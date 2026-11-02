@@ -1,0 +1,185 @@
+// GENERATED COPY. The source of truth is documentation/DOC_POINT_AT_PROCESS.md (Point At's process,
+// version below). An Edge Function cannot read repo files at runtime, so the text is embedded here.
+// Regenerate this constant whenever that document changes, or read_process and /api/process go stale.
+// The text contains no backticks, "${" or backslashes, so a template literal holds it verbatim.
+export const PROCESS_DOC = `# The Process
+
+Version: 0.3 (draft)
+This is a living document. It is refined through critique passes, and every change is recorded in the change log at the bottom.
+
+This document describes the single recursive unit used at every scale, from "make a sandwich this morning" to "achieve world peace".
+
+## 1. The node
+
+Everything is a node. Every node answers three questions:
+
+1. **What exactly are we trying to achieve here?**
+2. **How would we know it worked?** (a yes/no check)
+3. **What is the next concrete action a human or agent could take?**
+
+Each node has a **status**: proposed, reviewed, in progress, done, or overtaken. Each node also has a log of what happened when someone acted on it. That real-world feedback keeps the structure honest.
+
+## 2. Structure
+
+### 2.1 Split-from relation (the decomposition)
+
+Every node except a root has exactly one **parent it was split from**. Together these form a strict tree, which keeps the stopping rules and the hypothesis rule (section 6) clean.
+
+- **Top:** flexible. Any task can be a root, whatever its size, including tasks of unknown size.
+- **Bottom:** fixed by the leaf definition in section 3.
+- **No global depth limit.** Depth is unlimited. Only local rules decide when splitting stops (section 4). This is what makes the structure truly fractal, unlike existing tools that cap depth.
+
+### 2.2 No cycles
+
+Cycles are not allowed. A task that seems recursive or repeating is split into completable instances. "Clean the house, repeat" is not a valid node. "Clean the house in March" is.
+
+### 2.3 Lenses (dimensions)
+
+On top of the split-from tree, nodes can be viewed through any number of **lenses**.
+
+**Role views come first.** The primary lenses are views by role, built into the system as saved database queries on fields every node already carries (status, agent or human leaf, claimed or not):
+
+- **Token donors** see open thinking work: nodes waiting to be split, agent leaves to run, and splits waiting for review.
+- **Executors** see ready, unclaimed human leaves, optionally filtered by language, location or skills.
+
+Topic lenses such as "health" or "economic security" come later. Examples of other lenses:
+
+- the higher goal a node serves (health, economic security, trust)
+- region, actor type, cost, or urgency
+- clusters found automatically from embeddings of node content
+
+A node can carry many labels. Choosing a lens selects and regroups nodes, so the same tasks form a different graph depending on the dimension you look along. A node can also carry **"also serves"** links to nodes in other branches. These give credit across goals but never drive splitting, so they cannot create cycles.
+
+## 3. The leaf
+
+### 3.1 Definition
+
+A node is a **leaf** when the actor who would execute it, either an agent or the interfacing human, confirms they can do it in **one turn**.
+
+- **Agent leaf:** the agent can complete it in **one uninterrupted run**, with no human input or handoff in between. This works across tools (chat models, long-running coding agents) and can be checked afterwards: did the agent have to stop and ask?
+- **Human leaf:** the agent has done all the thinking but lacks the capability to act, for example because the step needs an email account, a sign-in, or a real-world presence. The agent hands the human a precise instruction. The human acts and reports back into the system.
+
+Agents do the complex knowledge work (analysis, drafting, structuring). Human leaves are concrete actions such as "send this message to this person".
+
+### 3.2 Where the handoff line sits
+
+The line between agent and human leaves is set by **capability**. A human acts only where agents currently lack the tools or access. This line shifts as agent tools improve, so leaves move from humans to agents over time.
+
+### 3.3 Human leaf template
+
+Every human leaf must fill these fields:
+
+| Field | Meaning |
+|---|---|
+| Who | The exact recipient or target |
+| What | The exact message, document or action |
+| How | The channel, and the deadline if there is one |
+| Done-signal | The yes/no check that shows it was done |
+
+**Bounce-back:** if anything is unclear, the human marks the leaf as unclear and it returns to the agents for refinement. A human never has to guess.
+
+### 3.4 Verification
+
+Rule: **verify as far as current tools allow, and record how it was verified.**
+
+Verification levels:
+
+1. **Self-reported:** the human says it is done.
+2. **Evidence attached:** a link, screenshot or forwarded reply.
+3. **Tool-verified:** an agent checked it directly, for example through connected email.
+4. **Outcome observed:** the expected effect actually appeared.
+
+Some trust is unavoidable. Downstream nodes decide how much to rely on each input: a cheap, reversible next step may build on a self-report, while an irreversible step requires higher-level or multiple independent inputs.
+
+## 4. Focus: when and how nodes come into existence
+
+### 4.1 Decompose on focus
+
+Nodes are created **only when someone focuses on a task**. When an agent or human aims attention at a node, they decompose it until they reach something they can work on in one turn. This is both the rule for decomposition and the origin of all tasks. There is no separate task-creation mode.
+
+Consequences:
+
+- Only the branches people actually work on are ever split. A goal like world peace does not explode into billions of unused nodes.
+- Depth can be unlimited without the structure growing out of control.
+
+The first question at every node is: **"Can I just do this?"** If yes, it is a leaf. This prevents a sandwich from being split into forty subtasks.
+
+### 4.2 The lens is part of the focus
+
+Whoever focuses brings a perspective, so the lens they work through can shape how a split comes out at that moment. Once made, the split becomes a normal node in the split-from tree that others can reuse through any lens.
+
+### 4.3 Re-check on focus
+
+Reality overtakes goals. A split made months ago may rest on facts that have changed, a task may already have been done by someone else, or the goal above it may have shifted. So focusing on a node always starts with a check: **is this still true and still needed?** How to act on the answer is left to the agent.
+
+The only shared requirement: a node that is no longer needed is closed with status *overtaken* and a note explaining why. That note feeds back up the tree as a result.
+
+To make this check possible, each split records the assumptions it relied on and when it was made.
+
+### 4.4 No separate escalation guard
+
+No separate mechanism is needed against endless vague splitting. The leaf rule already forces each split toward something workable in one turn, and capable models make splits concrete on their own: when forced to name who, where and what, a vague chain such as "build bridges between communities" bottoms out in a few steps. Revisit only if real runs show splits that merely rephrase.
+
+## 5. Storage and interface
+
+- **Process documents** live in the Git repository, where they are versioned and reviewed.
+- **Nodes** live in a database, because millions of nodes in Git files would be slow to search and painful to merge. Postgres with pgvector (for example through Supabase) supports fast search, links between nodes, embeddings for finding related tasks, and grouping by lens.
+
+**No app, an MCP server instead.** We do not build a separate app. We build the database plus an MCP server that connects to the agents people already use, such as their own Claude. Anyone can ask their agent "what could I do to drive progress?" and the system returns the next best task for them, through the role views in section 2.3. A read-only web view lets people navigate the tree visually.
+
+**Leave judgement to the models.** The system provides structure and data, not detailed procedures. Choosing the next best task, and similar judgement calls, is left to the person's agent. Too much prescribed process would hamper models once their intelligence surpasses the intelligence built into the process. The process should only fix what must be shared for coordination: the node format, the leaf rule, statuses, verification levels and review.
+
+## 6. How children relate to parents
+
+Every split carries an explicit **hypothesis**: *if all children are completed, the parent is completed.* Each split also records a **prediction**: what observable change in the parent's yes/no check should follow.
+
+- For concrete goals, the hypothesis is usually obviously true.
+- For value-laden goals, it is tested by **results**. If the parent did not move as predicted, the split is wrong and gets re-planned.
+
+Because the structure is fractal, the same hypothesis applies at every level: a completed parent is itself a child in its own parent's hypothesis.
+
+## 7. How much scrutiny a node gets
+
+- Scrutiny scales with risk: the more uncertain and irreversible an action, the more its assumptions and its second and third order effects deserve examination. How to examine them is left to the agent.
+- Never trade away a hard constraint (consent, freedom, reversibility) to achieve a goal.
+
+## 8. Review
+
+No contribution is merged until another agent has tried to break it. How to attack a split is left to the reviewing agent. A split cannot be reviewed by its own author.
+
+## 9. Working together
+
+Agents read this document first. They claim a node before working on it, cite evidence for claims, and follow the review rules.
+
+## 10. Prior art
+
+- **Plasma AI Fractal** (open source, Apache 2.0): coding-agent loops in a tree of Git worktrees. Each node has a NODE.md goal file that humans can edit while it runs, a per-node memory of cross-linked Markdown pages, and hard caps on iterations, depth, children, cost and time. Coordination is kept in a central SQLite database. Worth borrowing: live-editable goal files, topic-organised node memory, budget caps, and the docs-in-Git and coordination-in-database split.
+- **TinyAGI Fractals:** a recursive task orchestrator for coding swarms with a maximum depth and bottom-up merging.
+- **Atomic Task Graph** (research): recursive compilation of coarse tasks into atomic executable steps.
+
+What this project adds: no depth cap, decomposition on focus, lenses, human leaves with verification, adversarial review, re-checking against reality, and real-world goals with many contributors.
+
+---
+
+## Change log
+
+### 0.3: leaf critique pass 2 and fractal structure
+- Cycles forbidden. Repeating tasks become dated, completable instances.
+- Agent "one turn" defined as one uninterrupted run with no human input or handoff.
+- Structure clarified as a strict split-from tree plus lenses and "also serves" links (replaces the general graph of 0.2).
+- No global depth limit. Splitting is governed by local rules only.
+- Added decompose-on-focus as the origin of all tasks. No separate task-creation mode.
+- The lens is part of the focus and may shape a split.
+- Added re-check on focus and the *overtaken* status.
+- Added the storage section and the prior art section.
+- Dropped the escalation guard: the leaf rule and model intelligence already prevent endless vague splitting.
+- Added role views (token donor, executor) as the primary lenses.
+- Decided: no separate app; the interface is an MCP server on the database, used through people's existing agents, plus a read-only navigation view.
+- Principle: keep the process minimal and leave judgement, such as picking the next best task, to the models. Trimmed accordingly: reviewer roles, the re-check outcomes and the scrutiny steps are now left to agents, and the human leaf template is cut to four fields.
+
+### 0.2: leaf critique pass 1
+- One-turn leaf, agent and human leaves, capability-based handoff, human leaf template, bounce-back, verification levels, hypothesis and prediction per split.
+
+### 0.1: initial draft
+- Node with three questions, status and action log; flexible top, fixed leaf; stopping rule; scrutiny rule; adversarial review.
+`;
