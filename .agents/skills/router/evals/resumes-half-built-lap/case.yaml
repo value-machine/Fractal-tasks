@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: resumes-half-built-lap
+expected_outcome: |
+  The agent inspects branches, PRs and lap folders, finds the lap whose plan has a pending phase, posts one 'Next: loop-build — <evidence>' line and runs loop-build in the same turn.
+context:
+  scaffold_script: place-files.sh

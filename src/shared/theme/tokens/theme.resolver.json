@@ -1,0 +1,57 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "name": "plate-harness theme",
+  "version": "2025.10",
+  "description": "App theme. Build: pnpm tokens:build -> tokens.generated.css. Guide: documentation/DOC_THEMING.md",
+  "sets": {
+    "base": {
+      "description": "Tokens shared by every mode.",
+      "sources": [
+        {
+          "$ref": "base.tokens.json"
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "mode": {
+      "description": "Color mode (CSS: :root = light, .dark = dark).",
+      "contexts": {
+        "light": [
+          {
+            "$ref": "light.tokens.json"
+          }
+        ],
+        "dark": [
+          {
+            "$ref": "dark.tokens.json"
+          }
+        ]
+      },
+      "default": "light"
+    },
+    "motion": {
+      "description": "Motion preference (CSS: @media (prefers-reduced-motion: reduce)).",
+      "contexts": {
+        "default": [],
+        "reduced": [
+          {
+            "$ref": "reduced-motion.tokens.json"
+          }
+        ]
+      },
+      "default": "default"
+    }
+  },
+  "resolutionOrder": [
+    {
+      "$ref": "#/sets/base"
+    },
+    {
+      "$ref": "#/modifiers/mode"
+    },
+    {
+      "$ref": "#/modifiers/motion"
+    }
+  ]
+}

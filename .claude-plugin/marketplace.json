@@ -1,0 +1,15 @@
+{
+  "name": "plate-harness",
+  "owner": {
+    "name": "value-machine"
+  },
+  "description": "Claude Code plugins vendored in the plate-harness repo.",
+  "plugins": [
+    {
+      "name": "cursor-migration",
+      "source": "./plugins/cursor-migration",
+      "description": "Migrate a repo's Cursor setup to Claude Code while other agent tools keep working.",
+      "category": "development"
+    }
+  ]
+}

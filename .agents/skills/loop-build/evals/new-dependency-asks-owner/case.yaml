@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: new-dependency-asks-owner
+expected_outcome: |
+  The agent checks reuse options (dont-reinvent-the-wheel), and because adding papaparse is a new dependency on the stop list, asks the owner one multiple-choice question (or parks the lap if the away switch is on) instead of installing it silently.
+context:
+  scaffold_script: place-files.sh

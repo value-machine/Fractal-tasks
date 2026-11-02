@@ -1,0 +1,24 @@
+{
+  "motion": {
+    "$type": "duration",
+    "$description": "prefers-reduced-motion: reduce.",
+    "duration-fast": {
+      "$value": {
+        "value": 0.01,
+        "unit": "ms"
+      }
+    },
+    "duration-normal": {
+      "$value": {
+        "value": 0.01,
+        "unit": "ms"
+      }
+    },
+    "duration-slow": {
+      "$value": {
+        "value": 0.01,
+        "unit": "ms"
+      }
+    }
+  }
+}

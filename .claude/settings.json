@@ -1,0 +1,152 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm dev)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm build)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm preview)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm format:*)",
+      "Bash(pnpm type-check)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm clean)",
+      "Bash(pnpm compile)",
+      "Bash(pnpm fix)",
+      "Bash(pnpm arch:check)",
+      "Bash(pnpm arch:check:*)",
+      "Bash(pnpm arch:graph:*)",
+      "Bash(pnpm arch:validate)",
+      "Bash(pnpm validate:structure)",
+      "Bash(pnpm validate:structure:*)",
+      "Bash(pnpm validate:version-sync)",
+      "Bash(pnpm validate:app-config)",
+      "Bash(pnpm test:run)",
+      "Bash(pnpm test:run:*)",
+      "Bash(pnpm validate:git-workflow)",
+      "Bash(pnpm modularity:report)",
+      "Bash(pnpm validate:docs)",
+      "Bash(pnpm validate:docs:*)",
+      "Bash(pnpm validate:feature-docs:*)",
+      "Bash(pnpm arch:check:staged)",
+      "Bash(node scripts/*.js)",
+      "Bash(node scripts/*.cjs)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff)",
+      "Bash(git diff:*)",
+      "Bash(git log)",
+      "Bash(git log:*)",
+      "Bash(git branch)",
+      "Bash(git branch:*)",
+      "Bash(git show)",
+      "Bash(git show:*)",
+      "Bash(git blame:*)",
+      "Bash(git remote)",
+      "Bash(git remote:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git ls-files:*)",
+      "WebFetch(domain:react.dev)",
+      "WebFetch(domain:ui.shadcn.com)",
+      "WebFetch(domain:supabase.com)",
+      "WebFetch(domain:tanstack.com)",
+      "WebFetch(domain:vitejs.dev)",
+      "WebFetch(domain:vitest.dev)",
+      "WebFetch(domain:typescriptlang.org)",
+      "WebFetch(domain:eslint.org)",
+      "WebFetch(domain:prettier.io)",
+      "WebFetch(domain:docs.anthropic.com)"
+    ],
+    "ask": [
+      "Bash(pnpm install)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(pnpm update:*)",
+      "Bash(pnpm dlx:*)",
+      "Bash(npx:*)",
+      "Bash(npm:*)",
+      "Bash(yarn:*)",
+      "Bash(pnpm arch:baseline)",
+      "Edit(./.gitignore)",
+      "Edit(./.gitattributes)",
+      "Edit(./projectStructure.config.cjs)",
+      "Edit(./eslint.config.js)",
+      "Edit(./eslint.ignores.js)",
+      "Edit(./.dependency-cruiser.cjs)",
+      "Edit(./.dependency-cruiser-baseline.json)",
+      "Edit(./.prettierrc.json)",
+      "Edit(./.editorconfig)",
+      "Edit(./tsconfig*.json)",
+      "Edit(./.claude/rules/**)",
+      "Edit(./.agents/skills/**)",
+      "Edit(./.husky/**)",
+      "Edit(./.github/workflows/**)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git merge:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git stash:*)",
+      "Bash(git restore:*)",
+      "Bash(git clean:*)",
+      "Bash(rm:*)",
+      "Bash(rmdir:*)",
+      "Bash(del:*)",
+      "Bash(mv:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./.dev.vars*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/ensure-deps-installed.cjs\"",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/deny-git-write-on-main.cjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "plate-harness": {
+      "source": {
+        "source": "github",
+        "repo": "value-machine/bronze-plate-harness"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "cursor-migration@plate-harness": true
+  },
+  "outputStyle": "default",
+  "plansDirectory": "./documentation/jobs"
+}
