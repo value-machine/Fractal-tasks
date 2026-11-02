@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "generator": "cursor-migration inventory v0.3.0",
+  "keepCursor": true,
+  "excludes": [],
+  "environment": {
+    "hooks": {
+      "manager": "none",
+      "hooksPath": null
+    },
+    "syncScript": {
+      "path": "scripts/sync-agent-config.mjs",
+      "status": "missing",
+      "version": null,
+      "templateVersion": "0.1.0"
+    }
+  },
+  "instructions": {
+    "agentsMd": {
+      "exists": true,
+      "bytes": 7
+    },
+    "claudeMd": {
+      "exists": false,
+      "bytes": 0,
+      "isShim": false
+    },
+    "legacyCursorrules": null
+  },
+  "rules": [],
+  "ruleIndexFiles": [],
+  "ruleAttachments": [],
+  "commands": [],
+  "archivedCommands": [],
+  "cursorSkills": [],
+  "cursorSkillIndexFiles": [],
+  "agentsSkills": [],
+  "mcp": null,
+  "existingMcpJson": false,
+  "references": [],
+  "nestedConfigs": [
+    "packages/web/.cursor",
+    "packages/web/AGENTS.md"
+  ],
+  "excluded": [],
+  "bytesAdded": {
+    "alwaysLoadedRuleBytes": 0,
+    "pathScopedRuleBytes": 0,
+    "agentsMdPointerRows": 0
+  },
+  "sourceHashes": {
+    "AGENTS.md": "c50852826efd07a47ce5c5e548bb25789397a349e92037fad2eb33299eba3d4d"
+  },
+  "judgment": [
+    {
+      "id": "J1",
+      "kind": "nested",
+      "paths": [
+        "packages/web/.cursor"
+      ],
+      "message": "nested agent config: not converted in v1, migrate by hand"
+    },
+    {
+      "id": "J2",
+      "kind": "nested",
+      "paths": [
+        "packages/web/AGENTS.md"
+      ],
+      "message": "nested agent config: not converted in v1, migrate by hand"
+    }
+  ],
+  "guidedSteps": [
+    {
+      "id": "claude-check-context",
+      "tool": "Claude Code",
+      "title": "Check what loads",
+      "steps": [
+        "Open a new Claude Code session in the repo and run `/context`. Memory files should list `CLAUDE.md`, `AGENTS.md` and the always-on rules from `.claude/rules`.",
+        "Run `/skills`. Each repo skill should appear once.",
+        "Open a file that matches a path-scoped rule; that rule should load then, not at launch."
+      ]
+    },
+    {
+      "id": "claude-cloud-sessions",
+      "tool": "Claude Code",
+      "title": "Cloud sessions",
+      "steps": [
+        "Claude Code cloud sessions load the repo's `CLAUDE.md`, `.claude/rules` and `.claude/skills`, but not plugins. The migrated setup lives in repo files, so it works there; this plugin itself is only needed to migrate."
+      ]
+    },
+    {
+      "id": "cursor-user-rules",
+      "tool": "Cursor",
+      "title": "Copy personal User Rules by hand",
+      "steps": [
+        "Cursor Settings → Rules → User Rules live in Cursor, not in the repo, so they were not migrated.",
+        "Copy the ones you want in Claude Code into `~/.claude/CLAUDE.md` (all your projects) or this repo's `CLAUDE.md` (this project only)."
+      ]
+    },
+    {
+      "id": "cursor-third-party-configs",
+      "tool": "Cursor",
+      "title": "Third-party configs toggle",
+      "steps": [
+        "Cursor Settings → \"Include third-party Plugins, Skills, and other configs\" decides whether Cursor also reads Claude Code config such as `.claude/skills`.",
+        "Either setting works here: `.claude/skills` is an exact copy of `.agents/skills`, and Cursor shows a skill found in both once.",
+        "Cursor does not merge user-level folders: a skill in both `~/.agents/skills` and `~/.cursor/skills-cursor` shows twice. `~/.cursor/skills-cursor` is managed by Cursor; remove the copy in `~/.agents/skills` if you did not put it there on purpose."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: change-runs-lessons-and-queues-feedback
+expected_outcome: |
+  The agent runs the lessons step (learn) for the non-Pass verdict, adds the feedback as the top backlog task linked to the same lap branch/PR, and hands off to loop-backlog / loop-refine instead of merging.
+context:
+  scaffold_script: place-files.sh

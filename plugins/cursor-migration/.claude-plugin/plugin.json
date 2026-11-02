@@ -1,0 +1,12 @@
+{
+  "name": "cursor-migration",
+  "version": "0.3.0",
+  "description": "Migrate a repo's Cursor setup (rules, commands, skills, MCP, .cursorrules) to Claude Code while Cursor, Copilot and Codex keep working. Plan first, one approval, exact undo.",
+  "author": {
+    "name": "value-machine"
+  },
+  "homepage": "https://github.com/value-machine/bronze-plate-harness/tree/main/plugins/cursor-migration",
+  "repository": "https://github.com/value-machine/bronze-plate-harness",
+  "license": "MIT",
+  "keywords": ["cursor", "migration", "rules", "skills", "agents-md"]
+}

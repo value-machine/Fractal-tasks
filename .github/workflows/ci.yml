@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+    types: [opened, edited, synchronize, reopened]
+  # release-please.yml dispatches this on release-PR branches (GITHUB_TOKEN PRs do not
+  # trigger pull_request runs); `test` then reports on the release PR's head commit.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Description edits (`edited`) get their own group so they never cancel a code run, and
+# code runs still cancel each other on a new push.
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event.action == 'edited' && 'edit' || 'code' }}
+  cancel-in-progress: true
+
+jobs:
+  pr-title:
+    # Conventional `type: subject` PR titles become the squash commit and feed release-please.
+    # The job runs on every event so the required check reports success on release PRs, whose
+    # CI comes from the workflow_dispatch above: a skipped required check blocks the merge.
+    # Only pull_request runs check a title; release-please writes its own conventional title.
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - if: github.event_name == 'pull_request'
+        uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: github.event_name != 'pull_request'
+        run: echo "No pull_request event, no title to check (${{ github.event_name }} on ${{ github.ref_name }})."
+
+  test:
+    # Editing the PR description (preview link, ticked checkboxes) changes no code, so it must not
+    # re-run the suite: that left `test` pending and blocked the merge. Only the title check needs `edited`.
+    if: github.event.action != 'edited'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Pre-commit classifier tests
+        run: pnpm test:classify
+
+      - name: Feature README validation (strict)
+        run: pnpm validate:feature-docs:strict
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Version/changelog consistency
+        run: pnpm validate:version-sync
+
+      - name: Git workflow mode config
+        run: pnpm validate:git-workflow
+
+      - name: Skill admission check
+        run: pnpm validate:skills
+
+      - name: Structure validation
+        run: pnpm validate:structure
+
+      - name: Agent config mirrors in sync (.claude/skills, .cursor/rules)
+        run: node scripts/sync-agent-config.mjs --check
+
+      - name: cursor-migration plugin tests
+        run: pnpm test:plugin
+
+      - name: Feature size validation
+        run: pnpm validate:feature-size
+
+      - name: Architecture check
+        run: pnpm arch:check:ci
+
+      - name: Run tests
+        run: pnpm test:run
+
+      - name: Build
+        run: pnpm build
+
+

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: commits-and-opens-pr-without-asking
+expected_outcome: |
+  The agent commits with a conventional type: Subject title and a body, pushes the branch, opens a PR to main with the check summary and test steps, and does not ask 'ready to commit?' or 'ready to push?'; it does not merge.
+context:
+  scaffold_script: place-files.sh

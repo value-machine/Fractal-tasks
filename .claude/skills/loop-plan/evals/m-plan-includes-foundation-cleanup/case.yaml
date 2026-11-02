@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: m-plan-includes-foundation-cleanup
+expected_outcome: |
+  The agent writes DEVELOPMENT_PLAN.md from the template with Conflict & compliance, a Review contract and gated phases; plans extracting the triplicated filter logic into one shared, role-named module before the export phase (code-style Naming F2); writes a failing acceptance test; runs the merged plan review and records applied must-fixes as Amendments without waiting for the owner.
+context:
+  scaffold_script: place-files.sh

@@ -1,0 +1,6 @@
+# Pre-push hook — no local tests or type-check (CI is the merge gate).
+# SSOT: documentation/DOC_AGENT_WORKFLOW_LAYERS.md § Local git
+
+# Full Vitest suite and cold type-check run in CI on every PR (job: test).
+# Local: related/full tests on pre-commit; merge-safe gate is CI only.
+# See documentation/DOC_AGENT_WORKFLOW_LAYERS.md § Local git.
