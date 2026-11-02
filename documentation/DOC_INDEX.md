@@ -23,6 +23,8 @@ Central navigation for plate-harness documentation. For authoritative rules and 
 | **Architecture migration** | [DOC_ARCHITECTURE_MIGRATION_INSTRUCTIONS.md](./DOC_ARCHITECTURE_MIGRATION_INSTRUCTIONS.md) |
 | **Agent: human onboarding** | [`loop-backlog/references/onboarding.md`](../.agents/skills/loop-backlog/references/onboarding.md) |
 | **App vision & goals (fillable)** | [DOC_APP_VISION.md](./DOC_APP_VISION.md) |
+| **Point At process (the product rules: node, leaf, focus, review)** | [DOC_POINT_AT_PROCESS.md](./DOC_POINT_AT_PROCESS.md) |
+| **Point At risks and open questions** | [DOC_POINT_AT_RISKS.md](./DOC_POINT_AT_RISKS.md) |
 | **Dev task backlog** | [src/features/tasks/README.md](../src/features/tasks/README.md) |
 | **Theming (DTCG tokens, light/dark, runtime overrides)** | [DOC_THEMING.md](./DOC_THEMING.md) |
 | **TanStack Query** | [DOC_TANSTACK_QUERY.md](./DOC_TANSTACK_QUERY.md) |

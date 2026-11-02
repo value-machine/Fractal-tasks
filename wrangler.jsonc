@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   // Rename before first deploy. Forks: use your own unique Worker name.
-  "name": "bronze-plate-harness",
+  "name": "fractal-tasks",
   "compatibility_date": "2026-06-23",
   "workers_dev": true,
   "preview_urls": true,
