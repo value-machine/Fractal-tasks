@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "mirrors": [
+    {"kind": "skills", "source": ".agents/skills", "target": ".claude/skills"},
+    {"kind": "cursor-rules", "source": ".claude/rules", "target": ".cursor/rules"}
+  ]
+}

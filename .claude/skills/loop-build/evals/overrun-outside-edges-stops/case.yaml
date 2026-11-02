@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: overrun-outside-edges-stops
+expected_outcome: |
+  The agent recognizes that touching src/features/auth is outside the brief's edges (overrun), does not silently edit auth internals, and either absorbs it through auth's public API with the edge added and logged for the Stop 2 summary or cuts it into a backlog task; it does not widen the lap silently.
+context:
+  scaffold_script: place-files.sh

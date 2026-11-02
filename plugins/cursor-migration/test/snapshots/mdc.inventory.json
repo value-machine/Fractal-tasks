@@ -1,0 +1,296 @@
+{
+  "schemaVersion": 1,
+  "generator": "cursor-migration inventory v0.3.0",
+  "keepCursor": true,
+  "excludes": [],
+  "environment": {
+    "hooks": {
+      "manager": "husky",
+      "hooksPath": null
+    },
+    "syncScript": {
+      "path": "scripts/sync-agent-config.mjs",
+      "status": "missing",
+      "version": null,
+      "templateVersion": "0.1.0"
+    }
+  },
+  "instructions": {
+    "agentsMd": {
+      "exists": true,
+      "bytes": 109
+    },
+    "claudeMd": {
+      "exists": true,
+      "bytes": 35,
+      "isShim": false
+    },
+    "legacyCursorrules": null
+  },
+  "rules": [
+    {
+      "name": "frontend",
+      "source": ".cursor/rules/frontend.mdc",
+      "type": "path",
+      "globs": [
+        "src/**/*.{ts,tsx}",
+        "app/**"
+      ],
+      "description": "Frontend",
+      "bytes": 93,
+      "target": ".claude/rules/frontend.md",
+      "demotionCandidate": null,
+      "flags": []
+    },
+    {
+      "name": "notes",
+      "source": ".cursor/rules/notes.mdc",
+      "type": "manual",
+      "globs": [],
+      "description": "",
+      "bytes": 25,
+      "target": ".agents/skills/notes/SKILL.md",
+      "demotionCandidate": null,
+      "flags": []
+    },
+    {
+      "name": "release",
+      "source": ".cursor/rules/release.mdc",
+      "type": "agent",
+      "globs": [],
+      "description": "Release checklist",
+      "bytes": 57,
+      "target": ".agents/skills/release/SKILL.md",
+      "demotionCandidate": null,
+      "flags": [
+        "critical rule demoted to on-demand: AGENTS.md calls it mandatory"
+      ]
+    },
+    {
+      "name": "style",
+      "source": ".cursor/rules/style.mdc",
+      "type": "always",
+      "globs": [],
+      "description": "",
+      "bytes": 36,
+      "target": ".claude/rules/style.md",
+      "demotionCandidate": null,
+      "flags": []
+    }
+  ],
+  "ruleIndexFiles": [],
+  "ruleAttachments": [],
+  "commands": [
+    {
+      "name": "deploy",
+      "source": ".cursor/commands/deploy.md",
+      "bytes": 25,
+      "target": ".agents/skills/deploy/SKILL.md",
+      "alreadyMigratedAs": [],
+      "action": "convert to skill (disable-model-invocation: true)"
+    }
+  ],
+  "archivedCommands": [],
+  "cursorSkills": [
+    {
+      "name": "lint-fix",
+      "stub": false,
+      "fileCount": 1,
+      "problemFiles": [],
+      "action": "move to .agents/skills"
+    }
+  ],
+  "cursorSkillIndexFiles": [],
+  "agentsSkills": [],
+  "mcp": {
+    "source": ".cursor/mcp.json",
+    "target": ".mcp.json",
+    "servers": [
+      {
+        "name": "db",
+        "transport": "stdio",
+        "secretLocations": [
+          "env.DB_TOKEN",
+          "args[2]"
+        ]
+      },
+      {
+        "name": "docs",
+        "transport": "remote",
+        "secretLocations": [
+          "url query \"token\""
+        ]
+      },
+      {
+        "name": "safe",
+        "transport": "stdio",
+        "secretLocations": []
+      }
+    ],
+    "tracked": true,
+    "inGitHistory": true,
+    "rotateAdvised": true
+  },
+  "existingMcpJson": false,
+  "references": [
+    {
+      "file": "AGENTS.md",
+      "line": 3,
+      "ref": ".cursor/rules/release.mdc",
+      "mode": "auto",
+      "proposed": ".agents/skills/release/SKILL.md"
+    },
+    {
+      "file": "AGENTS.md",
+      "line": 4,
+      "ref": ".cursor/rules/style.mdc",
+      "mode": "auto",
+      "proposed": ".claude/rules/style.md"
+    },
+    {
+      "file": "docs/guide.md",
+      "line": 1,
+      "ref": ".cursor/commands/deploy.md",
+      "mode": "auto",
+      "proposed": ".agents/skills/deploy/SKILL.md"
+    },
+    {
+      "file": "docs/guide.md",
+      "line": 1,
+      "ref": ".cursor/rules/",
+      "mode": "auto",
+      "proposed": ".claude/rules/"
+    },
+    {
+      "file": "docs/guide.md",
+      "line": 1,
+      "ref": ".cursor/commands/gone.md",
+      "mode": "stale",
+      "proposed": null
+    },
+    {
+      "file": "scripts/check.js",
+      "line": 1,
+      "ref": ".cursor/rules/frontend.mdc",
+      "mode": "manual",
+      "proposed": ".claude/rules/frontend.md"
+    }
+  ],
+  "nestedConfigs": [],
+  "excluded": [
+    {
+      "path": ".cursor/debug*.log",
+      "reason": "1 Cursor debug log(s); may hold sensitive output, never migrated"
+    }
+  ],
+  "bytesAdded": {
+    "alwaysLoadedRuleBytes": 36,
+    "pathScopedRuleBytes": 93,
+    "agentsMdPointerRows": 1
+  },
+  "sourceHashes": {
+    ".cursor/commands/deploy.md": "b3105a9c62b7f53d7dc3f0a44cd76de2b569c5a66889aca804d3ab8b2ac1c217",
+    ".cursor/mcp.json": "22b971d4362c98f669023e59de2211e220ec05a36a041ad2514e2e2cb0eafad4",
+    ".cursor/rules/frontend.mdc": "ea8db49e3987b09d502a4adf2082717a8d49496979549bbe388ee7927a9fa016",
+    ".cursor/rules/notes.mdc": "1cec89af5402c5be33419b7b6045c2fcb6183fc44bc6b78a6308b3d0f9c6e3ac",
+    ".cursor/rules/release.mdc": "08bdc39f3904c011c7489d3a8988f636e3e1e84cb65b38e5c0f4f10f2edb7827",
+    ".cursor/rules/style.mdc": "e6e9bb630dc65809148d3115e6f475b3e494619de52db0f096ddae3262da0e5b",
+    ".cursor/skills/lint-fix/SKILL.md": "31dc9b2d021a010b379ccec26d2df7b42c0e6efe9119ff9d3deb64b4780ed333",
+    "AGENTS.md": "acefe40767acf5fa80ede1ae0701bbdb43dc181881a3287e64eee275a9fea0f4",
+    "CLAUDE.md": "f27e066ee2b4a320a80de4094b25fe20cd07330021a9fcdf2966bdc0d4da175c"
+  },
+  "judgment": [
+    {
+      "id": "J1",
+      "kind": "instructions",
+      "paths": [
+        "CLAUDE.md"
+      ],
+      "message": "CLAUDE.md has its own content: merge it into AGENTS.md or keep it below an @AGENTS.md import"
+    },
+    {
+      "id": "J2",
+      "kind": "rule",
+      "paths": [
+        ".cursor/rules/release.mdc"
+      ],
+      "message": "release: critical rule demoted to on-demand: AGENTS.md calls it mandatory"
+    },
+    {
+      "id": "J3",
+      "kind": "references",
+      "paths": [
+        "scripts/check.js"
+      ],
+      "message": "1 .cursor/ reference(s) need a manual edit (code, or no known target); see References"
+    },
+    {
+      "id": "J4",
+      "kind": "mcp",
+      "paths": [
+        ".cursor/mcp.json"
+      ],
+      "message": "literal secrets are in git history: rotate them, then use ${VAR} references"
+    }
+  ],
+  "guidedSteps": [
+    {
+      "id": "claude-approve-mcp",
+      "tool": "Claude Code",
+      "title": "Approve the project MCP servers",
+      "steps": [
+        "Set the variables listed in `.env.example` in your shell or `.env` first.",
+        "Start Claude Code in the repo. It asks once per server in `.mcp.json` (`db`, `docs`, `safe`); approve the ones you use.",
+        "Run `/mcp` to see each server's status."
+      ]
+    },
+    {
+      "id": "claude-check-context",
+      "tool": "Claude Code",
+      "title": "Check what loads",
+      "steps": [
+        "Open a new Claude Code session in the repo and run `/context`. Memory files should list `CLAUDE.md`, `AGENTS.md` and the always-on rules from `.claude/rules`.",
+        "Run `/skills`. Each repo skill should appear once.",
+        "Open a file that matches a path-scoped rule; that rule should load then, not at launch."
+      ]
+    },
+    {
+      "id": "personal-skills-shadow",
+      "tool": "Claude Code",
+      "title": "Check for personal skills that hide repo skills",
+      "steps": [
+        "Claude Code runs a personal skill (`~/.claude/skills/<name>`) instead of a repo skill with the same name, so the repo version never loads on that machine.",
+        "List your personal skills (`~/.claude/skills`; on Windows `%USERPROFILE%\\.claude\\skills`) and compare the folder names with `.agents/skills`.",
+        "Per match, choose: delete the personal copy (the repo version loads), rename it (both load; the personal one under the new name), or keep it (the repo version stays hidden for you).",
+        "`~/.claude/skills` is shared by every project on this machine. Check other repos before deleting."
+      ]
+    },
+    {
+      "id": "claude-cloud-sessions",
+      "tool": "Claude Code",
+      "title": "Cloud sessions",
+      "steps": [
+        "Claude Code cloud sessions load the repo's `CLAUDE.md`, `.claude/rules` and `.claude/skills`, but not plugins. The migrated setup lives in repo files, so it works there; this plugin itself is only needed to migrate."
+      ]
+    },
+    {
+      "id": "cursor-user-rules",
+      "tool": "Cursor",
+      "title": "Copy personal User Rules by hand",
+      "steps": [
+        "Cursor Settings → Rules → User Rules live in Cursor, not in the repo, so they were not migrated.",
+        "Copy the ones you want in Claude Code into `~/.claude/CLAUDE.md` (all your projects) or this repo's `CLAUDE.md` (this project only)."
+      ]
+    },
+    {
+      "id": "cursor-third-party-configs",
+      "tool": "Cursor",
+      "title": "Third-party configs toggle",
+      "steps": [
+        "Cursor Settings → \"Include third-party Plugins, Skills, and other configs\" decides whether Cursor also reads Claude Code config such as `.claude/skills`.",
+        "Either setting works here: `.claude/skills` is an exact copy of `.agents/skills`, and Cursor shows a skill found in both once.",
+        "Cursor does not merge user-level folders: a skill in both `~/.agents/skills` and `~/.cursor/skills-cursor` shows twice. `~/.cursor/skills-cursor` is managed by Cursor; remove the copy in `~/.agents/skills` if you did not put it there on purpose."
+      ]
+    }
+  ]
+}

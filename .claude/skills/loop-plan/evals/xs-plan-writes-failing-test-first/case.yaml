@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: xs-plan-writes-failing-test-first
+expected_outcome: |
+  The agent writes a failing test for the success check before any implementation, adds a short plan (goal, steps, gate) to BRIEF.md § Plan instead of a DEVELOPMENT_PLAN.md, runs no plan review, asks the owner nothing, and ends with a footer naming the plan path, size and acceptance test.
+context:
+  scaffold_script: place-files.sh

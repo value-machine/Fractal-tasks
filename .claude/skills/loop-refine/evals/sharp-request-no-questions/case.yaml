@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: sharp-request-no-questions
+expected_outcome: |
+  The agent reads the task, the vision and the relevant feature README/code, writes documentation/jobs/temp_job_<slug>/BRIEF.md with problem, success check, in/out of scope, an edges table and a size (XS or S), asks the owner no questions because nothing is on the stop list, and ends with one restatement line.
+context:
+  scaffold_script: place-files.sh

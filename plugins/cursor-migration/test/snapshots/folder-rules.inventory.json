@@ -1,0 +1,345 @@
+{
+  "schemaVersion": 1,
+  "generator": "cursor-migration inventory v0.3.0",
+  "keepCursor": true,
+  "excludes": [],
+  "environment": {
+    "hooks": {
+      "manager": "husky",
+      "hooksPath": null
+    },
+    "syncScript": {
+      "path": "scripts/sync-agent-config.mjs",
+      "status": "current",
+      "version": "0.1.0",
+      "templateVersion": "0.1.0"
+    }
+  },
+  "instructions": {
+    "agentsMd": {
+      "exists": true,
+      "bytes": 87
+    },
+    "claudeMd": {
+      "exists": true,
+      "bytes": 11,
+      "isShim": true
+    },
+    "legacyCursorrules": null
+  },
+  "rules": [
+    {
+      "name": "cloud",
+      "source": ".cursor/rules/cloud/RULE.md",
+      "type": "path",
+      "globs": [
+        "**/functions/**",
+        "**/*.{ts,tsx}"
+      ],
+      "description": "Edge functions",
+      "bytes": 137,
+      "target": ".claude/rules/cloud.md",
+      "demotionCandidate": null,
+      "flags": []
+    },
+    {
+      "name": "database",
+      "source": ".cursor/rules/database/RULE.md",
+      "type": "always",
+      "globs": [
+        "**/supabase/**"
+      ],
+      "description": "Database",
+      "bytes": 102,
+      "target": ".claude/rules/database.md",
+      "demotionCandidate": {
+        "reason": "also declares globs; could load only for those paths",
+        "proposedPaths": [
+          "**/supabase/**"
+        ]
+      },
+      "flags": [
+        "precedence: alwaysApply wins over globs"
+      ]
+    },
+    {
+      "name": "git-workflow",
+      "source": ".cursor/rules/git-workflow/RULE.md",
+      "type": "agent",
+      "globs": [],
+      "description": "Ask where to work before changing branches",
+      "bytes": 96,
+      "target": ".agents/skills/git-workflow/SKILL.md",
+      "demotionCandidate": null,
+      "flags": [
+        "critical rule demoted to on-demand: AGENTS.md calls it mandatory"
+      ]
+    }
+  ],
+  "ruleIndexFiles": [
+    ".cursor/rules/INDEX.md"
+  ],
+  "ruleAttachments": [],
+  "commands": [
+    {
+      "name": "debug",
+      "source": ".cursor/commands/debug.md",
+      "bytes": 41,
+      "target": ".agents/skills/debug/SKILL.md",
+      "alreadyMigratedAs": [
+        "source-command-debug"
+      ],
+      "action": "judgment: already migrated"
+    }
+  ],
+  "archivedCommands": [],
+  "cursorSkills": [
+    {
+      "name": "finish",
+      "stub": true,
+      "fileCount": 1,
+      "problemFiles": [],
+      "action": "remove stub (content already in .agents/skills)"
+    },
+    {
+      "name": "legacy",
+      "stub": false,
+      "fileCount": 1,
+      "problemFiles": [],
+      "action": "remove identical copy (same files in .agents/skills)"
+    },
+    {
+      "name": "plan",
+      "stub": true,
+      "fileCount": 2,
+      "problemFiles": [
+        {
+          "path": ".cursor/skills/plan/references/template.md",
+          "status": "differs",
+          "counterpart": ".agents/skills/plan/references/template.md"
+        }
+      ],
+      "action": "judgment: stub has files that differ from or are missing in .agents/skills"
+    }
+  ],
+  "cursorSkillIndexFiles": [
+    ".cursor/skills/INDEX.md"
+  ],
+  "agentsSkills": [
+    {
+      "name": "finish",
+      "files": 1,
+      "disableModelInvocation": true
+    },
+    {
+      "name": "legacy",
+      "files": 1,
+      "disableModelInvocation": null
+    },
+    {
+      "name": "plan",
+      "files": 2,
+      "disableModelInvocation": null
+    },
+    {
+      "name": "source-command-debug",
+      "files": 1,
+      "disableModelInvocation": null
+    }
+  ],
+  "mcp": null,
+  "existingMcpJson": false,
+  "references": [
+    {
+      "file": ".agents/skills/plan/SKILL.md",
+      "line": 5,
+      "ref": ".cursor/rules/database/RULE.md",
+      "mode": "auto",
+      "proposed": ".claude/rules/database.md"
+    },
+    {
+      "file": ".agents/skills/plan/SKILL.md",
+      "line": 5,
+      "ref": ".cursor/rules/INDEX.md",
+      "mode": "manual",
+      "proposed": null
+    },
+    {
+      "file": ".cursor/commands/debug.md",
+      "line": 2,
+      "ref": ".cursor/skills/plan/SKILL.md",
+      "mode": "auto",
+      "proposed": ".agents/skills/plan/SKILL.md"
+    },
+    {
+      "file": ".cursor/rules/INDEX.md",
+      "line": 1,
+      "ref": ".cursor/rules/database/RULE.md",
+      "mode": "auto",
+      "proposed": ".claude/rules/database.md"
+    },
+    {
+      "file": ".cursor/rules/cloud/RULE.md",
+      "line": 6,
+      "ref": ".cursor/rules/database/RULE.md",
+      "mode": "auto",
+      "proposed": ".claude/rules/database.md"
+    },
+    {
+      "file": ".cursor/skills/INDEX.md",
+      "line": 1,
+      "ref": ".cursor/skills/plan/SKILL.md",
+      "mode": "auto",
+      "proposed": ".agents/skills/plan/SKILL.md"
+    },
+    {
+      "file": "AGENTS.md",
+      "line": 3,
+      "ref": ".cursor/rules/git-workflow/RULE.md",
+      "mode": "auto",
+      "proposed": ".agents/skills/git-workflow/SKILL.md"
+    }
+  ],
+  "nestedConfigs": [],
+  "excluded": [
+    {
+      "path": ".cursor/plans",
+      "reason": "Cursor plan-mode output; leave or archive"
+    },
+    {
+      "path": ".cursor/worktrees.json",
+      "reason": "Cursor worktree setup; no Claude Code equivalent is migrated"
+    },
+    {
+      "path": ".cursor/config",
+      "reason": "live config read by scripts; stays, not migrated"
+    }
+  ],
+  "bytesAdded": {
+    "alwaysLoadedRuleBytes": 102,
+    "pathScopedRuleBytes": 137,
+    "agentsMdPointerRows": 1
+  },
+  "sourceHashes": {
+    ".cursor/commands/debug.md": "1ed7fc6227e2dae0dccf023106d448fcc49c1aea62d85055beb06394e2695d25",
+    ".cursor/rules/INDEX.md": "36252d389f88148aa0f7c5cf0a03732bc1b4ac63593c0e5cf43aa4fef8c24caa",
+    ".cursor/rules/cloud/RULE.md": "69cef1c3b78b8f06b78176104552c5b7aee997c9eebcbca7732f611344a61ac1",
+    ".cursor/rules/database/RULE.md": "6d22970ec6a935bde20220059db4daa726ab941366eaa0312a397f8c3538fb7d",
+    ".cursor/rules/git-workflow/RULE.md": "65078e3f3b739cfcc108284ea0ed904079ec1f2b6f14f7f295505f1d38910027",
+    ".cursor/skills/INDEX.md": "15391aaa4f4b9339351eb900132244bd7031e488c6cd383ffed1851bd7816098",
+    ".cursor/skills/finish/SKILL.md": "2a5e5c5cea304c28d3e7b2c84dcac79b64aefb875fa2dddab109912cde92ed2e",
+    ".cursor/skills/legacy/SKILL.md": "c416ef23da331010da4f0182bfb53b4e3928f124c492abd40ca4ed50e33906d6",
+    ".cursor/skills/plan/SKILL.md": "81af32b022a777913ac886d0912dd945a0b5b6b4d46df81a6f4fc560d9cf1f09",
+    ".cursor/skills/plan/references/template.md": "4e279a1c225bd075c47440e2db3e165cb354804cbc7c2e386050eabd949e5951",
+    "AGENTS.md": "5438e62a42cee65f9fb6c21e4d30e9ef9b963d2b551a07c94d4391b4abcc4d7b",
+    "CLAUDE.md": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+  },
+  "judgment": [
+    {
+      "id": "J1",
+      "kind": "rule",
+      "paths": [
+        ".cursor/rules/database/RULE.md"
+      ],
+      "message": "database: precedence: alwaysApply wins over globs"
+    },
+    {
+      "id": "J2",
+      "kind": "rule",
+      "paths": [
+        ".cursor/rules/git-workflow/RULE.md"
+      ],
+      "message": "git-workflow: critical rule demoted to on-demand: AGENTS.md calls it mandatory"
+    },
+    {
+      "id": "J3",
+      "kind": "index",
+      "paths": [
+        ".cursor/rules/INDEX.md"
+      ],
+      "message": "rule index file: rewrite to point at the new locations, or remove"
+    },
+    {
+      "id": "J4",
+      "kind": "skill",
+      "paths": [
+        ".cursor/skills/plan/references/template.md"
+      ],
+      "message": "plan: stub has files that differ from or are missing in .agents/skills (1 file(s))"
+    },
+    {
+      "id": "J5",
+      "kind": "index",
+      "paths": [
+        ".cursor/skills/INDEX.md"
+      ],
+      "message": "skill index file: router config lists may point at .cursor/skills paths"
+    },
+    {
+      "id": "J6",
+      "kind": "command",
+      "paths": [
+        ".cursor/commands/debug.md"
+      ],
+      "message": "command debug already has skill(s): source-command-debug; keep one, skip conversion"
+    },
+    {
+      "id": "J7",
+      "kind": "references",
+      "paths": [
+        ".agents/skills/plan/SKILL.md"
+      ],
+      "message": "1 .cursor/ reference(s) need a manual edit (code, or no known target); see References"
+    }
+  ],
+  "guidedSteps": [
+    {
+      "id": "claude-check-context",
+      "tool": "Claude Code",
+      "title": "Check what loads",
+      "steps": [
+        "Open a new Claude Code session in the repo and run `/context`. Memory files should list `CLAUDE.md`, `AGENTS.md` and the always-on rules from `.claude/rules`.",
+        "Run `/skills`. Each repo skill should appear once.",
+        "Open a file that matches a path-scoped rule; that rule should load then, not at launch."
+      ]
+    },
+    {
+      "id": "personal-skills-shadow",
+      "tool": "Claude Code",
+      "title": "Check for personal skills that hide repo skills",
+      "steps": [
+        "Claude Code runs a personal skill (`~/.claude/skills/<name>`) instead of a repo skill with the same name, so the repo version never loads on that machine.",
+        "List your personal skills (`~/.claude/skills`; on Windows `%USERPROFILE%\\.claude\\skills`) and compare the folder names with `.agents/skills`.",
+        "Per match, choose: delete the personal copy (the repo version loads), rename it (both load; the personal one under the new name), or keep it (the repo version stays hidden for you).",
+        "`~/.claude/skills` is shared by every project on this machine. Check other repos before deleting."
+      ]
+    },
+    {
+      "id": "claude-cloud-sessions",
+      "tool": "Claude Code",
+      "title": "Cloud sessions",
+      "steps": [
+        "Claude Code cloud sessions load the repo's `CLAUDE.md`, `.claude/rules` and `.claude/skills`, but not plugins. The migrated setup lives in repo files, so it works there; this plugin itself is only needed to migrate."
+      ]
+    },
+    {
+      "id": "cursor-user-rules",
+      "tool": "Cursor",
+      "title": "Copy personal User Rules by hand",
+      "steps": [
+        "Cursor Settings → Rules → User Rules live in Cursor, not in the repo, so they were not migrated.",
+        "Copy the ones you want in Claude Code into `~/.claude/CLAUDE.md` (all your projects) or this repo's `CLAUDE.md` (this project only)."
+      ]
+    },
+    {
+      "id": "cursor-third-party-configs",
+      "tool": "Cursor",
+      "title": "Third-party configs toggle",
+      "steps": [
+        "Cursor Settings → \"Include third-party Plugins, Skills, and other configs\" decides whether Cursor also reads Claude Code config such as `.claude/skills`.",
+        "Either setting works here: `.claude/skills` is an exact copy of `.agents/skills`, and Cursor shows a skill found in both once.",
+        "Cursor does not merge user-level folders: a skill in both `~/.agents/skills` and `~/.cursor/skills-cursor` shows twice. `~/.cursor/skills-cursor` is managed by Cursor; remove the copy in `~/.agents/skills` if you did not put it there on purpose."
+      ]
+    }
+  ]
+}
