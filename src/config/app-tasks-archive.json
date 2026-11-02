@@ -1,0 +1,32 @@
+[
+  {
+    "title": "Capture app errors to the database",
+    "description": "Global window error and unhandledrejection handler, error boundary reporting, and the existing logError path, all writing through the deduplicating upsert from the signals backend task. Tag each error with the environment (local, staging, production). Depends on: Signals backend task. Result: merged in PR #28 (src/features/error-reporting; live on production).",
+    "status": "done"
+  },
+  {
+    "title": "Signals backend: error logs, feedback and bugs tables",
+    "description": "Add supabase/migrations with error_logs (clustered by hash, upsert_error_log function), app_feedback and bugs tables, RLS, and a db:push-staging script, so the signal adapter in .agents/skills/loop-backlog/references/signal-adapter.md has data to read. Forks get this by default. Admin = a role claim in the user's auth app_metadata (never user_metadata, which users can edit); admins and local dev can read, signed-in users can insert their own rows. Test it on a scratch Postgres, then apply it to the project; with isolated staging, staging first and production after merge. Result: merged in PR #27 (tables, upsert_error_log, RLS; Google sign-in and production build verified; one shared Supabase project by default, D10).",
+    "status": "done"
+  },
+  {
+    "title": "Onboarding states requirements, not methods",
+    "description": "Rewrite the onboarding gates and the seeded Supabase and hosting tasks so they state setup requirements (end state, why, how the agent verifies, who acts) instead of vendor click paths, and add the staging Supabase project requirement. Decisions: documentation/DOC_DECISION_LOG.md § onboarding-requirements. Result: merged in PR #26 (onboarding.md states requirements; Supabase and hosting requirement tables; signals epic queued).",
+    "status": "done"
+  },
+  {
+    "title": "Run the loop skill evals against the v0.42.0 baseline",
+    "description": "Deferred from the skill-loop rework (skill-loop D59) to save usage. Run the eval cases under .agents/skills/router/evals/ and .agents/skills/loop-*/evals/ (15 cases), once with the new skill and once with the v0.42.0 skills it replaced (baseline = commit a920c0d), using the skill-creator workflow or `claude plugin eval`. Report pass rates per skill, and fix the skills where the new version loses behavior. Context: documentation/DOC_DECISION_LOG.md § skill-loop. Result: 45/45 graders passed on new skills vs 39/45 on v0.42.0 baseline (composer-2.5); 0 regressions.",
+    "status": "done"
+  },
+  {
+    "title": "Show the harness overview on the app's home page and README",
+    "description": "Publish the designed harness flowchart as an app route (/harness) built from kit components and the bronze theme tokens, with a PNG preview (public/harness-overview.png). Show a welcome card on the home page so visitors on the preview URL and on a fresh first run see it, and put the image at the top of README.md so people arriving from GitHub or Google see it. Result: merged in PR #32 (src/features/harness-overview, route /harness, public/harness-overview.png).",
+    "status": "done"
+  },
+  {
+    "title": "Fix Google sign-in returning to the wrong site with a PKCE error",
+    "description": "Seen on the production site after signing in with Google from a preview: 'PKCE code verifier not found in storage'. Supabase auth logs show the sign-in started on the preview origin, Supabase redirected to the Site URL (production) because the app's bare-origin redirect address did not match the '/**' allow-list pattern, and production then failed with bad_code_verifier. The app also exchanges the code twice (supabase-js does it during client init, then the callback hook again), which would show a false error even when sign-in works. Decisions: documentation/DOC_DECISION_LOG.md § google-signin-return. Result: merged in PR #29 (0817eac, fix(auth): return Google sign-in to the app root and skip a redundant code exchange).",
+    "status": "done"
+  }
+]

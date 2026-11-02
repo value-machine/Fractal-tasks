@@ -1,0 +1,76 @@
+{
+  "features": [
+    {
+      "key": "auth",
+      "inboundCount": 12,
+      "wiringCount": 9,
+      "inbound": [
+        "src/layouts/ProfileMenu/ProfileChips.tsx",
+        "src/layouts/ProfileMenu/ProfileInfo.tsx",
+        "src/layouts/ProfileMenu/ProfileMenu.tsx",
+        "src/layouts/ProfileMenu/ProfileMenuContent.tsx",
+        "src/layouts/ProfileMenu/ProfileMenuTrigger.tsx",
+        "src/pages/AuthCallbackPage.tsx",
+        "src/pages/HomePage.tsx",
+        "src/pages/LoginPage.tsx",
+        "src/pages/ResetPasswordPage.tsx",
+        "src/shared/context/AuthContext.tsx",
+        "src/shared/utils/profileHelpers.ts",
+        "src/shared/utils/userUtils.ts"
+      ],
+      "wiring": [
+        "src/layouts/ProfileMenu/ProfileChips.tsx",
+        "src/layouts/ProfileMenu/ProfileInfo.tsx",
+        "src/layouts/ProfileMenu/ProfileMenu.tsx",
+        "src/layouts/ProfileMenu/ProfileMenuContent.tsx",
+        "src/layouts/ProfileMenu/ProfileMenuTrigger.tsx",
+        "src/pages/AuthCallbackPage.tsx",
+        "src/pages/HomePage.tsx",
+        "src/pages/LoginPage.tsx",
+        "src/pages/ResetPasswordPage.tsx"
+      ],
+      "outboundFeatures": [],
+      "outboundStack": []
+    },
+    {
+      "key": "tasks",
+      "inboundCount": 2,
+      "wiringCount": 1,
+      "inbound": [
+        "src/App.tsx",
+        "src/pages/tasks/TasksPage.tsx"
+      ],
+      "wiring": [
+        "src/pages/tasks/TasksPage.tsx"
+      ],
+      "outboundFeatures": [],
+      "outboundStack": []
+    }
+  ],
+  "stack": [
+    {
+      "id": "Radix",
+      "fileCount": 9,
+      "busywork": "medium",
+      "files": [
+        "src/components/common/Avatar/Avatar.tsx",
+        "src/components/common/Button/Button.tsx",
+        "src/components/common/DropdownMenu/DropdownMenu.tsx",
+        "src/components/common/Label/Label.tsx",
+        "src/components/common/Modal/Modal.tsx",
+        "src/components/common/Select/Select.tsx",
+        "src/components/common/Separator/Separator.tsx",
+        "src/components/common/Tabs/Tabs.tsx",
+        "src/components/common/Tooltip/Tooltip.tsx"
+      ]
+    },
+    {
+      "id": "Supabase",
+      "fileCount": 1,
+      "busywork": "low",
+      "files": [
+        "src/shared/services/supabaseService.ts"
+      ]
+    }
+  ]
+}

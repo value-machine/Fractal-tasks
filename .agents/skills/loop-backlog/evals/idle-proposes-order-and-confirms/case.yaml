@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: idle-proposes-order-and-confirms
+expected_outcome: |
+  With no request and nothing in progress, the agent catches up the backlog against landed work, proposes a full order with seeded onboarding tasks or other blockers first and one-line reasons for moved rows, and asks exactly one confirm question before writing the JSON.
+context:
+  scaffold_script: place-files.sh

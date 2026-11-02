@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: short-handoff-asks-rule-change-in-chat
+expected_outcome: |
+  The agent asks the owner in chat for a yes/no on the code-style rule change (a Pass or a merge never approves it), and hands off in a few short lines: the preview URL, what to try, what checks couldn't cover. The README decision line stays in the PR body. It asks one Pass / Change / Drop question and says merging the PR counts as Pass.
+context:
+  scaffold_script: place-files.sh

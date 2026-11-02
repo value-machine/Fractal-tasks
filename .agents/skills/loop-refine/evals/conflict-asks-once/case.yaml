@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: conflict-asks-once
+expected_outcome: |
+  The agent detects that the request conflicts with the recorded decision in the theme README, asks the owner exactly one multiple-choice question proposing resolutions (including a challenge option), and does not write a final size or restatement until that is answered.
+context:
+  scaffold_script: place-files.sh

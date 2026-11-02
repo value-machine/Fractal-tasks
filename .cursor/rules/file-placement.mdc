@@ -1,0 +1,52 @@
+---
+alwaysApply: true
+---
+# File Placement Validation Rule
+
+Every file and folder must be allowed by the whitelist in `projectStructure.config.cjs` (enforced: `pnpm validate:structure`, staged in pre-commit, full in CI). Layer placement follows `.claude/rules/architecture.md` § Code placement and § Edge-case placement.
+
+## Before creating a file
+
+1. Pick the location (architecture rule; the conventions below). When unsure, run `pnpm validate:structure`.
+2. If the location is not allowed, say so, suggest the correct one, and explain why. Do not edit `projectStructure.config.cjs` to accommodate it — that is a protected file, changed only for a legitimate new structure with user approval.
+3. Adding many files to one feature: also run `pnpm validate:feature-size` (waivers: `featureBudgets.config.cjs` with a required `reason`).
+
+## Conventions the validator does not explain
+
+- **Pages:** `src/pages/<area>/<Name>Page.tsx` — named files, not `index.tsx` (ambiguous editor tabs), and no barrels in `pages/`. Avoid `src/pages/*/components/` unless a page truly has several page-only components.
+- **Backend:** migrations `supabase/migrations/*.sql`; Edge Functions `supabase/functions/<capability>/index.ts`; other runtimes `cloud-functions/<name>/`.
+- **Agent skills:** `.agents/skills/<name>/SKILL.md` (one per folder; optional `references/` and `patterns.md` where the whitelist permits).
+- **Temporary files:** prefix with `temp_` (planning notes, investigation findings, drafts, one-off test data, migration trackers) so they are easy to find and delete. Not for source, config, permanent docs, or SQL migrations.
+
+## Documentation placement
+
+- **Feature docs:** `src/features/<feature>/README.md` is required and must be staged with that feature's code changes (`pnpm validate:feature-docs:staged`; contract: `documentation/DOC_FEATURE_LOCAL_README.md`). `src/features/<feature>/docs/*.md` only with explicit user approval; prefer code comments and tests.
+- **Temporary / job docs:** `documentation/jobs/temp_job_<name>/` (e.g. `BRIEF.md`, `DEVELOPMENT_PLAN.md`, `DECISIONS.md` — one folder per loop lap, on the lap's branch) or `documentation/temp/`.
+- **Permanent docs:** files directly in `documentation/` must be `DOC_<NAME>.md` (validator-enforced). **Ask** the user before creating one; when in doubt, place it in `documentation/temp/` — it can be promoted later.
+- **Subfolders** of `documentation/` (e.g. `handoffs/`) group reference material and don't need the `DOC_` prefix.
+- **No relative time words for harness or app state** ("today", "current", "now", "the latest"). They go stale the moment the doc is read later. Cite the version (`package.json` `version`, e.g. v0.42.0) or a commit instead. Calendar dates are fine for logs and changelogs.
+
+## File moves and renames
+
+The agent does the move itself — don't hand it to the user just because an IDE can update imports (unless they ask to).
+
+1. Find every reference to the old path and symbol: imports in and of the file, barrels, lazy imports, registries, tests, config, docs.
+2. Confirm the destination is allowed; move it (`git mv` keeps history; keep LF endings).
+3. Update all references, then search for stale ones.
+4. Verify proportionally: type-check plus the relevant lint, tests, structure, and architecture checks.
+
+Never leave a compatibility husk or stale filename to avoid a verified rename.
+
+## Tooling artifacts (build / deploy CLIs)
+
+When tooling writes local state (e.g. Wrangler → `.wrangler/`, Claude Code → `.claude/worktrees/`):
+
+1. Add the path to the tracked **`.gitignore`** (protected — ask). The validator skips untracked paths ignored by tracked `.gitignore` files; personal excludes (`.git/info/exclude`, global) don't count, so results match on every machine. Tracked files are always validated.
+2. Optional fallback for runs without git: add it to `DEFAULT_IGNORE_PATTERNS` in `scripts/project-structure-validator.js`.
+3. Whitelist any new root config file (e.g. `wrangler.jsonc`) in `projectStructure.config.cjs`.
+
+Otherwise `pnpm validate:structure` fails after the first local build. See `documentation/DOC_CLOUDFLARE_WORKERS.md`.
+
+## Related
+
+When changing this rule, check `.claude/rules/architecture.md`, `projectStructure.config.cjs`, `scripts/project-structure-validator.js`, and `documentation/PROJECT-STRUCTURE-VALIDATION.md`.

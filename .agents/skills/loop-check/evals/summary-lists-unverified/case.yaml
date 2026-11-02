@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: summary-lists-unverified
+expected_outcome: |
+  The agent runs the tooling pass and rule subagents plus the component lens on the changed component, and ends with a check summary line that states what was verified and what remains for the owner to test in the app.
+context:
+  scaffold_script: place-files.sh

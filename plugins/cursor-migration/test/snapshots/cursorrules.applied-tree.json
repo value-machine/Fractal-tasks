@@ -1,0 +1,8 @@
+{
+  ".gitignore": ".claude/settings.local.json\n.claude/worktrees/\n",
+  "agent-sync.config.json": "{\n  \"version\": 1,\n  \"mirrors\": [\n    {\"kind\": \"skills\", \"source\": \".agents/skills\", \"target\": \".claude/skills\"}\n  ]\n}\n",
+  "AGENTS.md": "# Agent instructions\n\nAlways write tests first.\n",
+  "CLAUDE.md": "@AGENTS.md\n",
+  "README.md": "# Demo\n",
+  "scripts/sync-agent-config.mjs": "<sync-agent-config template>"
+}

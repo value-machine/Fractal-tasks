@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: third-copy-is-blocker
+expected_outcome: |
+  The agent runs the rule audit including the code-style naming sweep, reports the third copy as a Blocker under code-style § Naming F2 with contract or repo-current basis, and hands it back to loop-build for extraction into one role-named shared module instead of shipping.
+context:
+  scaffold_script: place-files.sh

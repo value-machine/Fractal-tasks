@@ -1,0 +1,28 @@
+# Security Standards
+
+Standard secure-coding practice applies (parameterized queries, output escaping, least privilege, input validation at boundaries, no secrets or PII in logs). This rule covers what is specific to this repo.
+
+## Database verification
+
+Never assume tables, columns, types, or constraints from memory — verify before writing a query or migration.
+
+1. **MCP first:** if an MCP server for the database is available and a tool call succeeds, list the tables and schema with it (general principle: `.claude/rules/api-integration.md`).
+2. **Fallback:** if no server matches, or it is unusable (`needsAuth`, `error`, `loading`, or a call fails after one retry — `.agents/skills/loop-plan/references/research-api.md`), read the migration last applied to the **target environment** (`supabase/migrations/`) or a schema export. Don't assume the newest migration file matches production when they may differ. Never skip verification.
+3. Check column names, types, constraints, and relationships against what the code expects.
+
+RLS policy syntax and performance (Supabase/Postgres): `.claude/rules/database.md` § RLS policy performance.
+
+## Authorization
+
+- Enforce authorization on the server (RLS, Edge Functions). Client-side checks are UX only — never trust them.
+- New user-facing tables get RLS enabled with a policy per operation the app needs (`.claude/rules/database.md`).
+
+## Secrets
+
+- `VITE_*` variables are compiled into the browser bundle: only publishable values (Supabase URL and publishable/anon key). Server secrets live in Supabase Edge Function secrets or Cloudflare settings — catalog: `.claude/rules/platform.md`.
+- Never commit secrets; `.env` is gitignored, `.env.example` holds placeholders only.
+- There may be env files you can't see — respect their restrictions.
+
+## Related Rules
+
+When modifying this rule, check `architecture`, `code-style`, `cloud-functions`, `database`, `project-specific`, and `api-integration` (MCP-first principle).

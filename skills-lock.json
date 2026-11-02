@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "spec-optimize-performance": {
+      "source": "project",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/spec-optimize-performance/references/react-perf-vite.md",
+      "derivedFrom": "vercel-labs/agent-skills (MIT) — adapted; vendored tree removed 2026-06-24"
+    }
+  }
+}

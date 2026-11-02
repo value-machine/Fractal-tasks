@@ -1,0 +1,231 @@
+# Git Workflow
+
+Branch strategy, pull requests, and production. Everything that differs by mode lives in **§ Mode behavior table** — other sections, skills, and docs point at its rows instead of restating them.
+
+**Mode config SSOT:** `src/config/git-workflow.json` (`mode`: `model-a` | `model-b` | `model-c`). Read it with `node scripts/validate-git-workflow.cjs --print-mode` or by opening the file. **Forbidden:** guessing the mode from the current branch name.
+
+## Version Control Standards
+
+Where the version and changelog come from: § Mode behavior table → **version source**. For A/B, `.agents/skills/loop-ship/SKILL.md` is the SSOT for semver, changelog gate, commit format, and `package.json` / `CHANGELOG.md` sync.
+
+**Note:** Configuration lives in `.env` only. Onboarding checklist: `src/config/app-tasks.json` (see `src/features/tasks/README.md`).
+
+## Mode behavior table
+
+| Behavior | `model-a` | `model-b` | `model-c` (default for new forks) |
+|----------|-----------|-----------|-----------------------------------|
+| **daily branch** | `feature/*` / `fix/*` off `develop` | `develop` | any non-`main` branch (incl. Claude Code worktree branches) |
+| **branch gate** | stop on `main` and `develop` (create a feature branch); proceed on `feature/*` / `fix/*` | stop on `main`; proceed on `develop`; stop on `feature/*` (switch to `develop`) | stop on `main` (branch first); proceed anywhere else |
+| **how work lands** | squash PR → `develop` | direct push → `develop` | squash PR → `main`, opened the Claude Code default way (`gh pr create`, base = default branch) |
+| **commit timing** | `loop-ship` commits on its own once `loop-check` passes (skill-loop D25) | same as A | same as A |
+| **version source** | `loop-ship` bumps `package.json` + `CHANGELOG.md` per landing | same as A | release-please release PR built from conventional PR titles; no per-PR bump |
+| **CI watcher** | babysit the PR checks | report the commit URL and stop (no `gh run watch`) | Claude Code desktop PR monitor / Auto-fix (no `gh run watch`) |
+| **staging** | `develop` stable preview (+ per-PR previews) | `develop` preview (may deploy before `test` is green) | per-PR preview URL; Supabase is one shared project until the app has real users, then an isolated staging (see `documentation/DOC_CLOUDFLARE_WORKERS.md` § Staging backend) |
+| **Stop 2 surface** (owner test before production, skill-loop D47) | the `develop` preview after the PR lands on `develop` | the `develop` preview | the PR preview, before merge |
+| **production** | the owner's Pass at Stop 2 → `loop-ship` runs Promote to production (ff `main` ← `develop`) | same as A | the owner's Pass at Stop 2 → `loop-ship` merges the PR (or the owner merges / uses the per-PR auto-merge toggle) |
+| **"land on main / promote / release" means** | run § Promote to production | same as A | merge the PR — **never** dispatch promote |
+| **`main` ruleset** | `deletion` + `non_fast_forward` only | same as A | `pull_request` (squash only) + required `test` and `pr-title` (source: GitHub Actions) + `non_fast_forward` + `deletion`; no bypass actors; no required approvals; branches need not be up to date |
+| **`develop` ruleset** | `pull_request` + required `test` + `non_fast_forward` + `deletion` | no `pull_request`; required `test` + `non_fast_forward` + `deletion` (not a pre-land gate: a bad push can exist and deploy staging before CI finishes) | none (`develop` does not exist) |
+| **fork setup** | create `develop` from `main`; rulesets; § First promotion bootstrap | same as A | rulesets; squash-only + PR title as commit message; allow auto-merge; Cloudflare production branch `main` with previews on all branches; baseline release is automatic (`release-please.yml` `bootstrap` job) |
+
+**Invariants in every mode:** agents never commit or push to `main` (a Claude Code hook enforces it); no force-push to protected branches; **under C, never relax the `main` ruleset**.
+
+## Mode-aware branch gate
+
+Agents run this before editing app code (`src/**`, configs, migrations, etc.):
+
+1. Read the mode (see top of this rule).
+2. Check the current branch.
+3. Apply the **branch gate** row of § Mode behavior table. If it says stop, switch branches (or wait for the user) before editing.
+4. Branches the row does not name (A/B only): ask the user before proceeding.
+
+Plans (`documentation/jobs/**/DEVELOPMENT_PLAN.md`) and rules (`.claude/rules/**`) remain editable on any branch per § Exceptions.
+
+## Branch Strategy
+
+### Model A — feature branches → develop
+
+- Short-lived `feature/*` / `fix/*` from latest `develop`, squash PR back to `develop` after `test` is green.
+- Hotfixes: `feature/*` or `fix/*` off `develop` → merge → promote.
+- Invariant: `main` is always an ancestor of `develop`.
+
+### Model B — direct develop
+
+- `loop-ship` commits and pushes on `develop`; no daily PR.
+- **Concurrency:** prefer one active agent per checkout on `develop`; serialize concurrent sessions.
+- **Hotfix:** fix on `develop`, then promote. Rare manual `fix/*` is a human exception.
+- **Single landing path:** integration commits land on `develop` only. Never squash-merge an app PR into `main`. Never land the same change twice on parallel paths (e.g. squash PR on `main` while an equivalent commit is pushed to `develop`) — that creates sibling SHAs and breaks the ancestor invariant (§ Promote to production § Ancestor failure).
+- Invariant: `main` is always an ancestor of `develop`.
+
+### Model C — Claude Code defaults
+
+Follows Claude Code's documented defaults (worktree sessions, PR monitor, opt-in squash auto-merge: https://code.claude.com/docs/en/desktop). Parallel worktree sessions are expected — each works on its own branch. The `main` ruleset and CI are the guard; release-please owns versions. Everything else: § Mode behavior table, column C.
+
+### Forbidden (A/B)
+
+- Squash PRs `develop` → `main`; routine `main` → `develop` back-merge as release hygiene (old broken model).
+- App-code pushes to `main` other than the promote workflow.
+
+## Branch Protection
+
+Ruleset expectations per mode: § Mode behavior table → **`main` ruleset**, **`develop` ruleset**.
+
+Rulesets (not classic branch protection):
+- Classic `gh api .../branches/main/protection` may return `404` — that is **not** evidence `main` is unprotected.
+- Use `gh api repos/OWNER/REPO/rules/branches/main` (and `.../develop` for A/B).
+
+### Exceptions
+
+#### Safe to Edit on Any Branch
+
+These files may be edited on any branch after user confirmation:
+- Documentation files (`documentation/**/*.md`), including plan files (`documentation/jobs/**/DEVELOPMENT_PLAN.md`)
+- Cursor rules (`.claude/rules/**`)
+- README files
+
+Mechanism-rename reference updates do not need that confirmation. See `.claude/rules/agent-behavior.md` § Protected Files.
+
+App code still follows § Mode-aware branch gate.
+
+#### Emergency Main Branch Changes (Rare Exception)
+
+Only when ALL of the following are true:
+1. User explicitly states "emergency fix on main"
+2. User confirms with "yes, proceed on main"
+3. User acknowledges the risk
+
+Then the agent prepares the change on a branch and hands the user the exact commands; **the user** commits and pushes on `main` themselves. Agents never write to `main` — the main write guard hook blocks it.
+
+## Pull Requests
+
+**A/B:** Model A only for daily work (Model B lands by direct push). **C:** PRs target `main` and are created the Claude Code default way; the A-specific steps below do not apply.
+
+**Preview link (every PR, all modes):** the PR body carries a `## Preview` section with the live preview URL of the PR's branch. Take it from the `cloudflare-workers-and-pages[bot]` comment on the PR ("Preview URL: …", the branch alias URL, not the per-commit one). If that comment is missing, the URL is `https://<alias>-<worker name>.<workers.dev subdomain>.workers.dev` (alias = branch name lowercased, `/` and other non-alphanumerics → `-`; this repo: `https://<alias>-bronze-plate-harness.tom-fab.workers.dev`); verify it before writing it (HTTP 200, page loads `/assets/*.js`). Until then, write `Preview: pending (Workers Builds)` and edit the PR body to the real link when it appears. Also give the link in the chat handoff next to the PR link.
+
+**Who reads what (every PR, all modes):** the PR body is the record for agents and reviewers. The owner reads only the short chat handoff (`.agents/skills/loop-verdict/SKILL.md` § Output) and tests the preview; never require them to read the PR body to decide.
+
+Model A:
+
+- Keep PRs focused and reasonably sized; include a clear description.
+- **Always target `develop`.** Prefer `gh pr create --base develop --head <feature-branch>`. **Never** paste GitHub's bare `…/pull/new/<branch>` URL without an explicit `base=develop` — that UI defaults to `main` and risks a production-bound PR.
+- **Create with `gh` (required pattern):**
+  1. Confirm branch is pushed: `git push -u origin HEAD` if needed.
+  2. Create: `gh pr create --base develop --head <feature-branch> --title "<type>: <short title>" --body "<markdown>"`.
+  3. Verify base: `gh pr view --json baseRefName,url` — **`baseRefName` must be `develop`**.
+  4. On PowerShell, do **not** use bash `<<'EOF'` heredocs. Pass `--body` via a PowerShell here-string or a temp file. In Git Bash (Claude Code), a heredoc is fine.
+  5. **Chat handoff (required):** In the same assistant message that reports the PR, include a **markdown link** whose label is the PR number (e.g. `#50`) and whose target is the PR `html_url` from `gh pr create` or `gh pr view --json number,url`. Example: `[#50](https://github.com/TMI-apps/plate-harness/pull/50)`.
+- **PR body template:**
+
+```markdown
+## Summary
+- <1–3 bullets: why / what landed>
+
+## Preview
+- <Workers Builds preview URL for this branch>
+
+## Verified
+- <checks run and what passed, e.g. CI `test` green, base is `develop`>
+
+## Not verified
+- <what no check covered>
+```
+
+  No `- [ ]` task lists in a PR body (all modes): GitHub renders them as clickable boxes that read as a to-do for the owner, and nobody has to tick anything (merge-is-pass D6).
+
+- Title: conventional `type: Subject` (all modes — under C, release-please reads it and CI enforces it via `pr-title`).
+- Wait for required `test` check before merge; keep branch up to date with `develop`.
+- Squash merge for `feature/*` → `develop`; auto-delete head branches.
+
+### Diagnosing "merge blocked" / "rule violation"
+
+- `gh pr view <N> --json mergeable,mergeStateStatus,statusCheckRollup`
+- `mergeable: MERGEABLE` + `mergeStateStatus: BLOCKED` almost always means a **required status check is still `IN_PROGRESS` or missing** — wait, then re-check (under C the desktop PR monitor shows this).
+- Only investigate deeper once `statusCheckRollup` is fully green but state is still `BLOCKED`.
+
+### Divergence prevention (A/B)
+
+The old broken model used squash `develop` → `main` plus mandatory `main` → `develop` back-merge. **Forbidden.** Production promotion is **fast-forward only** via `promote-to-production.yml`.
+
+If a Model A `feature/*` PR shows `CONFLICTING`, merge latest `develop` into the feature branch, resolve, push.
+
+If **Promote to production** fails with "main is not an ancestor of develop", run § Promote to production § Ancestor failure — do not squash-merge `develop` into `main` or force-push.
+
+## Promote to production
+
+**A/B only.** Under C, production = the user merging the PR (§ Mode behavior table → **production**); never dispatch promote.
+
+**Workflow:** `.github/workflows/promote-to-production.yml` (`workflow_dispatch` only).
+
+**Preconditions:**
+- `main` is a strict ancestor of `develop`
+- `develop` is ahead of `main`
+- Latest commit on `develop` has green combined status (`test` CI)
+
+**Agent UX:** Read the mode first. Under A/B, when the user says "promote to production", colloquial **"land on main"**, **"PR develop to main"**, **"merge develop to main"**, or **"release to production"**, **do not** open a `develop` → `main` PR. Run the **pre-promote check** below, then `gh workflow run promote-to-production.yml`, report the run URL, and stop. Do not `gh run watch`.
+
+**Pre-promote check (agent, before `workflow_dispatch`):**
+
+1. `git fetch origin main develop`
+2. `git merge-base --is-ancestor origin/main origin/develop` — must exit **0**. On PowerShell, verify `$LASTEXITCODE` after this command alone (see `.claude/rules/platform.md` § Exit Code Handling); in Git Bash, check `$?`; do not trust a chained `echo` on the same line.
+3. `origin/develop` must be **ahead** of `origin/main` (not equal).
+4. Latest `develop` tip has green CI `test` (same bar as the workflow).
+
+If step 2 fails, run § Ancestor failure before triggering promote.
+
+**Why no PAT or bypass actor is needed (A/B):** `main`'s ruleset only enforces `deletion` + `non_fast_forward`, so the workflow's built-in `GITHUB_TOKEN` can fast-forward. Daily integration + CI happen on `develop`.
+
+**Ruleset design (A/B, do not regress):**
+- Never add **GitHub Actions** to a ruleset bypass list for this pattern
+- Never require `PROMOTE_GH_TOKEN` for fork onboarding
+- `main` = `deletion` + `non_fast_forward` only; `develop` per § Mode behavior table
+
+**Failure modes (A/B):**
+- `403` / PR required on `main` — first confirm the mode is A/B (under C the PR requirement is intended — stop and merge the PR instead). Under A/B, reduce `main` ruleset to `deletion` + `non_fast_forward`.
+- `main is not an ancestor of develop` — § Ancestor failure (recurring when Model B work hits `main` via squash PR while `develop` has a parallel commit)
+- Already same commit — nothing to promote
+
+**Ancestor failure (reconcile, then re-promote):**
+
+Typical cause: the same logical change landed on **`main`** (squash PR with wrong base or accidental merge to `main`) and on **`develop`** (direct push or different SHA) after a shared parent — histories fork; promote cannot fast-forward.
+
+1. Confirm: `git log --oneline --graph origin/main origin/develop -10` shows sibling commits after one parent.
+2. On **`develop`**: `git checkout develop && git pull origin develop && git merge origin/main` (healing merge — **not** the forbidden routine back-merge loop).
+3. Push `develop`; wait until CI `test` is green on the new tip.
+4. Re-run pre-promote check; then `gh workflow run promote-to-production.yml`.
+
+**Prevention (Model B):** No app PRs to `main`; no duplicate landing on `main` + `develop`. **Model A:** squash PRs target **`develop` only**; promote is the only path to `main`.
+
+**One-time fork setup:** § Mode behavior table → **fork setup** (walked by `.agents/skills/loop-backlog/references/onboarding.md` § Branch workflow gate).
+
+**First promotion bootstrap (A/B):**
+- GitHub registers `workflow_dispatch` only after the workflow file exists on default branch (`main`).
+- After the first landing on `develop` that includes the workflow file, `main` must be fast-forwarded once. **User runs this** (agents are blocked by the main write guard):
+
+```bash
+git fetch origin && git checkout main && git merge --ff-only origin/develop && git push origin main
+```
+
+- Use Promote thereafter.
+
+## Commit and Push Workflow
+
+**Skill:** `.agents/skills/loop-ship/SKILL.md` (commit, push, PR, CI) — the owner's verdict is `.agents/skills/loop-verdict/SKILL.md`. Timing, landing, and CI follow-up per § Mode behavior table → **commit timing**, **how work lands**, **CI watcher**, **Stop 2 surface**.
+
+1. One lap = one branch (worktree under Model C). Every commit on it belongs to the lap.
+2. **Commit:** once `loop-check` passes — cleanup, version/changelog per **version source**, a conventional `type: Subject` title with a detailed body (`loop-ship/references/commit-standards.md`).
+3. **Push + land:** clean tree, existing commits only; push per **how work lands**; drive CI to green per **CI watcher**.
+4. **Production** only after the owner's Pass at Stop 2 (**production** row). Agents never write to `main` directly.
+
+---
+
+## Related Rules
+
+**When modifying this rule, check these rules for consistency:**
+
+- `.claude/rules/agent-behavior.md` — protected files, success reporting (verified vs unverified)
+- `.claude/rules/platform.md` — shell rules (PowerShell + Git Bash) for git/gh invocations
+
+**Rules that reference this rule:**
+
+- `.claude/rules/cloud-functions.md` — branch model for Edge deploys
+- `.claude/rules/testing.md` — branch model for function testing
