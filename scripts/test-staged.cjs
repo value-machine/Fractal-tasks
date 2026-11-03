@@ -59,6 +59,44 @@ function logMode(line) {
 }
 
 /**
+ * Variables git sets for a hook that pin every git call to this repository
+ * (`git rev-parse --local-env-vars`). Inside a linked worktree GIT_DIR is absolute, so a test
+ * that runs git in its own temp folder would commit to, check out and configure the real repo.
+ */
+const REPO_LOCATION_GIT_VARS = [
+  'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+  'GIT_CONFIG',
+  'GIT_CONFIG_PARAMETERS',
+  'GIT_CONFIG_COUNT',
+  'GIT_OBJECT_DIRECTORY',
+  'GIT_DIR',
+  'GIT_WORK_TREE',
+  'GIT_IMPLICIT_WORK_TREE',
+  'GIT_GRAFT_FILE',
+  'GIT_INDEX_FILE',
+  'GIT_NO_REPLACE_OBJECTS',
+  'GIT_REPLACE_REF_BASE',
+  'GIT_PREFIX',
+  'GIT_INTERNAL_SUPER_PREFIX',
+  'GIT_SHALLOW_FILE',
+  'GIT_COMMON_DIR',
+];
+
+/**
+ * Environment for spawned test runs: the caller's environment without the hook's
+ * repository-location git variables, so tests always run against their own fixtures.
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {NodeJS.ProcessEnv}
+ */
+function buildChildEnv(env) {
+  const childEnv = {...env};
+  for (const name of REPO_LOCATION_GIT_VARS) {
+    delete childEnv[name];
+  }
+  return childEnv;
+}
+
+/**
  * @typedef {{
  *   spawnSync?: typeof spawnSync,
  *   runPnpm?: (args: string[], cwd?: string) => number,
@@ -81,7 +119,7 @@ function createRunners(overrides = {}) {
         cwd,
         shell: isWin,
         stdio: 'inherit',
-        env: process.env,
+        env: buildChildEnv(process.env),
       });
       if (result.error) {
         throw result.error;
@@ -95,7 +133,7 @@ function createRunners(overrides = {}) {
       const result = spawn('pnpm', buildVitestArgv(vitestPaths), {
         shell: isWin,
         encoding: 'utf-8',
-        env: process.env,
+        env: buildChildEnv(process.env),
       });
       const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
       if (result.stdout) {
@@ -199,6 +237,7 @@ module.exports = {
   filterExistingPaths,
   resolveRunPlan,
   buildVitestArgv,
+  buildChildEnv,
   createRunners,
   executePlan,
   runStagedTests,
