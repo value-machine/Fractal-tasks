@@ -87,8 +87,33 @@ async function handleApi(path: string, url: URL): Promise<Response> {
   return json({ error: "Not found" }, 404);
 }
 
+/** Constant-time comparison, so response timing does not reveal how much of a token matched. */
+function tokensMatch(given: string, expected: string): boolean {
+  const a = new TextEncoder().encode(given);
+  const b = new TextEncoder().encode(expected);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
+  return diff === 0;
+}
+
+/**
+ * Writes go through MCP, so MCP needs the shared secret POINT_AT_MCP_TOKEN as a bearer token
+ * until contributor sign-in exists. Fails closed: without the secret set, MCP is refused.
+ */
+function mcpAuthError(req: Request): Response | null {
+  const expected = Deno.env.get("POINT_AT_MCP_TOKEN");
+  if (!expected) return json({ error: "MCP is not enabled on this deployment" }, 503);
+  const given = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (!given || !tokensMatch(given, expected)) {
+    return json({ error: "Unauthorized" }, 401, { "www-authenticate": "Bearer" });
+  }
+  return null;
+}
+
 /** MCP over streamable HTTP, stateless: a fresh server and transport per request. */
 async function handleMcp(req: Request): Promise<Response> {
+  const denied = mcpAuthError(req);
+  if (denied) return denied;
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

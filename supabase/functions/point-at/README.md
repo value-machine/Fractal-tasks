@@ -37,13 +37,16 @@ Actor comes from the `x-point-at-actor` request header (default `anonymous agent
 supabase functions deploy point-at --no-verify-jwt
 ```
 
-`--no-verify-jwt` is required for two reasons: the browser calls with a publishable key, which is not a user JWT, and agents call `/mcp` with no Supabase session at all. This also means **the function enforces no authentication** (see Known gaps).
+`--no-verify-jwt` is required for two reasons: the browser calls with a publishable key, which is not a user JWT, and agents call `/mcp` with no Supabase session at all. The function does its own check instead:
+
+- `/api/*` (read-only) is public.
+- `/mcp` (reads and writes) requires `Authorization: Bearer <POINT_AT_MCP_TOKEN>`, a shared secret set as an Edge Function secret (`supabase secrets set POINT_AT_MCP_TOKEN=<long random value>`). Without the secret set, `/mcp` answers 503, so a fresh deploy is closed by default. Rotate it by setting a new value; every agent then needs the new token.
 
 An Edge Function has no staging: a deploy affects production and every preview at once (`.claude/rules/testing.md` § Edge Functions testing). Apply the migration first, then deploy. Test with the procedure below, ideally against a scratch project, before deploying to the shared one.
 
 ## Manual test procedure
 
-Set `BASE=https://<ref>.supabase.co/functions/v1/point-at` and `KEY=<publishable key>`. The seed (`_shared/pointAt/seed.ts`) is not wired to a route, so an empty database returns `[]` from `/api/roots`; create a root through MCP first (step 8).
+Set `BASE=https://<ref>.supabase.co/functions/v1/point-at`, `KEY=<publishable key>` and `TOKEN=<POINT_AT_MCP_TOKEN>`. The seed (`_shared/pointAt/seed.ts`) is not wired to a route, so an empty database returns `[]` from `/api/roots`; create a root through MCP first (step 9).
 
 1. `curl -s -H "apikey: $KEY" "$BASE/api/roots"` returns a JSON array (200).
 2. Take an `id` from step 1: `curl -s -H "apikey: $KEY" "$BASE/api/nodes/<id>"` returns `node`, `ancestors`, `children`, `events`, `links`.
@@ -52,17 +55,18 @@ Set `BASE=https://<ref>.supabase.co/functions/v1/point-at` and `KEY=<publishable
 5. `curl -s "$BASE/api/views/donor"` and `.../api/views/executor?label=peace` return arrays; `.../api/views/other` returns 400.
 6. `curl -s "$BASE/api/process" | head` shows the process document.
 7. CORS: `curl -si -X OPTIONS -H "origin: http://localhost:5173" "$BASE/api/roots"` returns 204 with `access-control-allow-origin: *`.
-8. MCP initialize:
+8. MCP without the token: `curl -si "$BASE/mcp" -X POST -d '{}'` returns 401 (503 if the secret is not set).
+9. MCP initialize:
 
    ```bash
-   curl -s "$BASE/mcp" -H "content-type: application/json" -H "accept: application/json, text/event-stream" \
+   curl -s "$BASE/mcp" -H "authorization: Bearer $TOKEN" -H "content-type: application/json" -H "accept: application/json, text/event-stream" \
      -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"curl","version":"0"}}}'
    ```
 
    Then list the tools (stateless, so no session header is needed):
 
    ```bash
-   curl -s "$BASE/mcp" -H "content-type: application/json" -H "accept: application/json, text/event-stream" \
+   curl -s "$BASE/mcp" -H "authorization: Bearer $TOKEN" -H "content-type: application/json" -H "accept: application/json, text/event-stream" \
      -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
    ```
 
@@ -72,12 +76,13 @@ Set `BASE=https://<ref>.supabase.co/functions/v1/point-at` and `KEY=<publishable
 
 MCP URL: `https://<ref>.supabase.co/functions/v1/point-at/mcp`.
 
-- **Claude Code:** `claude mcp add --transport http point-at https://<ref>.supabase.co/functions/v1/point-at/mcp --header "x-point-at-actor: Your Name via Claude Code"`
-- **claude.ai:** Settings, Connectors, add a custom connector with that URL. The connector UI cannot send a custom header, so actors there fall back to `anonymous agent` unless the agent passes the `actor` argument; tell it to.
+- **Claude Code:** `claude mcp add --transport http point-at https://<ref>.supabase.co/functions/v1/point-at/mcp --header "Authorization: Bearer <token>" --header "x-point-at-actor: Your Name via Claude Code"`
+- **Cursor / Claude Desktop:** an HTTP MCP server entry with that URL and the same two headers (Claude Desktop through a local bridge such as `mcp-remote` with `--header`).
+- **claude.ai web connectors:** not yet. They authenticate with OAuth and cannot send the token, so they wait for contributor sign-in.
 
 ## Known gaps
 
-- **No authentication.** Anyone with the URL can read the whole tree and, through `/mcp`, create, claim, close or overtake nodes. Actors are free-text names that anyone can claim; the "reviewer is not the author" rule compares those names and is not a security boundary. Fine for a prototype with example data, not for real use.
+- **One shared token, no per-person sign-in.** Anyone with the URL can read the whole tree; anyone with the token can create, claim, close or overtake nodes. Actors are free-text names; the "reviewer is not the author" rule compares those names and is not a security boundary. The tree lives in the shared Inventhor website project (ref `kyzhhofupypwmfjpbyfc`), so the token guards that database too. Real contributor identity is a backlog task.
 - **Embeddings are unfilled.** `nodes.embedding` exists and is indexed, but nothing writes or queries it; search is full-text plus `ilike`.
 - **No rate limiting.** `.claude/rules/project-specific.md` asks for it on public and write endpoints. It is not added because its helper keys limits on a user id, and this function has no user (no auth yet); an IP or actor key would be spoofable. It should land together with an auth decision.
 - **No tests run.** The function and migration were written without Deno or a Postgres available and have not been executed.
