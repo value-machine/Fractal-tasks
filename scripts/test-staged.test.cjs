@@ -3,6 +3,8 @@ const assert = require('node:assert/strict');
 const {getFullSuiteSrcThreshold} = require('./change-classify.cjs');
 const {
   buildVitestArgv,
+  buildChildEnv,
+  createRunners,
   resolveRunPlan,
   executePlan,
   runStagedTests,
@@ -21,6 +23,42 @@ describe('test-staged executor', () => {
         'src/a.ts',
         'src/b.ts',
       ]);
+    });
+  });
+
+  describe('buildChildEnv', () => {
+    test('should drop repository-location git variables when called from a git hook', () => {
+      const env = buildChildEnv({
+        PATH: '/usr/bin',
+        GIT_DIR: '/repo/.git/worktrees/wt',
+        GIT_INDEX_FILE: '/repo/.git/worktrees/wt/index',
+        GIT_WORK_TREE: '/wt',
+        GIT_COMMON_DIR: '/repo/.git',
+        GIT_PREFIX: 'src/',
+        GIT_AUTHOR_NAME: 'Someone',
+      });
+      assert.deepEqual(env, {PATH: '/usr/bin', GIT_AUTHOR_NAME: 'Someone'});
+    });
+
+    test('should pass the cleaned environment to spawned test runs when running pnpm', () => {
+      const seen = [];
+      const runners = createRunners({
+        spawnSync: (_cmd, _args, opts) => {
+          seen.push(opts.env);
+          return {status: 0, stdout: '', stderr: ''};
+        },
+      });
+      const previous = process.env.GIT_DIR;
+      process.env.GIT_DIR = '/repo/.git/worktrees/wt';
+      try {
+        runners.runPnpm(['test:classify']);
+        runners.runVitestRelated(['src/a.ts']);
+      } finally {
+        if (previous === undefined) delete process.env.GIT_DIR;
+        else process.env.GIT_DIR = previous;
+      }
+      assert.equal(seen.length, 2);
+      for (const env of seen) assert.equal(env.GIT_DIR, undefined);
     });
   });
 

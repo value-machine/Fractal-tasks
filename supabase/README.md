@@ -26,6 +26,18 @@ The browser side is `src/features/error-reporting/`: it calls `upsert_error_log(
 
 `purge_old_error_logs()` is not scheduled yet. Run it with the service role until a scheduled job exists.
 
+## Point At tree
+
+Migration `*_point_at_tree.sql`. Served by the `point-at` Edge Function (`functions/point-at/README.md`).
+
+| Table         | Holds                                                                                         | Who may write                | Who may read                 |
+| ------------- | --------------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------- |
+| `nodes`       | The task tree: one row per node, `parent_id` is the split-from relation (set once, immutable) | Only the `point-at` function | Only the `point-at` function |
+| `node_events` | Per-node log: created, split, claimed, reports, reviews, bounce-backs                         | Only the `point-at` function | Only the `point-at` function |
+| `node_links`  | "Also serves" links across branches                                                           | Only the `point-at` function | Only the `point-at` function |
+
+RLS is enabled with no policies and table privileges are revoked from `anon` and `authenticated`, so the publishable key cannot touch these tables. The function connects with the `SUPABASE_DB_URL` secret (role `postgres`, bypasses RLS) and exposes a read-only JSON API to the browser and an MCP endpoint to agents. That endpoint has no authentication yet: the tables are closed to the API keys but writes are open to anyone who has the function URL (see the function README § Known gaps). `nodes.embedding` (pgvector, in the `extensions` schema) is not filled yet.
+
 ## Applying migrations
 
 Order for a change: with one project, test on a scratch Postgres and apply when the lap is ready; with isolated staging, staging while the PR is open and production after the PR merges, from the same file. A file name carries the version the target database recorded, so list the applied migrations of each project and compare them with the files here. Either the Supabase connector or the Supabase CLI can apply them; the project owner chooses.
