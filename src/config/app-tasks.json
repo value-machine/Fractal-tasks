@@ -11,12 +11,42 @@
   },
   {
     "title": "Define app vision",
-    "description": "Collaborate with the coding agent to fill documentation/DOC_APP_VISION.md (problem, persona, app role). Replace placeholder bullets with real prose and change Vision status from DRAFT to ACTIVE when complete. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § App vision & goals gate.",
-    "status": "to-do"
+    "description": "Collaborate with the coding agent to fill documentation/DOC_APP_VISION.md (problem, persona, app role). Replace placeholder bullets with real prose and change Vision status from DRAFT to ACTIVE when complete. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § App vision & goals gate. Status: drafted by the agent from the Point At concept (2026-11-02); waiting for the owner to confirm and switch DRAFT to ACTIVE.",
+    "status": "in-progress"
   },
   {
     "title": "Make the interface yours",
     "description": "Everything visible still shows the template. Your coding agent renames the app (browser tab title in index.html, top bar in src/layouts/Topbar/Topbar.tsx), walks through the home page and top bar with you (keep or change each), and removes the harness overview card (src/features/harness-overview/, src/pages/HarnessOverviewPage.tsx and its test, the /harness route in src/App.tsx, the card in src/pages/HomePage.tsx, public/harness-overview.png, plus its README.md image and documentation/DOC_INDEX.md row). Then restyle via the design token files in src/shared/theme/tokens/ and run pnpm tokens:build (documentation/DOC_THEMING.md); verify both modes with the theme icon in the profile menu. It also replaces the template icon and adds your app icons, theme color and link-preview card (title, description, image) in public/ and index.html; you supply a logo or approve a drawn one, and paste your preview link into a chat app to check the card. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § Configuration tasks gate (Interface).",
+    "status": "to-do"
+  },
+  {
+    "title": "Point At MVP: shared tree backend and navigation view",
+    "description": "Port the Point At prototype into this harness: Supabase migration for the node tree, an Edge Function serving the MCP server (/mcp) and a read-only JSON API, and a React navigation view (roots, node focus, role views, search). Source: documentation/DOC_POINT_AT_PROCESS.md and the prototype zip. Depends on: Configure Supabase (a project to deploy to).",
+    "status": "in-progress"
+  },
+  {
+    "title": "Contributor identity for MCP writes",
+    "description": "Actors are free-text names; anyone with the function URL can write. Decide and build how contributors are identified (e.g. Supabase Auth with OAuth for MCP clients, per-person API tokens) before the tree is shared publicly. Auth permission model: needs an owner decision. Context: DOC_POINT_AT_RISKS.md § Process and governance.",
+    "status": "to-do"
+  },
+  {
+    "title": "Rate limiting on the point-at Edge Function",
+    "description": "Add Postgres-backed rate limiting to the point-at function per .claude/rules/project-specific.md once contributor identity exists (limits need a stable key per actor).",
+    "status": "to-do"
+  },
+  {
+    "title": "Fill node embeddings and add semantic search",
+    "description": "The embedding column (384 dims, Supabase gte-small) exists but nothing fills it. Generate embeddings on create/update in the Edge Function and add a semantic search path next to full-text search.",
+    "status": "to-do"
+  },
+  {
+    "title": "Run the Point At first tests",
+    "description": "Run the proposed first tests in documentation/DOC_POINT_AT_RISKS.md (sandwich, awkward task, mid-tree entry, adversarial plan, human leaf) against the deployed MCP server with real agents, and record results in the process change log.",
+    "status": "to-do"
+  },
+  {
+    "title": "Design adversarial traversal",
+    "description": "Open question in DOC_POINT_AT_RISKS.md: agents that continually challenge existing goals so nothing is locked in. Decide when they run, how a node is challenged and what closes or keeps it; then add it to the process doc and the MCP tools.",
     "status": "to-do"
   },
   {
