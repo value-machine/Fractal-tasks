@@ -58,3 +58,23 @@ export const getSupabase = (): SupabaseClient => {
 if (isSupabaseConfigured()) {
   getSupabase();
 }
+
+/** Connection details for calling a Supabase Edge Function over plain fetch. */
+export interface EdgeFunctionConfig {
+  /** `<project url>/functions/v1/<name>` without a trailing slash. */
+  baseUrl: string;
+  /** `apikey` + bearer headers using the publishable key. */
+  headers: Record<string, string>;
+}
+
+/**
+ * Returns the base URL and public headers for an Edge Function, or null when Supabase is not
+ * configured. For functions that expose their own HTTP API (the Supabase client cannot route those).
+ */
+export const getEdgeFunctionConfig = (name: string): EdgeFunctionConfig | null => {
+  if (!isSupabaseConfigured() || !supabaseUrl || !supabaseAnonKey) return null;
+  return {
+    baseUrl: `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/${name}`,
+    headers: { apikey: supabaseAnonKey, Authorization: `Bearer ${supabaseAnonKey}` },
+  };
+};

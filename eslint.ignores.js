@@ -16,4 +16,7 @@ export default [
   'public/',
   'documentation/',
   'vite-plugin-*.ts', // Vite plugin files
+  // Supabase Edge Functions run on Deno (npm:/jsr: imports, Deno globals) and sit outside
+  // tsconfig.app.json, so the type-aware rules cannot parse them. Check them with Deno instead.
+  'supabase/functions/',
 ];

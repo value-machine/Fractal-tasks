@@ -12,6 +12,18 @@ import { QueryErrorBoundary } from "@/components/common/QueryErrorBoundary";
 import { reportError } from "@/features/error-reporting/services/errorReportService";
 
 const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
+const GoalTreeHomePage = lazy(() =>
+  import("@/pages/goal-tree/GoalTreeHomePage").then((m) => ({ default: m.GoalTreeHomePage }))
+);
+const GoalNodePage = lazy(() =>
+  import("@/pages/goal-tree/GoalNodePage").then((m) => ({ default: m.GoalNodePage }))
+);
+const GoalRoleViewPage = lazy(() =>
+  import("@/pages/goal-tree/GoalRoleViewPage").then((m) => ({ default: m.GoalRoleViewPage }))
+);
+const GoalSearchPage = lazy(() =>
+  import("@/pages/goal-tree/GoalSearchPage").then((m) => ({ default: m.GoalSearchPage }))
+);
 const HarnessOverviewPage = lazy(() =>
   import("@/pages/HarnessOverviewPage").then((m) => ({ default: m.HarnessOverviewPage }))
 );
@@ -40,7 +52,11 @@ function AppContent() {
           <Suspense fallback={<PageLoadingState />}>
             <Routes>
               <Route element={<MainLayout />}>
-                <Route path="/" element={<HomePage />} />
+                <Route path="/" element={<GoalTreeHomePage />} />
+                <Route path="/nodes/:id" element={<GoalNodePage />} />
+                <Route path="/views/:role" element={<GoalRoleViewPage />} />
+                <Route path="/search" element={<GoalSearchPage />} />
+                <Route path="/welcome" element={<HomePage />} />
                 <Route path="/harness" element={<HarnessOverviewPage />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
