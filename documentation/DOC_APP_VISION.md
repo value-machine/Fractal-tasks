@@ -1,6 +1,6 @@
 # App vision & goals
 
-> **Vision status:** `DRAFT` — Drafted by the agent from the owner's Point At concept (README, PROCESS and RISKS documents, 2026-11-02). The owner has not confirmed it yet; change `DRAFT` to `ACTIVE` on this line once they have.
+> **Vision status:** `ACTIVE` — Drafted by the agent from the owner's Point At concept (README, PROCESS and RISKS documents, 2026-11-02); confirmed by the owner merging value-machine/Fractal-tasks#1 (2026-11-04).
 
 Product SSOT for problem, persona, and the app's role. Agents read this before ambiguous product or UX work. The product rules themselves (node, leaf, focus, review) live in [`DOC_POINT_AT_PROCESS.md`](./DOC_POINT_AT_PROCESS.md); what is still undecided lives in [`DOC_POINT_AT_RISKS.md`](./DOC_POINT_AT_RISKS.md).
 

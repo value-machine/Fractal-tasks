@@ -1,6 +1,6 @@
 {
   "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
-  "name": "plate-harness theme",
+  "name": "Point At theme",
   "version": "2025.10",
   "description": "App theme. Build: pnpm tokens:build -> tokens.generated.css. Guide: documentation/DOC_THEMING.md",
   "sets": {

@@ -9,9 +9,9 @@ import { QueryDevtoolsGate } from "@/components/common/QueryDevtoolsGate";
 import { MainLayout } from "@/layouts/MainLayout/MainLayout";
 import { PageLoadingState } from "@/components/common/PageLoadingState";
 import { QueryErrorBoundary } from "@/components/common/QueryErrorBoundary";
+import { useAuthCallbackHandler } from "@/features/auth/hooks/useAuthCallbackHandler";
 import { reportError } from "@/features/error-reporting/services/errorReportService";
 
-const HomePage = lazy(() => import("@/pages/HomePage").then((m) => ({ default: m.HomePage })));
 const GoalTreeHomePage = lazy(() =>
   import("@/pages/goal-tree/GoalTreeHomePage").then((m) => ({ default: m.GoalTreeHomePage }))
 );
@@ -23,9 +23,6 @@ const GoalRoleViewPage = lazy(() =>
 );
 const GoalSearchPage = lazy(() =>
   import("@/pages/goal-tree/GoalSearchPage").then((m) => ({ default: m.GoalSearchPage }))
-);
-const HarnessOverviewPage = lazy(() =>
-  import("@/pages/HarnessOverviewPage").then((m) => ({ default: m.HarnessOverviewPage }))
 );
 const TasksPage = lazy(() =>
   import("@/pages/tasks/TasksPage").then((m) => ({ default: m.TasksPage }))
@@ -43,6 +40,8 @@ const reportRenderError = (error: Error): void => reportError(error, "react");
 function AppContent() {
   const location = useLocation();
   const isTasksRoute = location.pathname === "/tasks";
+  // OAuth (PKCE) and recovery redirects land on "/" whatever page renders there.
+  useAuthCallbackHandler();
 
   return (
     <>
@@ -56,8 +55,6 @@ function AppContent() {
                 <Route path="/nodes/:id" element={<GoalNodePage />} />
                 <Route path="/views/:role" element={<GoalRoleViewPage />} />
                 <Route path="/search" element={<GoalSearchPage />} />
-                <Route path="/welcome" element={<HomePage />} />
-                <Route path="/harness" element={<HarnessOverviewPage />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />

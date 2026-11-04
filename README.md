@@ -2,10 +2,6 @@
 
 A production-ready harness (boilerplate + agent harness) for building React applications with TypeScript, Vite, Tailwind CSS + shadcn/ui, and Supabase. It enforces strict architectural rules and includes authentication as an example feature.
 
-[![How work moves through the harness: request, brief, plan, build, check, ship, then your verdict, with helper skills and guardrails](public/harness-overview.png)](public/harness-overview.png)
-
-_How work moves through the agent harness, in plain language. The running app serves the same page at `/harness`._
-
 ## Features
 
 - ⚡️ **Vite** - Fast build tool and dev server

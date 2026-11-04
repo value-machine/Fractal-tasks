@@ -11,7 +11,7 @@ export const Topbar = () => {
       <div className="flex h-toolbar items-center px-4 sm:px-6">
         <div className="flex-1 font-heading text-xl font-bold">
           <Link to="/" className="text-primary no-underline">
-            Plate Harness
+            Point At
           </Link>
         </div>
 

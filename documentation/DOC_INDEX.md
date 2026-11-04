@@ -18,7 +18,6 @@ Central navigation for plate-harness documentation. For authoritative rules and 
 | **Agent workflow layers (skills vs rules)** | [DOC_AGENT_WORKFLOW_LAYERS.md](./DOC_AGENT_WORKFLOW_LAYERS.md) — includes **The product-owner loop** |
 | **Handoffs (portable notes)** | [handoffs/README.md](./handoffs/README.md) |
 | **Agent skill: persist lessons** | [`.agents/skills/meta-learn-lessons/SKILL.md`](../.agents/skills/meta-learn-lessons/SKILL.md) |
-| **Harness overview (designed flowchart for non-technical readers; route `/harness`)** | [`src/features/harness-overview/README.md`](../src/features/harness-overview/README.md) · [preview image](../public/harness-overview.png) |
 | **Architecture** | [ARCHITECTURE.md](../ARCHITECTURE.md) |
 | **Architecture migration** | [DOC_ARCHITECTURE_MIGRATION_INSTRUCTIONS.md](./DOC_ARCHITECTURE_MIGRATION_INSTRUCTIONS.md) |
 | **Agent: human onboarding** | [`loop-backlog/references/onboarding.md`](../.agents/skills/loop-backlog/references/onboarding.md) |
