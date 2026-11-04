@@ -13,7 +13,7 @@ Read-only navigation of the shared goal tree ("Point At"): zoomable nested tiles
 | Hooks      | `hooks/useGoalTreeQueries.ts`, `hooks/useGoalTreeMcpUrl.ts` | TanStack Query hooks with `goalTreeKeys`; MCP URL for the hint                                        |
 | Components | `components/Goal*.tsx`, `AgentHint.tsx`                     | Tiles, rows, pills, breadcrumbs, node detail, nav + search, query-state wrapper, agent hint           |
 
-Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:role` (`donor` or `executor`), `/search?q=`, wired in `src/App.tsx`. The previous template home page moved to `/welcome`.
+Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:role` (`donor` or `executor`), `/search?q=`, wired in `src/App.tsx`.
 
 ## Dependencies
 
@@ -23,6 +23,6 @@ Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:rol
 
 ## Decisions
 
-- The tree is the home route; the template home (sign-in + harness card) moved to `/welcome`.
+- The tree is the home route.
 - Read-only by design: no mutations, so no optimistic-update code.
 - Prototype zoom animations and hash routes were not ported; React Router paths replace them.

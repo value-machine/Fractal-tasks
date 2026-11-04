@@ -28,5 +28,10 @@
     "title": "Fix Google sign-in returning to the wrong site with a PKCE error",
     "description": "Seen on the production site after signing in with Google from a preview: 'PKCE code verifier not found in storage'. Supabase auth logs show the sign-in started on the preview origin, Supabase redirected to the Site URL (production) because the app's bare-origin redirect address did not match the '/**' allow-list pattern, and production then failed with bad_code_verifier. The app also exchanges the code twice (supabase-js does it during client init, then the callback hook again), which would show a false error even when sign-in works. Decisions: documentation/DOC_DECISION_LOG.md § google-signin-return. Result: merged in PR #29 (0817eac, fix(auth): return Google sign-in to the app root and skip a redundant code exchange).",
     "status": "done"
+  },
+  {
+    "title": "Define app vision",
+    "description": "Collaborate with the coding agent to fill documentation/DOC_APP_VISION.md (problem, persona, app role). Replace placeholder bullets with real prose and change Vision status from DRAFT to ACTIVE when complete. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § App vision & goals gate. Status: drafted by the agent from the Point At concept (2026-11-02); waiting for the owner to confirm and switch DRAFT to ACTIVE. Result: documentation/DOC_APP_VISION.md is ACTIVE; owner confirmed by merging value-machine/Fractal-tasks#1 (2026-11-04).",
+    "status": "done"
   }
 ]

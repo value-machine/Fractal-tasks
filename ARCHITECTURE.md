@@ -20,7 +20,6 @@ src/
 │   │   ├── hooks/       # React hooks for feature logic
 │   │   ├── services/    # Pure functions, API calls
 │   │   └── types/       # TypeScript types for feature
-│   ├── harness-overview/ # /harness overview route + home-page welcome card (deletable)
 │   └── tasks/           # Dev-only task backlog (/tasks)
 ├── layouts/             # App shell: wires features into page chrome
 │   ├── MainLayout/      # Main layout component
