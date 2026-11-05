@@ -76,7 +76,8 @@ Set `BASE=https://<ref>.supabase.co/functions/v1/point-at`, `KEY=<publishable ke
 
 MCP URL: `https://<ref>.supabase.co/functions/v1/point-at/mcp`.
 
-- **Claude Code:** `claude mcp add --transport http point-at https://<ref>.supabase.co/functions/v1/point-at/mcp --header "Authorization: Bearer <token>" --header "x-point-at-actor: Your Name via Claude Code"`
+- **Claude Code in this repo:** `.mcp.json` already lists `point-at`. Set the environment variable `POINT_AT_MCP_TOKEN` (and optionally `POINT_AT_ACTOR`, your name as it appears in the tree) and start a new session; Claude Code fills them into the headers. In cloud sessions the variable goes in the environment's settings, never in a chat.
+- **Claude Code elsewhere:** `claude mcp add --transport http point-at https://<ref>.supabase.co/functions/v1/point-at/mcp --header "Authorization: Bearer <token>" --header "x-point-at-actor: Your Name via Claude Code"`
 - **Cursor / Claude Desktop:** an HTTP MCP server entry with that URL and the same two headers (Claude Desktop through a local bridge such as `mcp-remote` with `--header`).
 - **claude.ai web connectors:** not yet. They authenticate with OAuth and cannot send the token, so they wait for contributor sign-in.
 

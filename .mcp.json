@@ -2,7 +2,15 @@
   "mcpServers": {
     "supabase": {
       "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=YOUR_PROJECT_REF&read_only=true"
+      "url": "https://mcp.supabase.com/mcp?project_ref=kyzhhofupypwmfjpbyfc&read_only=true"
+    },
+    "point-at": {
+      "type": "http",
+      "url": "https://kyzhhofupypwmfjpbyfc.supabase.co/functions/v1/point-at/mcp",
+      "headers": {
+        "Authorization": "Bearer ${POINT_AT_MCP_TOKEN}",
+        "x-point-at-actor": "${POINT_AT_ACTOR:-Claude Code agent}"
+      }
     }
   }
 }
