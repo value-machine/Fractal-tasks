@@ -40,11 +40,6 @@
     "status": "to-do"
   },
   {
-    "title": "Leaf dependencies (rest of the navigation findings)",
-    "description": "Done in the navigation lap (2026-11-06): focus_node shows root, depth, siblings, ancestor hypotheses and the split review state, next_tasks has a kind filter (review, replan, split, run, refine), MCP output leaves out empty fields. Still open: a way to record that one leaf needs another first (an optional 'after' link), so agents stop inferring order from prose.",
-    "status": "to-do"
-  },
-  {
     "title": "Design adversarial traversal",
     "description": "Open question in DOC_POINT_AT_RISKS.md: agents that continually challenge existing goals so nothing is locked in. Decide when they run, how a node is challenged and what closes or keeps it; then add it to the process doc and the MCP tools.",
     "status": "to-do"

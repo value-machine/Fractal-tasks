@@ -275,7 +275,7 @@ export class Store {
       this.events(id),
       this.links(id),
     ]);
-    const [siblings, split] = await Promise.all([
+    const [siblings, split, dependencies] = await Promise.all([
       node.parent_id
         ? this.db.query<Pick<Node, "id" | "title" | "status" | "leaf_type">>(
             `select id, title, status, leaf_type from nodes
@@ -284,6 +284,7 @@ export class Store {
           )
         : Promise.resolve([]),
       this.splitReview(id, node.split_at),
+      this.dependencies(id),
     ]);
     const grandchildren = children.length
       ? await this.db.query<NodeSummary>(
@@ -298,6 +299,8 @@ export class Store {
       ancestors,
       siblings,
       split,
+      needs: dependencies.needs,
+      needed_by: dependencies.needed_by,
       children: children.map((c) => ({
         ...c,
         children: grandchildren.filter((g) => g.parent_id === c.id),
@@ -353,6 +356,9 @@ export class Store {
         `${SUMMARY_SELECT}
          where n.leaf_type = 'human' and n.status not in ('done','overtaken')
            and n.claimed_by is null and n.unclear_reason is null ${extra}
+           and not exists (
+             select 1 from node_dependencies d join nodes dn on dn.id = d.needs_id
+             where d.node_id = n.id and dn.status not in ('done','overtaken'))
          order by n.created_at limit ${lim}`,
         params
       );
@@ -385,7 +391,9 @@ export class Store {
          where n.status not in ('done','overtaken') and n.claimed_by is null ${extra}
            and (
              (n.leaf_type = 'human' and n.unclear_reason is not null)
-             or n.leaf_type = 'agent'
+             or (n.leaf_type = 'agent' and not exists (
+             select 1 from node_dependencies d join nodes dn on dn.id = d.needs_id
+             where d.node_id = n.id and dn.status not in ('done','overtaken')))
              or (n.leaf_type is null and not exists (select 1 from nodes c where c.parent_id = n.id))
              or (n.status = 'proposed' and n.split_at is not null)
            )
@@ -662,6 +670,69 @@ export class Store {
       await this.db.query(`update nodes set status = 'reviewed' where id = $1`, [id]);
     }
     return this.getNode(id);
+  }
+
+  /** What this node needs first, and what waits for it. */
+  async dependencies(id: string) {
+    const needs = await this.db.query<{
+      id: string;
+      title: string;
+      status: Status;
+      note: string | null;
+    }>(
+      `select n.id, n.title, n.status, d.note from node_dependencies d
+       join nodes n on n.id = d.needs_id where d.node_id = $1 order by d.created_at`,
+      [id]
+    );
+    const neededBy = await this.db.query<{
+      id: string;
+      title: string;
+      status: Status;
+      note: string | null;
+    }>(
+      `select n.id, n.title, n.status, d.note from node_dependencies d
+       join nodes n on n.id = d.node_id where d.needs_id = $1 order by d.created_at`,
+      [id]
+    );
+    return { needs, needed_by: neededBy };
+  }
+
+  /**
+   * Record that `nodeId` needs `needsId` closed first. Refuses a dependency that would close
+   * a loop (A needs B needs ... needs A), since such leaves could never become ready.
+   */
+  async addDependency(input: { nodeId: string; needsId: string; note?: string }, actor: string) {
+    const node = await this.getNode(input.nodeId);
+    const needed = await this.getNode(input.needsId);
+    if (CLOSED.includes(node.status)) throw new ProcessError(`Node is ${node.status}.`);
+    if (node.id === needed.id) throw new ProcessError("A node cannot need itself.");
+    const [loop] = await this.db.query<{ found: boolean }>(
+      `with recursive chain as (
+         select needs_id from node_dependencies where node_id = $1
+         union
+         select d.needs_id from node_dependencies d join chain c on d.node_id = c.needs_id
+       )
+       select exists (select 1 from chain where needs_id = $2) as found`,
+      [input.needsId, input.nodeId]
+    );
+    if (loop?.found) {
+      throw new ProcessError(
+        `"${needed.title}" already (indirectly) needs "${node.title}"; this would be a loop.`
+      );
+    }
+    await this.db.query(
+      `insert into node_dependencies (node_id, needs_id, note, created_by) values ($1, $2, $3, $4)
+       on conflict (node_id, needs_id) do update set note = excluded.note`,
+      [input.nodeId, input.needsId, input.note ?? null, actor]
+    );
+    await logEvent(
+      this.db,
+      input.nodeId,
+      actor,
+      "link",
+      `Needs first: ${needed.title}${input.note ? ` (${input.note})` : ""}`
+    );
+    return this.dependencies(input.nodeId);
   }
 
   async link(fromId: string, toId: string, note: string | undefined, actor: string) {
