@@ -135,6 +135,19 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
   );
 
   server.registerTool(
+    "review_stats",
+    {
+      title: "Review timing stats",
+      description:
+        "How review is going, measured from the event log: splits awaiting review, work started on children before the first review, " +
+        "rejected splits and the work under them, and minutes to first review. Use it to see where review is needed most.",
+      inputSchema: { label: z.string().optional().describe("Only splits with this lens label.") },
+      annotations: { readOnlyHint: true },
+    },
+    ({ label }) => run(async () => withoutNulls(await store.reviewStats({ label })))
+  );
+
+  server.registerTool(
     "search_nodes",
     {
       title: "Search nodes",

@@ -64,6 +64,10 @@ async function handleApi(path: string, url: URL): Promise<Response> {
     return json(await s.focus(id));
   }
 
+  if (path === "/api/stats/reviews") {
+    return json(await s.reviewStats({ label: url.searchParams.get("label") || undefined }));
+  }
+
   if (path === "/api/search") {
     const q = (url.searchParams.get("q") ?? "").trim();
     return json(q ? await s.search(q, 30) : []);
