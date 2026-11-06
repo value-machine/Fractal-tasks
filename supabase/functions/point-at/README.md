@@ -29,7 +29,7 @@ Base URL: `https://<ref>.supabase.co/functions/v1/point-at`. Browser calls send 
 Actor comes from the `x-point-at-actor` request header (default `anonymous agent`); each write tool also takes an optional `actor` argument that wins over the header.
 
 - Read: `read_process`, `list_roots`, `focus_node` (node, root, depth, ancestors with their split hypotheses, siblings, its own split author and review state, children, grandchildren, links, events; empty fields left out), `next_tasks` (role `donor` or `executor`; donor rows carry a `kind`: `review`, `replan`, `split`, `run`, `refine`, and the same `kind` filters the view), `search_nodes`, `review_stats` (also at `GET /api/stats/reviews?label=`). Resource: `pointat://process`.
-- Write: `create_root`, `split_node`, `mark_leaf`, `update_node`, `claim_node`, `release_node`, `report`, `mark_overtaken`, `review_split`, `link_nodes`.
+- Write: `create_root`, `split_node`, `mark_leaf`, `update_node`, `claim_node`, `release_node`, `report`, `mark_overtaken`, `review_split`, `link_nodes`, `add_dependency` (a node needs another closed first; a leaf with an open dependency is left out of `next_tasks` and the Actions view; loops are refused).
 
 ## Deploy
 

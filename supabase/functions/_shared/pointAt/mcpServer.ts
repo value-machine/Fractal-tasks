@@ -100,7 +100,7 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
       title: "Focus on a node",
       description:
         "Returns a node with its root and depth, its ancestors with each split's hypothesis (why every level exists), " +
-        'its siblings, the review state of its own split, children and grandchildren, "also serves" links and recent events. ' +
+        'its siblings, the review state of its own split, what it needs first and what waits for it, children and grandchildren, "also serves" links and recent events. ' +
         "Empty fields are left out. " +
         "Before acting, check it is still true and still needed.",
       inputSchema: { id: z.string().uuid() },
@@ -313,6 +313,24 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
       },
     },
     ({ from_id, to_id, note, actor }) => run(() => store.link(from_id, to_id, note, who(actor)))
+  );
+
+  server.registerTool(
+    "add_dependency",
+    {
+      title: "Record that a node needs another first",
+      description:
+        "Record that node id cannot start until needs_id is closed (done or overtaken), e.g. an outreach leaf that needs its proposal drafted. " +
+        "A leaf with an open dependency is left out of next_tasks until it is ready. Loops are refused.",
+      inputSchema: {
+        id: z.string().uuid(),
+        needs_id: z.string().uuid(),
+        note: z.string().optional(),
+        actor: actorField,
+      },
+    },
+    ({ id, needs_id, note, actor }) =>
+      run(() => store.addDependency({ nodeId: id, needsId: needs_id, note }, who(actor)))
   );
 
   return server;
