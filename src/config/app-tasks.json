@@ -1,17 +1,7 @@
 [
   {
-    "title": "Configure Supabase",
-    "description": "Set up the backend: one Supabase project with the auth providers you use enabled, its Site URL set to the app's primary origin, and its URL and publishable key available as VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (local .env, plus the hosting build variables for main and for previews). Before the app has real users, isolate staging from production with a Supabase Branching staging branch or a second project (documentation/DOC_CLOUDFLARE_WORKERS.md § Staging backend). Your coding agent lists the exact requirements, checks the result, and tells you what only you can do. For Google sign-in, requirements are in documentation/DOC_SUPABASE_GOOGLE_OAUTH.md. If you explicitly say this app does not use Supabase, Google sign-in, anonymous sessions, or error reporting, the agent offers to delete that code. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § Shipped integrations and § Configuration tasks gate (Supabase). Status (2026-11-04): the owner chose the existing Inventhor website project (ref kyzhhofupypwmfjpbyfc, org T-supabase), shared with the inventhor.com website; the Point At migration is applied there. Still open: VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY in .env and hosting build variables, auth providers and URL settings, and the harness signals migration (20261024081200_signals_tables.sql), which is NOT applied to that project. Status (2026-11-06): URL and publishable key are set as Cloudflare build variables. Still open: Supabase Auth redirect URLs for the Point At origins (add only; the project Site URL belongs to the inventhor.com website and must not change), local .env.",
-    "status": "in-progress"
-  },
-  {
     "title": "Make the interface yours",
     "description": "Everything visible still shows the template. Your coding agent renames the app (browser tab title in index.html, top bar in src/layouts/Topbar/Topbar.tsx), walks through the home page and top bar with you (keep or change each), and removes the harness overview card (src/features/harness-overview/, src/pages/HarnessOverviewPage.tsx and its test, the /harness route in src/App.tsx, the card in src/pages/HomePage.tsx, public/harness-overview.png, plus its README.md image and documentation/DOC_INDEX.md row). Then restyle via the design token files in src/shared/theme/tokens/ and run pnpm tokens:build (documentation/DOC_THEMING.md); verify both modes with the theme icon in the profile menu. It also replaces the template icon and adds your app icons, theme color and link-preview card (title, description, image) in public/ and index.html; you supply a logo or approve a drawn one, and paste your preview link into a chat app to check the card. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § Configuration tasks gate (Interface). Status (2026-11-04): app renamed to Point At, harness overview and the old home page removed. Still open: theme tokens, app icons, theme color and link-preview card (needs the owner logo).",
-    "status": "in-progress"
-  },
-  {
-    "title": "Point At MVP: shared tree backend and navigation view",
-    "description": "Port the Point At prototype into this harness: Supabase migration for the node tree, an Edge Function serving the MCP server (/mcp) and a read-only JSON API, and a React navigation view (roots, node focus, role views, search). Source: documentation/DOC_POINT_AT_PROCESS.md and the prototype zip. Depends on: Configure Supabase (a project to deploy to). Status (2026-11-04): UI, schema and Edge Function merged (value-machine/Fractal-tasks#2, #3); schema applied; function deploy and live test pending. Status (2026-11-06): function deployed with the MCP token guard, sandwich test created through MCP and shown on the live site; Claude Code sessions connect through .mcp.json (#6).",
     "status": "in-progress"
   },
   {
@@ -33,11 +23,6 @@
     "title": "Measure review timing before designing a review gate",
     "description": "Owner decision (2026-11-06): design the review gate step by step from evidence, not up front. Step 1 (now): a read-only stats view over node_events: (a) share of splits whose children were claimed or worked before the first review, (b) work wasted on splits later rejected, (c) time from split to first review, (d) rejection share and reason type. Step 2 (with real traffic): show 'not yet reviewed' on splits in the web view and agent responses. Step 3 (only if (b) shows real waste, and after contributor sign-in): block claiming or closing until a split is accepted, with a review_state field. Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open. Status (2026-11-06): step 1 is live: GET /api/stats/reviews and the MCP tool review_stats (point-at version 8). On the first-tests data: 5 splits, work started before review on 4, 2 of 3 reviewed splits rejected, 1 with work under it, about 3.5 minutes to first review. Next: watch these numbers once real contributors use the tree, then decide step 2.",
     "status": "in-progress"
-  },
-  {
-    "title": "Process wording for human leaves (first-tests findings)",
-    "description": "Decide and write into DOC_POINT_AT_PROCESS.md 3: generic targets instead of an exact recipient, send-only leaves when a reply comes later, done checks observed by a third party or much later, and a constraints field on splits. Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open.",
-    "status": "to-do"
   },
   {
     "title": "Design adversarial traversal",
