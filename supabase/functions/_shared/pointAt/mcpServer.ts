@@ -50,6 +50,14 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
     }
   };
 
+  /** Drop null and empty-array fields so agents read less noise. */
+  const withoutNulls = (value: unknown): unknown =>
+    JSON.parse(
+      JSON.stringify(value, (_key, v: unknown) =>
+        v === null || (Array.isArray(v) && v.length === 0) ? undefined : v
+      )
+    );
+
   const readProcess = () => Promise.resolve(PROCESS_DOC);
 
   server.registerResource(
@@ -91,12 +99,14 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
     {
       title: "Focus on a node",
       description:
-        'Returns a node with its ancestors (what it is for), children and grandchildren, "also serves" links and recent events. ' +
+        "Returns a node with its root and depth, its ancestors with each split's hypothesis (why every level exists), " +
+        'its siblings, the review state of its own split, children and grandchildren, "also serves" links and recent events. ' +
+        "Empty fields are left out. " +
         "Before acting, check it is still true and still needed.",
       inputSchema: { id: z.string().uuid() },
       annotations: { readOnlyHint: true },
     },
-    ({ id }) => run(() => store.focus(id))
+    ({ id }) => run(async () => withoutNulls(await store.focus(id)))
   );
 
   server.registerTool(
@@ -111,10 +121,17 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
         label: z.string().optional().describe("Only nodes with this lens label."),
         query: z.string().optional().describe("Only nodes matching this text."),
         limit: z.number().int().min(1).max(100).optional(),
+        kind: z
+          .enum(["refine", "run", "replan", "review", "split"])
+          .optional()
+          .describe(
+            'Donor role only: "review" splits awaiting review, "replan" rejected splits, "split" open nodes, "run" agent leaves, "refine" bounced-back human leaves.'
+          ),
       },
       annotations: { readOnlyHint: true },
     },
-    ({ role, label, query, limit }) => run(() => store.view(role, { label, query, limit }))
+    ({ role, label, query, limit, kind }) =>
+      run(async () => withoutNulls(await store.view(role, { label, query, limit, kind })))
   );
 
   server.registerTool(
