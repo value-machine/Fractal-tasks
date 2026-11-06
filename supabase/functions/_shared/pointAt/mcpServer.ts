@@ -22,7 +22,7 @@ const actorField = z
   );
 
 const newNode = z.object({
-  title: z.string().min(3).describe("What exactly this node tries to achieve."),
+  title: z.string().trim().min(3).max(300).describe("What exactly this node tries to achieve."),
   done_check: z.string().optional().describe("Yes/no check that shows it worked."),
   next_action: z
     .string()
@@ -190,7 +190,7 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
         "Re-plan a node whose facts changed: edit its title, done check, next action or labels. Pass leaf_type: null to unmark a leaf.",
       inputSchema: {
         id: z.string().uuid(),
-        title: z.string().optional(),
+        title: z.string().trim().min(3).max(300).optional(),
         done_check: z.string().nullable().optional(),
         next_action: z.string().nullable().optional(),
         labels: z.array(z.string()).optional(),
@@ -247,7 +247,7 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
       title: "Mark as overtaken",
       description:
         "Close a node that reality has overtaken: already done by someone else, no longer true, or no longer needed. Say why.",
-      inputSchema: { id: z.string().uuid(), note: z.string().min(5), actor: actorField },
+      inputSchema: { id: z.string().uuid(), note: z.string().trim().min(5), actor: actorField },
     },
     ({ id, note, actor }) => run(() => store.overtake(id, note, who(actor)))
   );
@@ -262,7 +262,7 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
       inputSchema: {
         id: z.string().uuid().describe("The parent node whose split you review."),
         verdict: z.enum(["accept", "reject"]),
-        reasoning: z.string().min(10),
+        reasoning: z.string().trim().min(10),
         actor: actorField,
       },
     },

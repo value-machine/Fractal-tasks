@@ -30,8 +30,18 @@
     "status": "to-do"
   },
   {
-    "title": "Run the Point At first tests",
-    "description": "Run the proposed first tests in documentation/DOC_POINT_AT_RISKS.md (sandwich, awkward task, mid-tree entry, adversarial plan, human leaf) against the deployed MCP server with real agents, and record results in the process change log.",
+    "title": "Decide the review gate for unreviewed splits",
+    "description": "First tests: children of an unreviewed split can be claimed and worked, and a parent can be closed without review, while DOC_POINT_AT_PROCESS.md 8 says nothing is merged before review. Owner decision: block, warn, or redefine merged; then add a review_state (awaiting, accepted, rejected) so the review queue is explicit (schema change). Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open.",
+    "status": "to-do"
+  },
+  {
+    "title": "Process wording for human leaves (first-tests findings)",
+    "description": "Decide and write into DOC_POINT_AT_PROCESS.md 3: generic targets instead of an exact recipient, send-only leaves when a reply comes later, done checks observed by a third party or much later, and a constraints field on splits. Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open.",
+    "status": "to-do"
+  },
+  {
+    "title": "Richer focus_node for navigation",
+    "description": "From the mid-tree and review tests: add siblings, a root marker and depth, the parent hypothesis in ancestors, a needs-review filter on next_tasks, optional leaf dependencies, and a compact output mode.",
     "status": "to-do"
   },
   {

@@ -217,6 +217,11 @@ export class Store {
            case
              when n.leaf_type = 'human' and n.unclear_reason is not null then 'Bounced back by a human: refine the instruction'
              when n.leaf_type = 'agent' then 'Agent leaf ready to run'
+             when n.status = 'proposed' and n.split_at is not null and (
+               select e.verdict from node_events e
+               where e.node_id = n.id and e.type = 'review' and e.created_at > n.split_at
+               order by e.created_at desc, e.id desc limit 1
+             ) = 'reject' then 'Split rejected in review: re-plan it'
              when n.status = 'proposed' and n.split_at is not null then 'Split awaiting adversarial review'
              else 'Open: confirm as a leaf or split it'
            end as why`)}
@@ -350,8 +355,14 @@ export class Store {
       labels: patch.labels ?? node.labels,
     };
     const unmark = patch.leaf_type === null;
+    // Editing the node's words is the refinement a bounce-back asks for (PROCESS.md 3.3).
+    const refines =
+      patch.title !== undefined ||
+      patch.done_check !== undefined ||
+      patch.next_action !== undefined;
     await this.db.query(
       `update nodes set title = $2, done_check = $3, next_action = $4, labels = $5
+         ${refines ? ", unclear_reason = null" : ""}
          ${unmark ? ", leaf_type = null, leaf_who = null, leaf_what = null, leaf_how = null" : ""}
        where id = $1`,
       [id, next.title, next.done_check, next.next_action, next.labels]
@@ -404,6 +415,12 @@ export class Store {
   ) {
     const node = await this.getNode(id);
     if (CLOSED.includes(node.status)) throw new ProcessError(`Node is already ${node.status}.`);
+    // Claims are exclusive (PROCESS.md 9): only the claimer reports on a claimed node.
+    if (node.claimed_by && node.claimed_by !== actor) {
+      throw new ProcessError(
+        `Claimed by ${node.claimed_by}; only they can report on it. Ask them, or wait for a release.`
+      );
+    }
 
     if (input.outcome === "unclear") {
       if (!input.note) throw new ProcessError("Say what is unclear (note).");
@@ -433,29 +450,36 @@ export class Store {
     );
     await logEvent(this.db, id, actor, "report", input.note ?? "Done", input.evidence, level);
 
-    // The split hypothesis is tested by results: point the agent at the parent when all siblings are closed.
-    let parent_check: string | undefined;
-    if (node.parent_id) {
-      const parent = await this.getNode(node.parent_id);
-      if (parent.child_count === parent.done_child_count) {
-        parent_check =
-          `All children of "${parent.title}" are now closed. Test the split's hypothesis: ` +
-          `is the parent's done check met${parent.split_prediction ? ` and did "${parent.split_prediction}" happen` : ""}? ` +
-          "If so report it done; if not, re-plan it.";
-      }
-    }
-    return { node: await this.getNode(id), parent_check };
+    return { node: await this.getNode(id), parent_check: await this.parentCheck(node.parent_id) };
+  }
+
+  /**
+   * The split hypothesis is tested by results (PROCESS.md 6): once the last child closes, done or
+   * overtaken, point the agent at the parent.
+   */
+  private async parentCheck(parentId: string | null): Promise<string | undefined> {
+    if (!parentId) return undefined;
+    const parent = await this.getNode(parentId);
+    if (parent.child_count !== parent.done_child_count) return undefined;
+    return (
+      `All children of "${parent.title}" are now closed. Test the split's hypothesis: ` +
+      `is the parent's done check met${parent.split_prediction ? ` and did "${parent.split_prediction}" happen` : ""}? ` +
+      "If so report it done; if not, re-plan it."
+    );
   }
 
   /** Close a node that reality has overtaken (PROCESS.md 4.3). */
   async overtake(id: string, note: string, actor: string) {
-    if (!note) throw new ProcessError("Explain why the node is overtaken (note).");
+    const reason = note?.trim();
+    if (!reason) throw new ProcessError("Explain why the node is overtaken (note).");
+    const node = await this.getNode(id);
+    if (CLOSED.includes(node.status)) throw new ProcessError(`Node is already ${node.status}.`);
     await this.db.query(
       `update nodes set status = 'overtaken', overtaken_note = $2, claimed_by = null, claimed_at = null where id = $1`,
-      [id, note]
+      [id, reason]
     );
-    await logEvent(this.db, id, actor, "overtaken", note);
-    return this.getNode(id);
+    await logEvent(this.db, id, actor, "overtaken", reason);
+    return { node: await this.getNode(id), parent_check: await this.parentCheck(node.parent_id) };
   }
 
   /** Adversarial review of a split (PROCESS.md 8). The reviewer must not be its author. */
