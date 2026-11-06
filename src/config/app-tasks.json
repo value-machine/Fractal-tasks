@@ -30,8 +30,8 @@
     "status": "to-do"
   },
   {
-    "title": "Decide the review gate for unreviewed splits",
-    "description": "First tests: children of an unreviewed split can be claimed and worked, and a parent can be closed without review, while DOC_POINT_AT_PROCESS.md 8 says nothing is merged before review. Owner decision: block, warn, or redefine merged; then add a review_state (awaiting, accepted, rejected) so the review queue is explicit (schema change). Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open.",
+    "title": "Measure review timing before designing a review gate",
+    "description": "Owner decision (2026-11-06): design the review gate step by step from evidence, not up front. Step 1 (now): a read-only stats view over node_events: (a) share of splits whose children were claimed or worked before the first review, (b) work wasted on splits later rejected, (c) time from split to first review, (d) rejection share and reason type. Step 2 (with real traffic): show 'not yet reviewed' on splits in the web view and agent responses. Step 3 (only if (b) shows real waste, and after contributor sign-in): block claiming or closing until a split is accepted, with a review_state field. Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open.",
     "status": "to-do"
   },
   {

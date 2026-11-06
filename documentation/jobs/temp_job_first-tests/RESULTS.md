@@ -30,7 +30,7 @@ Verified live after the deploy: 1 (report by a non-claimer refused), 3 (whitespa
 
 ## Open: needs an owner decision
 
-1. **Review gate.** Children of an unreviewed split can be claimed and worked, and a parent can be closed without its split ever being reviewed. PROCESS.md 8 says "no contribution is merged until another agent has tried to break it". Options: block claiming and closing until the split is accepted; warn only; or redefine "merged" as "counted towards the parent".
+1. **Review gate.** Children of an unreviewed split can be claimed and worked, and a parent can be closed without its split ever being reviewed. PROCESS.md 8 says "no contribution is merged until another agent has tried to break it". Owner decision (2026-11-06): design it step by step from evidence. First measure from the event log (work started before review, work wasted on rejected splits, time to first review, rejection share); then show "not yet reviewed"; block only if the numbers show real waste, and only after contributor sign-in.
 2. **Identity.** The author-is-not-reviewer rule compares free-text actor names, so anyone with the token can review their own split under a second name. Needs contributor sign-in (backlog).
 3. **Split status.** "proposed" covers both "split, waiting for review" and "rejected". A `review_state` (awaiting, accepted, rejected) would make the review queue explicit. Schema change.
 4. **Process wording (PROCESS.md 3):**
