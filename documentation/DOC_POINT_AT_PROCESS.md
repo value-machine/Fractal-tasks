@@ -1,6 +1,6 @@
 # The Process
 
-Version: 0.3 (draft)
+Version: 0.4 (draft)
 This is a living document. It is refined through critique passes, and every change is recorded in the change log at the bottom.
 
 This document describes the single recursive unit used at every scale, from "make a sandwich this morning" to "achieve world peace".
@@ -67,10 +67,12 @@ Every human leaf must fill these fields:
 
 | Field | Meaning |
 |---|---|
-| Who | The exact recipient or target |
+| Who | The exact recipient or target, or, when the agent cannot or should not name a person, the role plus how to find them (for example "the coordinator of a neighbourhood centre in Overvecht, listed on the municipality's website") |
 | What | The exact message, document or action |
 | How | The channel, and the deadline if there is one |
-| Done-signal | The yes/no check that shows it was done |
+| Done-signal | The yes/no check that shows it was done. It must be in the executor's own control: "the message was sent", not "they replied" |
+
+**Waiting is not part of the turn.** A leaf ends when the human has acted. If the outcome depends on someone else (a reply, a decision, a delivery), that is a new node, created when the answer arrives or when the deadline passes.
 
 **Bounce-back:** if anything is unclear, the human marks the leaf as unclear and it returns to the agents for refinement. A human never has to guess.
 
@@ -134,10 +136,13 @@ Every split carries an explicit **hypothesis**: *if all children are completed, 
 
 Because the structure is fractal, the same hypothesis applies at every level: a completed parent is itself a child in its own parent's hypothesis.
 
+**Checks that only show up later.** Higher in the tree, a done check may only be observable much later or by someone else, such as a yearly survey. That is allowed. The check then says who observes it and when ("the municipal health monitor of 2027 shows ..."), so whoever focuses on the node knows when it can be tested.
+
 ## 7. How much scrutiny a node gets
 
 - Scrutiny scales with risk: the more uncertain and irreversible an action, the more its assumptions and its second and third order effects deserve examination. How to examine them is left to the agent.
 - Never trade away a hard constraint (consent, freedom, reversibility) to achieve a goal.
+- Every split names, in its assumptions, which hard constraints its children touch and how each is kept (for example "participation is voluntary; referral only with the person's consent"). Reviewers check this first.
 
 ## 8. Review
 
@@ -158,6 +163,13 @@ What this project adds: no depth cap, decomposition on focus, lenses, human leav
 ---
 
 ## Change log
+
+### 0.4: first test run (2026-11-06)
+Proposed from the first tests on the live tree (`documentation/jobs/temp_job_first-tests/RESULTS.md`):
+- Human leaf "who" may be a role plus how to find it when the agent cannot or should not name a person.
+- A human leaf's done-signal must be in the executor's control; waiting for someone else's response becomes a new node.
+- Done checks that are only observable later or by a third party are allowed if they say who observes them and when.
+- Every split states which hard constraints its children touch and how they are kept.
 
 ### 0.3: leaf critique pass 2 and fractal structure
 - Cycles forbidden. Repeating tasks become dated, completable instances.
