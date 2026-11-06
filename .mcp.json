@@ -8,7 +8,7 @@
       "type": "http",
       "url": "https://kyzhhofupypwmfjpbyfc.supabase.co/functions/v1/point-at/mcp",
       "headers": {
-        "Authorization": "Bearer ${POINT_AT_MCP_TOKEN}",
+        "Authorization": "Bearer ${POINT_AT_MCP_TOKEN:-proxy-injected}",
         "x-point-at-actor": "${POINT_AT_ACTOR:-Claude Code agent}"
       }
     }
