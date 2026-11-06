@@ -115,10 +115,6 @@ export const requestPasswordReset = (email: string): Promise<AuthResult> =>
 export const updatePassword = (password: string): Promise<AuthResult> =>
   runAuth((auth) => auth.updateUser({ password }));
 
-/** Sign in anonymously (for visitors who haven't logged in) */
-export const signInAnonymously = (): Promise<AuthResult> =>
-  runAuth((auth) => auth.signInAnonymously(), { requireConfig: false });
-
 /** Exchange authorization code for session (used in OAuth PKCE callback) */
 export const exchangeCodeForSession = (code: string): Promise<AuthResult> =>
   runAuth((auth) => auth.exchangeCodeForSession(code));

@@ -53,10 +53,5 @@
     "title": "Add a db:push-staging script or fix the adapter reference",
     "description": "The signal adapter (.agents/skills/loop-backlog/references/signal-adapter.md) tells the agent to run `pnpm run db:push-staging`, which does not exist. Either add a script that applies supabase/migrations to the staging project with a pinned Supabase CLI (needs project linking, which the owner must set up), or change the adapter to say the connector or CLI applies migrations. Protected file edit: needs owner approval. Context: documentation/DOC_DECISION_LOG.md § signals-backend D8.",
     "status": "to-do"
-  },
-  {
-    "title": "Decide whether the app uses anonymous sign-ins",
-    "description": "The app asks Supabase for an anonymous session on every visit and Supabase refuses (anonymous_provider_disabled, HTTP 422), twice per page load. Either enable anonymous sign-ins in the project (anonymous users get the authenticated role, so the feedback policy would admit them; review RLS first) or remove the call. Auth permission model: needs an owner decision.",
-    "status": "to-do"
   }
 ]

@@ -6,7 +6,7 @@ User authentication and session management via Supabase.
 
 - Email/password login, sign-up, and password reset
 - Google OAuth sign-in (PKCE callback on `/`)
-- Anonymous sessions for unauthenticated visitors
+- No anonymous sessions: visitors without a session stay signed out (owner decision, 2026-11-06; the Point At tree is public and read-only)
 - Session persistence and auth state subscription
 - Auth redirect and callback handling
 - User profile query/mutation (TanStack Query)
@@ -31,7 +31,7 @@ Returns:
 `{ user, loading, error, login, signUp, logout, signInWithGoogle, requestPasswordReset, updatePassword, clearAuthError, setAuthError }`
 
 - Requires Supabase configured (`isSupabaseConfigured()`). If not, `loading` becomes `false` and handlers no-op.
-- Anonymous Supabase users are treated as logged out (`user === null`).
+- The app never creates anonymous sessions; an anonymous Supabase user (if one exists) is still treated as logged out (`user === null`).
 - Session is initialized on mount and kept in sync via `useAuthStateSubscription`.
 - Context value and auth handlers are memoized so consumers re-render only when `user`, `loading`, `error`, or handler identity changes.
 

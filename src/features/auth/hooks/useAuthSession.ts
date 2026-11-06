@@ -1,27 +1,14 @@
 import { getSupabase, isSupabaseConfigured } from "@/shared/services/supabaseService";
-import * as authService from "@/features/auth/services/authService";
 import { mapProviderUserToAppUser } from "@/shared/utils/userUtils";
-import { isOAuthRedirectInProgress } from "@/shared/utils/oauthUtils";
 import type { User } from "@/features/auth/types/auth.types";
 import type { SupabaseUser } from "@/shared/services/supabaseService";
 
 /**
- * Initialize authentication session
+ * Visitors without a session stay signed out: the app does not create anonymous sessions
+ * (owner decision, 2026-11-06; the Point At tree is public and read-only).
  */
-const handleSessionResult = async (
-  session: { user: SupabaseUser } | null
-): Promise<User | null> => {
-  if (session?.user) {
-    return mapProviderUserToAppUser(session.user);
-  }
-
-  const oauthRedirectInProgress = isOAuthRedirectInProgress();
-  if (!oauthRedirectInProgress) {
-    await authService.signInAnonymously();
-  }
-
-  return null;
-};
+const handleSessionResult = (session: { user: SupabaseUser } | null): User | null =>
+  session?.user ? mapProviderUserToAppUser(session.user) : null;
 
 export const initializeSession = async (): Promise<{
   user: User | null;
@@ -37,7 +24,7 @@ export const initializeSession = async (): Promise<{
       data: { session },
     } = await supabase.auth.getSession();
 
-    const user = await handleSessionResult(session);
+    const user = handleSessionResult(session);
     return { user, error: null };
   } catch (err) {
     return {
@@ -52,18 +39,7 @@ export const initializeSession = async (): Promise<{
  */
 export const handleAuthStateChange = async (
   session: { user: SupabaseUser } | null
-): Promise<{ user: User | null; error: string | null }> => {
-  if (session?.user) {
-    const currentUser = mapProviderUserToAppUser(session.user);
-    return { user: currentUser, error: null };
-  }
-
-  // User signed out - create anonymous session
-  try {
-    await authService.signInAnonymously();
-  } catch {
-    // Ignore anonymous sign-in errors
-  }
-
-  return { user: null, error: null };
-};
+): Promise<{ user: User | null; error: string | null }> => ({
+  user: handleSessionResult(session),
+  error: null,
+});
