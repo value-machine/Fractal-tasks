@@ -39,6 +39,9 @@ build
 .wrangler
 .dev.vars*
 
+# Supabase CLI local state (written by `supabase functions deploy` and other commands)
+supabase/.temp
+
 # ESLint
 .eslintcache
 
