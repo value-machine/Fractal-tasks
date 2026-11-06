@@ -163,6 +163,97 @@ export class Store {
     );
   }
 
+  /**
+   * Review timing, measured from the event log (step 1 of the review-gate plan in
+   * documentation/jobs/temp_job_first-tests/RESULTS.md): how often work on a split's children
+   * starts before anyone reviewed the split, how much of that work sits under a rejected split,
+   * how long the first review takes, and how often splits are rejected. Read-only.
+   */
+  async reviewStats(opts: { label?: string } = {}) {
+    const params: unknown[] = [];
+    let labelFilter = "";
+    if (opts.label) {
+      params.push(opts.label);
+      labelFilter = `and $${params.length} = any(n.labels)`;
+    }
+    const rows = await this.db.query<{
+      id: string;
+      title: string;
+      split_at: string;
+      first_review_at: string | null;
+      verdict: string | null;
+      verdict_reason: string | null;
+      first_work_at: string | null;
+      work_events: number;
+    }>(
+      `with splits as (
+         select n.id, n.title, n.split_at from nodes n
+         where n.split_at is not null ${labelFilter}
+       ),
+       reviews as (
+         select e.node_id, min(e.created_at) as first_review_at from node_events e
+         join splits s on s.id = e.node_id
+         where e.type = 'review' and e.created_at > s.split_at group by e.node_id
+       ),
+       latest as (
+         select distinct on (e.node_id) e.node_id, e.verdict, e.body from node_events e
+         join splits s on s.id = e.node_id
+         where e.type = 'review' and e.created_at > s.split_at
+         order by e.node_id, e.created_at desc, e.id desc
+       ),
+       work as (
+         select c.parent_id as node_id, min(e.created_at) as first_work_at, count(*)::int as work_events
+         from nodes c join splits s on s.id = c.parent_id
+         join node_events e on e.node_id = c.id
+         where e.type in ('claimed', 'report', 'split') and e.created_at > s.split_at
+         group by c.parent_id
+       )
+       select s.id, s.title, s.split_at, r.first_review_at, l.verdict, l.body as verdict_reason,
+         w.first_work_at, coalesce(w.work_events, 0) as work_events
+       from splits s
+       left join reviews r on r.node_id = s.id
+       left join latest l on l.node_id = s.id
+       left join work w on w.node_id = s.id
+       order by s.split_at desc`,
+      params
+    );
+
+    const minutes = (from: string, to: string) =>
+      (new Date(to).getTime() - new Date(from).getTime()) / 60000;
+    const reviewed = rows.filter((r) => r.first_review_at);
+    const waits = reviewed
+      .map((r) => minutes(r.split_at, r.first_review_at as string))
+      .sort((a, b) => a - b);
+    const median = waits.length ? waits[Math.floor(waits.length / 2)] : null;
+    const workedBeforeReview = rows.filter(
+      (r) => r.first_work_at && (!r.first_review_at || r.first_work_at < r.first_review_at)
+    );
+    const rejected = rows.filter((r) => r.verdict === "reject");
+    const rejectedWithWork = rejected.filter((r) => r.work_events > 0);
+    const round = (n: number | null) => (n === null ? null : Math.round(n * 10) / 10);
+
+    return {
+      splits: rows.length,
+      reviewed: reviewed.length,
+      awaiting_review: rows.length - reviewed.length,
+      work_started_before_review: workedBeforeReview.length,
+      rejected: rejected.length,
+      rejected_share: reviewed.length ? round(rejected.length / reviewed.length) : null,
+      rejected_with_work_on_children: rejectedWithWork.length,
+      work_events_under_rejected_splits: rejectedWithWork.reduce(
+        (sum, r) => sum + r.work_events,
+        0
+      ),
+      minutes_to_first_review: { median: round(median), max: round(waits.at(-1) ?? null) },
+      rejected_splits: rejected.map((r) => ({
+        id: r.id,
+        title: r.title,
+        work_events_on_children: r.work_events,
+        reason: r.verdict_reason,
+      })),
+    };
+  }
+
   async links(id: string) {
     const serves = await this.db.query<{ id: string; title: string; note: string | null }>(
       `select n.id, n.title, l.note from node_links l join nodes n on n.id = l.to_id where l.from_id = $1`,

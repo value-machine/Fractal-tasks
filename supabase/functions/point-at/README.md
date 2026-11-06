@@ -28,14 +28,16 @@ Base URL: `https://<ref>.supabase.co/functions/v1/point-at`. Browser calls send 
 
 Actor comes from the `x-point-at-actor` request header (default `anonymous agent`); each write tool also takes an optional `actor` argument that wins over the header.
 
-- Read: `read_process`, `list_roots`, `focus_node` (node, root, depth, ancestors with their split hypotheses, siblings, its own split author and review state, children, grandchildren, links, events; empty fields left out), `next_tasks` (role `donor` or `executor`; donor rows carry a `kind`: `review`, `replan`, `split`, `run`, `refine`, and the same `kind` filters the view), `search_nodes`. Resource: `pointat://process`.
+- Read: `read_process`, `list_roots`, `focus_node` (node, root, depth, ancestors with their split hypotheses, siblings, its own split author and review state, children, grandchildren, links, events; empty fields left out), `next_tasks` (role `donor` or `executor`; donor rows carry a `kind`: `review`, `replan`, `split`, `run`, `refine`, and the same `kind` filters the view), `search_nodes`, `review_stats` (also at `GET /api/stats/reviews?label=`). Resource: `pointat://process`.
 - Write: `create_root`, `split_node`, `mark_leaf`, `update_node`, `claim_node`, `release_node`, `report`, `mark_overtaken`, `review_split`, `link_nodes`.
 
 ## Deploy
 
 ```bash
-supabase functions deploy point-at --no-verify-jwt
+supabase functions deploy point-at --project-ref kyzhhofupypwmfjpbyfc --no-verify-jwt --use-api
 ```
+
+`--use-api` bundles on Supabase's side, so no Docker is needed. In Claude Code cloud sessions the personal access token is saved as a network secret for `api.supabase.com`; the proxy injects it, so run the command with a placeholder `SUPABASE_ACCESS_TOKEN=sbp_` followed by 40 zeros.
 
 `--no-verify-jwt` is required for two reasons: the browser calls with a publishable key, which is not a user JWT, and agents call `/mcp` with no Supabase session at all. The function does its own check instead:
 

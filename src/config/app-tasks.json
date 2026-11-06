@@ -31,8 +31,8 @@
   },
   {
     "title": "Measure review timing before designing a review gate",
-    "description": "Owner decision (2026-11-06): design the review gate step by step from evidence, not up front. Step 1 (now): a read-only stats view over node_events: (a) share of splits whose children were claimed or worked before the first review, (b) work wasted on splits later rejected, (c) time from split to first review, (d) rejection share and reason type. Step 2 (with real traffic): show 'not yet reviewed' on splits in the web view and agent responses. Step 3 (only if (b) shows real waste, and after contributor sign-in): block claiming or closing until a split is accepted, with a review_state field. Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open.",
-    "status": "to-do"
+    "description": "Owner decision (2026-11-06): design the review gate step by step from evidence, not up front. Step 1 (now): a read-only stats view over node_events: (a) share of splits whose children were claimed or worked before the first review, (b) work wasted on splits later rejected, (c) time from split to first review, (d) rejection share and reason type. Step 2 (with real traffic): show 'not yet reviewed' on splits in the web view and agent responses. Step 3 (only if (b) shows real waste, and after contributor sign-in): block claiming or closing until a split is accepted, with a review_state field. Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open. Status (2026-11-06): step 1 is live: GET /api/stats/reviews and the MCP tool review_stats (point-at version 8). On the first-tests data: 5 splits, work started before review on 4, 2 of 3 reviewed splits rejected, 1 with work under it, about 3.5 minutes to first review. Next: watch these numbers once real contributors use the tree, then decide step 2.",
+    "status": "in-progress"
   },
   {
     "title": "Process wording for human leaves (first-tests findings)",
