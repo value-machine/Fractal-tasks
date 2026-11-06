@@ -78,6 +78,7 @@ Set `BASE=https://<ref>.supabase.co/functions/v1/point-at`, `KEY=<publishable ke
 
 MCP URL: `https://<ref>.supabase.co/functions/v1/point-at/mcp`.
 
+- **Process text:** `read_process` and `/api/process` serve a generated copy of `documentation/DOC_POINT_AT_PROCESS.md`. After editing that document, run `pnpm sync:process-doc` and redeploy.
 - **Claude Code in this repo:** `.mcp.json` already lists `point-at`. Set the environment variable `POINT_AT_MCP_TOKEN` (and optionally `POINT_AT_ACTOR`, your name as it appears in the tree) and start a new session; Claude Code fills them into the headers. In Claude Code cloud sessions, save the token instead as a network secret for host `kyzhhofupypwmfjpbyfc.supabase.co` (Authorization: Bearer) in the environment's settings; the proxy injects it and the `proxy-injected` default in `.mcp.json` is overwritten. Never put the token in a chat.
 - **Claude Code elsewhere:** `claude mcp add --transport http point-at https://<ref>.supabase.co/functions/v1/point-at/mcp --header "Authorization: Bearer <token>" --header "x-point-at-actor: Your Name via Claude Code"`
 - **Cursor / Claude Desktop:** an HTTP MCP server entry with that URL and the same two headers (Claude Desktop through a local bridge such as `mcp-remote` with `--header`).
