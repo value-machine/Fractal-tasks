@@ -43,5 +43,10 @@
     "title": "Decide whether the app uses anonymous sign-ins",
     "description": "The app asks Supabase for an anonymous session on every visit and Supabase refuses (anonymous_provider_disabled, HTTP 422), twice per page load. Either enable anonymous sign-ins in the project (anonymous users get the authenticated role, so the feedback policy would admit them; review RLS first) or remove the call. Auth permission model: needs an owner decision. Result (2026-11-06): owner chose to remove it; the app no longer calls signInAnonymously, so the 422s on every visit are gone.",
     "status": "done"
+  },
+  {
+    "title": "Run the Point At first tests",
+    "description": "Run the proposed first tests in documentation/DOC_POINT_AT_RISKS.md (sandwich, awkward task, mid-tree entry, adversarial plan, human leaf) against the deployed MCP server with real agents, and record results in the process change log. Result (2026-11-06): all five pass with friction; five bugs fixed and deployed; results in documentation/jobs/temp_job_first-tests/RESULTS.md.",
+    "status": "done"
   }
 ]

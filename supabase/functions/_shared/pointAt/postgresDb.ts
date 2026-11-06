@@ -10,7 +10,9 @@ interface RawRunner {
 function wrap(runner: RawRunner, onTransaction: Db["transaction"], onClose: Db["close"]): Db {
   return {
     async query<T>(sql: string, params: unknown[] = []): Promise<T[]> {
-      return (await runner.unsafe(sql, params as never[])) as T[];
+      // Postgres text cannot hold NUL; strip it instead of surfacing a raw driver error.
+      const clean = params.map((v) => (typeof v === "string" ? v.replaceAll("\u0000", "") : v));
+      return (await runner.unsafe(sql, clean as never[])) as T[];
     },
     transaction: onTransaction,
     close: onClose,

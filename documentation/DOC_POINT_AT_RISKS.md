@@ -45,6 +45,11 @@ This is a living document. Resolved questions move into DOC_POINT_AT_PROCESS.md 
 
 ## Change log
 
+### 0.3.1: first test run (2026-11-06)
+- Ran tests 1 to 5 of § Proposed first tests on the live tree with separate agents; all five pass, with friction. Results, fixes and open decisions: `documentation/jobs/temp_job_first-tests/RESULTS.md`.
+- Adversarial test: an independent reviewer, given no hint, rejected a split that hid mandatory location tracking. Self-review is refused, but only by comparing free-text actor names (see contributor identity above).
+- New open questions: whether claiming and closing should wait for an accepted review; how to write human leaves for generic targets, replies that arrive later, and checks observed only by third parties.
+
 ### 0.3
 - Resolved and moved to DOC_POINT_AT_PROCESS.md: how cycles are prevented, what "one turn" means for an agent, where nodes are stored, when decomposition happens, role views as primary lenses.
 - Dropped the escalation guard and the "endless vague splitting" failure mode: the leaf rule and model intelligence handle it; revisit if real runs show otherwise.
