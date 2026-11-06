@@ -50,11 +50,11 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
     }
   };
 
-  /** Drop null and empty-array fields so agents read less noise. */
+  /** Drop null and empty-array fields so agents read less noise (never the top-level value). */
   const withoutNulls = (value: unknown): unknown =>
     JSON.parse(
-      JSON.stringify(value, (_key, v: unknown) =>
-        v === null || (Array.isArray(v) && v.length === 0) ? undefined : v
+      JSON.stringify(value, (key, v: unknown) =>
+        key !== "" && (v === null || (Array.isArray(v) && v.length === 0)) ? undefined : v
       )
     );
 
