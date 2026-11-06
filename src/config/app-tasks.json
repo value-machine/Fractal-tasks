@@ -40,8 +40,8 @@
     "status": "to-do"
   },
   {
-    "title": "Richer focus_node for navigation",
-    "description": "From the mid-tree and review tests: add siblings, a root marker and depth, the parent hypothesis in ancestors, a needs-review filter on next_tasks, optional leaf dependencies, and a compact output mode.",
+    "title": "Leaf dependencies (rest of the navigation findings)",
+    "description": "Done in the navigation lap (2026-11-06): focus_node shows root, depth, siblings, ancestor hypotheses and the split review state, next_tasks has a kind filter (review, replan, split, run, refine), MCP output leaves out empty fields. Still open: a way to record that one leaf needs another first (an optional 'after' link), so agents stop inferring order from prose.",
     "status": "to-do"
   },
   {

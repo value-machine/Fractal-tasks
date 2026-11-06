@@ -9,6 +9,8 @@ import type { Db } from "./db.ts";
 
 export type Status = "proposed" | "reviewed" | "in_progress" | "done" | "overtaken";
 export type LeafType = "agent" | "human";
+/** What kind of thinking work a donor-view row is. */
+export type DonorKind = "refine" | "run" | "replan" | "review" | "split";
 export type Role = "donor" | "executor";
 
 export interface Node {
@@ -105,16 +107,53 @@ export class Store {
   }
 
   /** Ancestors from the root down to (not including) the node. */
-  async ancestors(id: string): Promise<Pick<Node, "id" | "title" | "status">[]> {
+  /**
+   * Ancestors from the root down to (not including) the node, each with its split's reasoning,
+   * so an agent entering mid-tree can see why every level exists.
+   */
+  async ancestors(id: string): Promise<
+    (Pick<Node, "id" | "title" | "status" | "split_hypothesis" | "split_prediction"> & {
+      depth: number;
+    })[]
+  > {
     return this.db.query(
       `with recursive up as (
-         select id, parent_id, title, status, 0 as depth from nodes where id = $1
+         select id, parent_id, title, status, split_hypothesis, split_prediction, 0 as up_steps
+         from nodes where id = $1
          union all
-         select p.id, p.parent_id, p.title, p.status, up.depth + 1 from nodes p join up on p.id = up.parent_id
+         select p.id, p.parent_id, p.title, p.status, p.split_hypothesis, p.split_prediction, up.up_steps + 1
+         from nodes p join up on p.id = up.parent_id
        )
-       select id, title, status from up where depth > 0 order by depth desc`,
+       select id, title, status, split_hypothesis, split_prediction,
+         ((select max(up_steps) from up) - up_steps)::int as depth
+       from up where up_steps > 0 order by up_steps desc`,
       [id]
     );
+  }
+
+  /** Who split the node last, and the latest review of that split, if any. */
+  async splitReview(id: string, splitAt: string | null) {
+    if (!splitAt) return null;
+    const [author] = await this.db.query<{ actor: string }>(
+      `select actor from node_events where node_id = $1 and type = 'split' order by created_at desc, id desc limit 1`,
+      [id]
+    );
+    const [review] = await this.db.query<{
+      actor: string;
+      verdict: string;
+      body: string;
+      created_at: string;
+    }>(
+      `select actor, verdict, body, created_at from node_events
+       where node_id = $1 and type = 'review' and created_at > $2
+       order by created_at desc, id desc limit 1`,
+      [id, splitAt]
+    );
+    return {
+      author: author?.actor ?? null,
+      state: review ? (review.verdict === "accept" ? "accepted" : "rejected") : "awaiting review",
+      last_review: review ?? null,
+    };
   }
 
   async events(id: string, limit = 20): Promise<NodeEvent[]> {
@@ -145,6 +184,16 @@ export class Store {
       this.events(id),
       this.links(id),
     ]);
+    const [siblings, split] = await Promise.all([
+      node.parent_id
+        ? this.db.query<Pick<Node, "id" | "title" | "status" | "leaf_type">>(
+            `select id, title, status, leaf_type from nodes
+             where parent_id = $1 and id <> $2 order by created_at`,
+            [node.parent_id, id]
+          )
+        : Promise.resolve([]),
+      this.splitReview(id, node.split_at),
+    ]);
     const grandchildren = children.length
       ? await this.db.query<NodeSummary>(
           `${SUMMARY_SELECT} where n.parent_id = any($1::uuid[]) order by n.created_at`,
@@ -153,7 +202,11 @@ export class Store {
       : [];
     return {
       node,
+      depth: ancestors.length,
+      root: ancestors[0] ? { id: ancestors[0].id, title: ancestors[0].title } : null,
       ancestors,
+      siblings,
+      split,
       children: children.map((c) => ({
         ...c,
         children: grandchildren.filter((g) => g.parent_id === c.id),
@@ -180,8 +233,8 @@ export class Store {
    */
   async view(
     role: Role,
-    opts: { label?: string; query?: string; limit?: number } = {}
-  ): Promise<(NodeSummary & { why?: string })[]> {
+    opts: { label?: string; query?: string; limit?: number; kind?: DonorKind } = {}
+  ): Promise<(NodeSummary & { why?: string; kind?: DonorKind })[]> {
     const limit = opts.limit ?? 25;
     const params: unknown[] = [];
     const filters: string[] = [];
@@ -196,6 +249,11 @@ export class Store {
       );
     }
     const extra = filters.length ? `and ${filters.join(" and ")}` : "";
+    let kindFilter = "";
+    if (opts.kind && role === "donor") {
+      params.push(opts.kind);
+      kindFilter = `where v.kind = $${params.length}`;
+    }
     params.push(limit);
     const lim = `$${params.length}`;
 
@@ -211,17 +269,25 @@ export class Store {
     }
 
     // Token donors: open thinking work.
-    const rows = await this.db.query<NodeSummary & { why: string }>(
-      `select * from (
-         ${summarySelect(`,
-           case
-             when n.leaf_type = 'human' and n.unclear_reason is not null then 'Bounced back by a human: refine the instruction'
-             when n.leaf_type = 'agent' then 'Agent leaf ready to run'
-             when n.status = 'proposed' and n.split_at is not null and (
+    const rejected = `(
                select e.verdict from node_events e
                where e.node_id = n.id and e.type = 'review' and e.created_at > n.split_at
                order by e.created_at desc, e.id desc limit 1
-             ) = 'reject' then 'Split rejected in review: re-plan it'
+             ) = 'reject'`;
+    const rows = await this.db.query<NodeSummary & { why: string; kind: DonorKind }>(
+      `select * from (
+         ${summarySelect(`,
+           case
+             when n.leaf_type = 'human' and n.unclear_reason is not null then 'refine'
+             when n.leaf_type = 'agent' then 'run'
+             when n.status = 'proposed' and n.split_at is not null and ${rejected} then 'replan'
+             when n.status = 'proposed' and n.split_at is not null then 'review'
+             else 'split'
+           end as kind,
+           case
+             when n.leaf_type = 'human' and n.unclear_reason is not null then 'Bounced back by a human: refine the instruction'
+             when n.leaf_type = 'agent' then 'Agent leaf ready to run'
+             when n.status = 'proposed' and n.split_at is not null and ${rejected} then 'Split rejected in review: re-plan it'
              when n.status = 'proposed' and n.split_at is not null then 'Split awaiting adversarial review'
              else 'Open: confirm as a leaf or split it'
            end as why`)}
@@ -233,6 +299,7 @@ export class Store {
              or (n.status = 'proposed' and n.split_at is not null)
            )
        ) v
+       ${kindFilter}
        order by case when v.unclear_reason is not null then 0 when v.leaf_type = 'agent' then 1 else 2 end, v.created_at
        limit ${lim}`,
       params
