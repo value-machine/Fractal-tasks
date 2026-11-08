@@ -137,9 +137,33 @@ describe("leaves and splits", () => {
     );
   });
 
-  // Gaps found while writing these tests; they become real tests once the behaviour is decided.
-  it.todo("should keep the first split's hypothesis when a parent is split a second time");
-  it.todo("should release the claim when a claimed leaf is unmarked to be split");
+  it("should keep every split's hypothesis when a parent is split a second time", async () => {
+    const { root } = await rootWithChildren("One");
+    await store.split(
+      root.id,
+      { hypothesis: "Second thoughts: one more step", children: [{ title: "Two" }] },
+      OTHER
+    );
+    const splits = await store.splits(root.id);
+    expect(splits.map((x) => [x.kind, x.hypothesis, x.created_by])).toEqual([
+      ["split", "These steps reach the goal", AUTHOR],
+      ["split", "Second thoughts: one more step", OTHER],
+    ]);
+    expect(splits[1].child_ids).toHaveLength(1);
+    // The node itself still shows the latest split.
+    expect((await store.getNode(root.id)).split_hypothesis).toBe("Second thoughts: one more step");
+    expect((await store.focus(root.id)).splits).toHaveLength(2);
+  });
+
+  it("should release the claim when a claimed leaf is unmarked to be split", async () => {
+    const { children } = await rootWithChildren("One");
+    const id = children[0].id;
+    await store.markLeaf(id, { type: "agent", done_check: "Done?" }, AUTHOR);
+    await store.claim(id, OTHER);
+    const unmarked = await store.update(id, { leaf_type: null }, AUTHOR);
+    expect(unmarked.claimed_by).toBeNull();
+    expect(unmarked.status).toBe("proposed");
+  });
 });
 
 describe("claims and reports", () => {
@@ -254,6 +278,15 @@ describe("adopting roots", () => {
     expect((await store.listRoots()).map((r) => r.id)).toEqual([big.id]);
     // The adopted root keeps its own subtree.
     expect((await store.children(small.root.id)).map((c) => c.title)).toEqual(["Draft letter"]);
+  });
+
+  it("should record an adoption in the split history when roots are adopted", async () => {
+    const { root } = await rootWithChildren("Existing child");
+    const orphan = await store.createRoot({ title: "Orphan" }, OTHER);
+    await store.adopt(root.id, adoptInput([orphan.id]), OTHER);
+    const splits = await store.splits(root.id);
+    expect(splits.map((x) => x.kind)).toEqual(["split", "adopt"]);
+    expect(splits[1].child_ids).toEqual([orphan.id]);
   });
 
   it("should send an adoption to review by someone other than the adopter", async () => {
