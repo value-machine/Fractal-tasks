@@ -190,6 +190,28 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
   );
 
   server.registerTool(
+    "adopt_roots",
+    {
+      title: "Adopt roots under a node",
+      description:
+        "When investigation shows existing root goals are part of a bigger goal, make them children of that node. " +
+        "Recorded as a split with its own hypothesis (why completing the adopted goals, with any other children, completes this node), " +
+        "so it goes to adversarial review like any split. Only roots can be adopted; a node that already has a parent never moves, and loops are refused. " +
+        "To give credit across goals without changing the tree, use link_nodes instead.",
+      inputSchema: {
+        id: z.string().uuid().describe("The node that adopts the roots."),
+        root_ids: z.array(z.string().uuid()).min(1).describe("The roots to place under it."),
+        hypothesis: z.string().min(5),
+        prediction: z.string().optional(),
+        assumptions: z.string().optional(),
+        actor: actorField,
+      },
+    },
+    ({ id, root_ids, actor, ...input }) =>
+      run(() => store.adopt(id, { ...input, rootIds: root_ids }, who(actor)))
+  );
+
+  server.registerTool(
     "mark_leaf",
     {
       title: "Confirm a leaf",

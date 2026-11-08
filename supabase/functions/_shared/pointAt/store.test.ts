@@ -61,14 +61,14 @@ describe("roots", () => {
     expect(tree.find((r) => r.id === b.id)?.children).toEqual([]);
   });
 
-  it("should refuse to change a node's parent when the database is updated directly", async () => {
+  it("should refuse to move or detach a node when it already has a parent", async () => {
     const { children } = await rootWithChildren("Step one");
     const other = await store.createRoot({ title: "Other root" }, AUTHOR);
     await expect(
       db.query("update nodes set parent_id = $1 where id = $2", [other.id, children[0].id])
     ).rejects.toThrow(/parent_id cannot be changed/);
     await expect(
-      db.query("update nodes set parent_id = $1 where id = $2", [children[0].id, other.id])
+      db.query("update nodes set parent_id = null where id = $1", [children[0].id])
     ).rejects.toThrow(/parent_id cannot be changed/);
   });
 });
@@ -234,5 +234,71 @@ describe("dependencies", () => {
     expect(await store.view("executor")).toEqual([]);
     await store.overtake(draft, "Draft already exists", AUTHOR);
     expect((await store.view("executor")).map((n) => n.id)).toEqual([send]);
+  });
+});
+
+describe("adopting roots", () => {
+  const adoptInput = (rootIds: string[]) => ({
+    hypothesis: "These goals turn out to be part of this one",
+    rootIds,
+  });
+
+  it("should place existing roots under a node as children when it adopts them", async () => {
+    const big = await store.createRoot({ title: "Restore democracy" }, AUTHOR);
+    const small = await rootWithChildren("Draft letter");
+    const { parent, adopted } = await store.adopt(big.id, adoptInput([small.root.id]), AUTHOR);
+
+    expect(adopted.map((n) => n.parent_id)).toEqual([big.id]);
+    expect(parent.status).toBe("proposed");
+    expect(parent.split_hypothesis).toBe("These goals turn out to be part of this one");
+    expect((await store.listRoots()).map((r) => r.id)).toEqual([big.id]);
+    // The adopted root keeps its own subtree.
+    expect((await store.children(small.root.id)).map((c) => c.title)).toEqual(["Draft letter"]);
+  });
+
+  it("should send an adoption to review by someone other than the adopter", async () => {
+    const big = await store.createRoot({ title: "Big" }, AUTHOR);
+    const small = await store.createRoot({ title: "Small" }, OTHER);
+    await store.adopt(big.id, adoptInput([small.id]), AUTHOR);
+    expect((await store.view("donor", { kind: "review" })).map((n) => n.id)).toEqual([big.id]);
+    await expect(
+      store.review(big.id, { verdict: "accept", reasoning: "ok" }, AUTHOR)
+    ).rejects.toThrow(/someone other than its author/);
+  });
+
+  it("should refuse to adopt a node when it is not a root", async () => {
+    const big = await store.createRoot({ title: "Big" }, AUTHOR);
+    const { children } = await rootWithChildren("Child");
+    await expect(store.adopt(big.id, adoptInput([children[0].id]), AUTHOR)).rejects.toThrow(
+      /not a root/
+    );
+  });
+
+  it("should refuse an adoption when it would make a loop", async () => {
+    const { root, children } = await rootWithChildren("Child");
+    await expect(store.adopt(children[0].id, adoptInput([root.id]), AUTHOR)).rejects.toThrow(
+      /loop/
+    );
+    await expect(store.adopt(root.id, adoptInput([root.id]), AUTHOR)).rejects.toThrow(/loop/);
+  });
+
+  it("should refuse to adopt under a node when it is a leaf or closed", async () => {
+    const { children } = await rootWithChildren("Leaf", "Gone");
+    const orphan = await store.createRoot({ title: "Orphan" }, AUTHOR);
+    await store.markLeaf(children[0].id, { type: "agent", done_check: "Done?" }, AUTHOR);
+    await store.overtake(children[1].id, "Not needed", AUTHOR);
+    await expect(store.adopt(children[0].id, adoptInput([orphan.id]), AUTHOR)).rejects.toThrow(
+      /marked as a leaf/
+    );
+    await expect(store.adopt(children[1].id, adoptInput([orphan.id]), AUTHOR)).rejects.toThrow(
+      /overtaken/
+    );
+  });
+
+  it("should refuse in the database a parent change when it would make a loop", async () => {
+    const { root, children } = await rootWithChildren("Child");
+    await expect(
+      db.query("update nodes set parent_id = $1 where id = $2", [children[0].id, root.id])
+    ).rejects.toThrow(/loop/);
   });
 });

@@ -41,6 +41,7 @@ const EVENT_LABELS: Record<string, string> = {
   overtaken: "marked it overtaken",
   note: "noted",
   link: "linked it",
+  adopted: "placed it under a bigger goal",
 };
 
 /** Human wording for an event; reviews depend on the verdict. */
