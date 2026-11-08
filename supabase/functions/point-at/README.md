@@ -76,7 +76,7 @@ Set `BASE=https://<ref>.supabase.co/functions/v1/point-at`, `KEY=<publishable ke
 
 ## Connect an agent
 
-MCP URL: `https://<ref>.supabase.co/functions/v1/point-at/mcp`.
+MCP URL: `https://<ref>.supabase.co/functions/v1/point-at/mcp?forceFunctionRegion=eu-west-1`. The query parameter runs the function next to the database (eu-west-1); without it every query crosses from the region nearest the caller, measured 2026-11-08 at about 4x slower per page. The web view pins its `/api` calls the same way.
 
 - **Process text:** `read_process` and `/api/process` serve a generated copy of `documentation/DOC_POINT_AT_PROCESS.md`. After editing that document, run `pnpm sync:process-doc` and redeploy.
 - **Claude Code in this repo:** `.mcp.json` already lists `point-at`. Set the environment variable `POINT_AT_MCP_TOKEN` (and optionally `POINT_AT_ACTOR`, your name as it appears in the tree) and start a new session; Claude Code fills them into the headers. In Claude Code cloud sessions, save the token instead as a network secret for host `kyzhhofupypwmfjpbyfc.supabase.co` (Authorization: Bearer) in the environment's settings; the proxy injects it and the `proxy-injected` default in `.mcp.json` is overwritten. Never put the token in a chat.

@@ -99,6 +99,17 @@ export class Store {
     );
   }
 
+  /** Root goals with their children, in two queries instead of one per root. */
+  async rootsWithChildren(): Promise<(NodeSummary & { children: NodeSummary[] })[]> {
+    const roots = await this.listRoots();
+    if (!roots.length) return [];
+    const children = await this.db.query<NodeSummary>(
+      `${SUMMARY_SELECT} where n.parent_id = any($1::uuid[]) order by n.created_at`,
+      [roots.map((r) => r.id)]
+    );
+    return roots.map((r) => ({ ...r, children: children.filter((c) => c.parent_id === r.id) }));
+  }
+
   async children(id: string): Promise<NodeSummary[]> {
     return this.db.query<NodeSummary>(
       `${SUMMARY_SELECT} where n.parent_id = $1 order by n.created_at`,

@@ -6,7 +6,7 @@
     },
     "point-at": {
       "type": "http",
-      "url": "https://kyzhhofupypwmfjpbyfc.supabase.co/functions/v1/point-at/mcp",
+      "url": "https://kyzhhofupypwmfjpbyfc.supabase.co/functions/v1/point-at/mcp?forceFunctionRegion=eu-west-1",
       "headers": {
         "Authorization": "Bearer ${POINT_AT_MCP_TOKEN:-proxy-injected}",
         "x-point-at-actor": "${POINT_AT_ACTOR:-Claude Code agent}"

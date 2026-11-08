@@ -17,7 +17,7 @@ Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:rol
 
 ## Dependencies
 
-- Edge Function `point-at` (`supabase/functions/point-at`): `GET /api/roots`, `/api/nodes/:id`, `/api/search?q=`, `/api/views/:role`; MCP at `/mcp`. Called with the publishable key via `getEdgeFunctionConfig` in `src/shared/services/supabaseService.ts`.
+- Edge Function `point-at` (`supabase/functions/point-at`): `GET /api/roots`, `/api/nodes/:id`, `/api/search?q=`, `/api/views/:role`; MCP at `/mcp`. Called with the publishable key via `getEdgeFunctionConfig` in `src/shared/services/supabaseService.ts`. Every call (and the MCP URL shown in the hint) adds `forceFunctionRegion=eu-west-1`, so the function runs next to its database; unpinned, each query crosses regions and a goal page took about 4x longer (measured 2026-11-08).
 - Kit components `Card`, `Badge`, `Alert`, `Input`, `PageLoadingState`; `formatRelativeTime` from `src/shared/utils/`; `react-router-dom`, `@tanstack/react-query`.
 - Colors come only from theme tokens (`success`, `warning`, `info`, `primary`, `muted`).
 
