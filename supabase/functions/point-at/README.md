@@ -46,6 +46,10 @@ supabase functions deploy point-at --project-ref kyzhhofupypwmfjpbyfc --no-verif
 
 An Edge Function has no staging: a deploy affects production and every preview at once (`.claude/rules/testing.md` § Edge Functions testing). Apply the migration first, then deploy. Test with the procedure below, ideally against a scratch project, before deploying to the shared one.
 
+## Automated rule tests
+
+`supabase/functions/_shared/pointAt/store.test.ts` tests the process rules (roots, leaves and splits, claims and reports, review, dependencies) against an in-process Postgres (PGlite, `pgliteDb.ts`) built from the Point At migrations. The shared Supabase project is never touched. They run in `pnpm test:run`, so CI runs them on every PR. Add a test here for every new rule before building it; `it.todo` entries list known gaps.
+
 ## Manual test procedure
 
 Set `BASE=https://<ref>.supabase.co/functions/v1/point-at`, `KEY=<publishable key>` and `TOKEN=<POINT_AT_MCP_TOKEN>`. The seed (`_shared/pointAt/seed.ts`) is not wired to a route, so an empty database returns `[]` from `/api/roots`; create a root through MCP first (step 9).
