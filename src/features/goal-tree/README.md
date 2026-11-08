@@ -26,3 +26,4 @@ Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:rol
 - The tree is the home route.
 - Read-only by design: no mutations, so no optimistic-update code.
 - Prototype zoom animations and hash routes were not ported; React Router paths replace them.
+- Adoptions (`adopt_roots`) need no UI of their own: an adopted root disappears from the roots list and shows under its new parent, and its event reads "placed it under a bigger goal".

@@ -82,6 +82,13 @@ export interface NewNodeInput {
   labels?: string[];
 }
 
+/** What a split records on its parent (PROCESS.md 6). */
+export interface SplitRecord {
+  hypothesis: string;
+  prediction?: string;
+  assumptions?: string;
+}
+
 export class Store {
   constructor(private db: Db) {}
 
@@ -438,31 +445,10 @@ export class Store {
   }
 
   /** Decompose on focus (PROCESS.md 4.1 and 6). Adds children and records the split's hypothesis. */
-  async split(
-    parentId: string,
-    input: {
-      hypothesis: string;
-      prediction?: string;
-      assumptions?: string;
-      children: NewNodeInput[];
-    },
-    actor: string
-  ) {
+  async split(parentId: string, input: SplitRecord & { children: NewNodeInput[] }, actor: string) {
     if (!input.children.length) throw new ProcessError("A split needs at least one child.");
     return this.db.transaction(async (tx) => {
-      const parent = await new Store(tx).getNode(parentId);
-      if (CLOSED.includes(parent.status))
-        throw new ProcessError(`Node is ${parent.status}; it cannot be split.`);
-      if (parent.leaf_type) {
-        throw new ProcessError(
-          "Node is marked as a leaf. Unmark it with update_node (leaf_type: null) before splitting."
-        );
-      }
-      await tx.query(
-        `update nodes set split_hypothesis = $2, split_prediction = $3, split_assumptions = $4,
-           split_at = now(), status = 'proposed' where id = $1`,
-        [parentId, input.hypothesis, input.prediction ?? null, input.assumptions ?? null]
-      );
+      const parent = await new Store(tx).startSplit(parentId, input);
       const ids: string[] = [];
       for (const child of input.children) {
         const [row] = await tx.query<{ id: string }>(
@@ -492,6 +478,66 @@ export class Store {
         children: await new Store(tx).children(parentId),
       };
     });
+  }
+
+  /**
+   * Adopt existing roots as children (PROCESS.md 2.1): investigation showed they are part of
+   * this node's goal. Recorded as a new split with its own hypothesis, so it is reviewed like
+   * one. Only roots can be adopted; the database refuses any adoption that would make a loop.
+   */
+  async adopt(
+    parentId: string,
+    input: SplitRecord & { rootIds: string[] },
+    actor: string
+  ): Promise<{ parent: NodeSummary; adopted: NodeSummary[] }> {
+    if (!input.rootIds.length) throw new ProcessError("Name at least one root to adopt.");
+    return this.db.transaction(async (tx) => {
+      const store = new Store(tx);
+      const parent = await store.startSplit(parentId, input);
+      const adopted: NodeSummary[] = [];
+      for (const rootId of input.rootIds) {
+        const root = await store.getNode(rootId);
+        if (root.parent_id) throw new ProcessError(`"${root.title}" is not a root.`);
+        try {
+          await tx.query(`update nodes set parent_id = $2 where id = $1`, [rootId, parentId]);
+        } catch (error: unknown) {
+          if (String((error as Error)?.message).includes("loop")) {
+            throw new ProcessError(
+              `"${root.title}" already contains "${parent.title}"; adopting it would make a loop.`
+            );
+          }
+          throw error;
+        }
+        await logEvent(tx, rootId, actor, "adopted", `Adopted under "${parent.title}"`);
+        adopted.push(await store.getNode(rootId));
+      }
+      await logEvent(
+        tx,
+        parentId,
+        actor,
+        "split",
+        `Adopted ${adopted.length} root(s): ${adopted.map((n) => n.title).join("; ")}. Hypothesis: ${input.hypothesis}`
+      );
+      return { parent: await store.getNode(parentId), adopted };
+    });
+  }
+
+  /** Check a node can take children and record the split's hypothesis on it. */
+  private async startSplit(parentId: string, input: SplitRecord): Promise<NodeSummary> {
+    const parent = await this.getNode(parentId);
+    if (CLOSED.includes(parent.status))
+      throw new ProcessError(`Node is ${parent.status}; it cannot be split.`);
+    if (parent.leaf_type) {
+      throw new ProcessError(
+        "Node is marked as a leaf. Unmark it with update_node (leaf_type: null) before splitting."
+      );
+    }
+    await this.db.query(
+      `update nodes set split_hypothesis = $2, split_prediction = $3, split_assumptions = $4,
+         split_at = now(), status = 'proposed' where id = $1`,
+      [parentId, input.hypothesis, input.prediction ?? null, input.assumptions ?? null]
+    );
+    return parent;
   }
 
   /** Confirm a node as a leaf for an agent or a human (PROCESS.md 3). */

@@ -3,7 +3,7 @@
 // Run `node scripts/sync-process-doc.mjs` whenever that document changes.
 export const PROCESS_DOC = `# The Process
 
-Version: 0.4 (draft)
+Version: 0.5 (draft)
 This is a living document. It is refined through critique passes, and every change is recorded in the change log at the bottom.
 
 This document describes the single recursive unit used at every scale, from "make a sandwich this morning" to "achieve world peace".
@@ -26,6 +26,7 @@ Every node except a root has exactly one **parent it was split from**. Together 
 
 - **Top:** flexible. Any task can be a root, whatever its size, including tasks of unknown size.
 - **Bottom:** fixed by the leaf definition in section 3.
+- **Roots can be adopted.** When investigation shows that a root is part of a bigger goal, the bigger goal's node adopts it as a child. Adopting is a split: it records its own hypothesis and is reviewed like any other split. Only a root can be adopted, because a node that already has a parent never moves. If a node only also contributes to another goal, use an "also serves" link instead (2.3).
 - **No global depth limit.** Depth is unlimited. Only local rules decide when splitting stops (section 4). This is what makes the structure truly fractal, unlike existing tools that cap depth.
 
 ### 2.2 No cycles
@@ -166,6 +167,9 @@ What this project adds: no depth cap, decomposition on focus, lenses, human leav
 ---
 
 ## Change log
+
+### 0.5: adopting roots (2026-11-08)
+- A root can be adopted as a child of another node when investigation shows it is part of a bigger goal. Adoption is a reviewed split with its own hypothesis; only roots move, and loops are refused.
 
 ### 0.4: first test run (2026-11-06)
 Proposed from the first tests on the live tree (\`documentation/jobs/temp_job_first-tests/RESULTS.md\`):
