@@ -32,15 +32,18 @@ describe("goalTreeApiService", () => {
     vi.unstubAllGlobals();
   });
 
-  it("should call the roots endpoint with the apikey headers when fetching roots", async () => {
+  it("should call the roots endpoint in the database region with the apikey headers when fetching roots", async () => {
     fetchMock.mockResolvedValue(jsonResponse([{ id: "a" }]));
 
     const roots = await fetchGoalRoots();
 
     expect(roots).toEqual([{ id: "a" }]);
-    expect(fetchMock).toHaveBeenCalledWith(`${CONFIG.baseUrl}/api/roots`, {
-      headers: CONFIG.headers,
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${CONFIG.baseUrl}/api/roots?forceFunctionRegion=eu-west-1`,
+      {
+        headers: CONFIG.headers,
+      }
+    );
   });
 
   it("should encode the id when fetching a node", async () => {
@@ -48,7 +51,9 @@ describe("goalTreeApiService", () => {
 
     await fetchGoalNode("a/b c");
 
-    expect(fetchMock.mock.calls[0][0]).toBe(`${CONFIG.baseUrl}/api/nodes/a%2Fb%20c`);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${CONFIG.baseUrl}/api/nodes/a%2Fb%20c?forceFunctionRegion=eu-west-1`
+    );
   });
 
   it("should encode the query when searching", async () => {
@@ -56,7 +61,9 @@ describe("goalTreeApiService", () => {
 
     await searchGoals("peace & love");
 
-    expect(fetchMock.mock.calls[0][0]).toBe(`${CONFIG.baseUrl}/api/search?q=peace%20%26%20love`);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${CONFIG.baseUrl}/api/search?q=peace%20%26%20love&forceFunctionRegion=eu-west-1`
+    );
   });
 
   it("should request the role path when fetching a role view", async () => {
@@ -64,7 +71,9 @@ describe("goalTreeApiService", () => {
 
     await fetchGoalRoleView("executor");
 
-    expect(fetchMock.mock.calls[0][0]).toBe(`${CONFIG.baseUrl}/api/views/executor`);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${CONFIG.baseUrl}/api/views/executor?forceFunctionRegion=eu-west-1`
+    );
   });
 
   it("should throw the server error message when the response is not ok", async () => {
@@ -87,6 +96,6 @@ describe("goalTreeApiService", () => {
   });
 
   it("should build the MCP url when Supabase is configured", () => {
-    expect(getGoalTreeMcpUrl()).toBe(`${CONFIG.baseUrl}/mcp`);
+    expect(getGoalTreeMcpUrl()).toBe(`${CONFIG.baseUrl}/mcp?forceFunctionRegion=eu-west-1`);
   });
 });

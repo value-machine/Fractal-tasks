@@ -1,9 +1,6 @@
 // Point At: read-only JSON API for the browser UI, plus the MCP server over HTTP at /mcp.
 // Contract and test procedure: README.md in this folder.
-import { WebStandardStreamableHTTPServerTransport } from "npm:@modelcontextprotocol/sdk@1.32.2/server/webStandardStreamableHttp.js";
-
 import { connectPostgres } from "../_shared/pointAt/postgresDb.ts";
-import { createMcpServer } from "../_shared/pointAt/mcpServer.ts";
 import { PROCESS_DOC } from "../_shared/pointAt/processDoc.ts";
 import { ProcessError, Store, type Role } from "../_shared/pointAt/store.ts";
 
@@ -44,10 +41,7 @@ async function handleApi(path: string, url: URL): Promise<Response> {
   const s = getStore();
 
   if (path === "/api/roots") {
-    const roots = await s.listRoots();
-    return json(
-      await Promise.all(roots.map(async (r) => ({ ...r, children: await s.children(r.id) })))
-    );
+    return json(await s.rootsWithChildren());
   }
 
   if (path === "/api/process") {
@@ -118,6 +112,12 @@ function mcpAuthError(req: Request): Response | null {
 async function handleMcp(req: Request): Promise<Response> {
   const denied = mcpAuthError(req);
   if (denied) return denied;
+  // Loaded on first MCP request only: the MCP SDK and zod are the heaviest imports, and the web
+  // view's /api calls never need them, so a cold start for the browser stays light.
+  const [{ WebStandardStreamableHTTPServerTransport }, { createMcpServer }] = await Promise.all([
+    import("npm:@modelcontextprotocol/sdk@1.32.2/server/webStandardStreamableHttp.js"),
+    import("../_shared/pointAt/mcpServer.ts"),
+  ]);
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
