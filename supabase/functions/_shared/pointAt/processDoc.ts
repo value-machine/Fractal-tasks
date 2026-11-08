@@ -137,6 +137,7 @@ Every split carries an explicit **hypothesis**: *if all children are completed, 
 
 - For concrete goals, the hypothesis is usually obviously true.
 - For value-laden goals, it is tested by **results**. If the parent did not move as predicted, the split is wrong and gets re-planned.
+- A re-plan is a new split. Earlier splits are kept with their hypotheses, so the record shows which predictions failed.
 
 Because the structure is fractal, the same hypothesis applies at every level: a completed parent is itself a child in its own parent's hypothesis.
 
@@ -170,6 +171,8 @@ What this project adds: no depth cap, decomposition on focus, lenses, human leav
 
 ### 0.5: adopting roots (2026-11-08)
 - A root can be adopted as a child of another node when investigation shows it is part of a bigger goal. Adoption is a reviewed split with its own hypothesis; only roots move, and loops are refused.
+- Every split of a node is kept with its own hypothesis, so re-planning never erases what an earlier split predicted.
+- Turning a claimed leaf back into a node to split releases the claim: whoever claimed it was going to do the leaf, not split it.
 
 ### 0.4: first test run (2026-11-06)
 Proposed from the first tests on the live tree (\`documentation/jobs/temp_job_first-tests/RESULTS.md\`):

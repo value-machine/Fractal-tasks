@@ -100,7 +100,7 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
       title: "Focus on a node",
       description:
         "Returns a node with its root and depth, its ancestors with each split's hypothesis (why every level exists), " +
-        'its siblings, the review state of its own split, what it needs first and what waits for it, children and grandchildren, "also serves" links and recent events. ' +
+        'its siblings, the review state of its own split, the hypothesis of every earlier split, what it needs first and what waits for it, children and grandchildren, "also serves" links and recent events. ' +
         "Empty fields are left out. " +
         "Before acting, check it is still true and still needed.",
       inputSchema: { id: z.string().uuid() },
@@ -176,7 +176,7 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
       title: "Split a node",
       description:
         "Decompose a node you are focusing on into children, until each is workable. Record the hypothesis (why completing the children completes the parent), " +
-        "an observable prediction, and the assumptions it rests on so others can re-check them later. Can be called again to add children when re-planning.",
+        "an observable prediction, and the assumptions it rests on so others can re-check them later. Can be called again to add children when re-planning; every split's hypothesis is kept in the node's split history.",
       inputSchema: {
         id: z.string().uuid().describe("The node to split."),
         hypothesis: z.string().min(5),
@@ -239,7 +239,7 @@ export function createMcpServer(store: Store, defaultActor = "anonymous agent"):
     {
       title: "Update a node",
       description:
-        "Re-plan a node whose facts changed: edit its title, done check, next action or labels. Pass leaf_type: null to unmark a leaf.",
+        "Re-plan a node whose facts changed: edit its title, done check, next action or labels. Pass leaf_type: null to unmark a leaf so it can be split; this also releases any claim on it.",
       inputSchema: {
         id: z.string().uuid(),
         title: z.string().trim().min(3).max(300).optional(),

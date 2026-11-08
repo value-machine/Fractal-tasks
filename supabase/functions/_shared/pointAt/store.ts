@@ -75,6 +75,14 @@ const SUMMARY_SELECT = summarySelect();
 
 const CLOSED: Status[] = ["done", "overtaken"];
 
+/**
+ * Unmarking turns a leaf back into a node to split. Whoever claimed it was going to do the leaf,
+ * not split it, so the claim is released with it.
+ */
+const UNMARK_LEAF = `, leaf_type = null, leaf_who = null, leaf_what = null, leaf_how = null,
+  claimed_by = null, claimed_at = null,
+  status = case when status = 'in_progress' then 'proposed' else status end`;
+
 export interface NewNodeInput {
   title: string;
   done_check?: string | null;
@@ -87,6 +95,17 @@ export interface SplitRecord {
   hypothesis: string;
   prediction?: string;
   assumptions?: string;
+}
+
+/** One recorded split or adoption of a node. */
+export interface SplitHistoryEntry {
+  kind: "split" | "adopt";
+  hypothesis: string;
+  prediction: string | null;
+  assumptions: string | null;
+  child_ids: string[];
+  created_by: string | null;
+  created_at: string;
 }
 
 export class Store {
@@ -285,6 +304,15 @@ export class Store {
   }
 
   /** Everything needed to focus on a node: the node, where it sits, its children and history. */
+  /** Every split of this node, oldest first; the node's split_* fields hold only the latest. */
+  async splits(id: string): Promise<SplitHistoryEntry[]> {
+    return this.db.query<SplitHistoryEntry>(
+      `select kind, hypothesis, prediction, assumptions, child_ids, created_by, created_at
+       from node_splits where node_id = $1 order by created_at, id`,
+      [id]
+    );
+  }
+
   async focus(id: string) {
     const [node, ancestors, children, events, links] = await Promise.all([
       this.getNode(id),
@@ -293,7 +321,7 @@ export class Store {
       this.events(id),
       this.links(id),
     ]);
-    const [siblings, split, dependencies] = await Promise.all([
+    const [siblings, split, dependencies, splits] = await Promise.all([
       node.parent_id
         ? this.db.query<Pick<Node, "id" | "title" | "status" | "leaf_type">>(
             `select id, title, status, leaf_type from nodes
@@ -303,6 +331,7 @@ export class Store {
         : Promise.resolve([]),
       this.splitReview(id, node.split_at),
       this.dependencies(id),
+      this.splits(id),
     ]);
     const grandchildren = children.length
       ? await this.db.query<NodeSummary>(
@@ -317,6 +346,7 @@ export class Store {
       ancestors,
       siblings,
       split,
+      splits,
       needs: dependencies.needs,
       needed_by: dependencies.needed_by,
       children: children.map((c) => ({
@@ -466,6 +496,13 @@ export class Store {
         ids.push(row.id);
         await logEvent(tx, row.id, actor, "created", `Split from "${parent.title}"`);
       }
+      await recordSplit(tx, {
+        nodeId: parentId,
+        kind: "split",
+        split: input,
+        childIds: ids,
+        actor,
+      });
       await logEvent(
         tx,
         parentId,
@@ -511,6 +548,13 @@ export class Store {
         await logEvent(tx, rootId, actor, "adopted", `Adopted under "${parent.title}"`);
         adopted.push(await store.getNode(rootId));
       }
+      await recordSplit(tx, {
+        nodeId: parentId,
+        kind: "adopt",
+        split: input,
+        childIds: adopted.map((n) => n.id),
+        actor,
+      });
       await logEvent(
         tx,
         parentId,
@@ -586,7 +630,7 @@ export class Store {
     await this.db.query(
       `update nodes set title = $2, done_check = $3, next_action = $4, labels = $5
          ${refines ? ", unclear_reason = null" : ""}
-         ${unmark ? ", leaf_type = null, leaf_who = null, leaf_what = null, leaf_how = null" : ""}
+         ${unmark ? UNMARK_LEAF : ""}
        where id = $1`,
       [id, next.title, next.done_check, next.next_action, next.labels]
     );
@@ -803,6 +847,31 @@ export class Store {
     await logEvent(this.db, fromId, actor, "link", `Also serves ${toId}${note ? `: ${note}` : ""}`);
     return this.links(fromId);
   }
+}
+
+async function recordSplit(
+  db: Db,
+  entry: {
+    nodeId: string;
+    kind: SplitHistoryEntry["kind"];
+    split: SplitRecord;
+    childIds: string[];
+    actor: string;
+  }
+) {
+  await db.query(
+    `insert into node_splits (node_id, kind, hypothesis, prediction, assumptions, child_ids, created_by)
+     values ($1, $2, $3, $4, $5, $6::uuid[], $7)`,
+    [
+      entry.nodeId,
+      entry.kind,
+      entry.split.hypothesis,
+      entry.split.prediction ?? null,
+      entry.split.assumptions ?? null,
+      entry.childIds,
+      entry.actor,
+    ]
+  );
 }
 
 async function logEvent(
