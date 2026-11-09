@@ -19,7 +19,9 @@ export const GoalRow = ({ item }: { item: GoalRoleViewItem }) => {
     >
       <GoalStatusDot status={item.status} />
       <div className="min-w-0">
-        <h3 className="text-[0.9375rem] leading-snug font-semibold">{item.title}</h3>
+        <h3 title={item.title} className="line-clamp-3 text-[0.9375rem] leading-snug font-semibold">
+          {item.title}
+        </h3>
         {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">

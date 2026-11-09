@@ -42,8 +42,9 @@ export const GoalTile = ({ node }: { node: GoalNodeWithChildren | GoalNodeSummar
         <div className="flex items-start gap-2.5">
           <GoalStatusDot status={node.status} className="mt-2" />
           <h3
+            title={node.title}
             className={cn(
-              "flex-1 text-base leading-snug font-semibold",
+              "line-clamp-3 flex-1 text-base leading-snug font-semibold",
               node.status === "overtaken" && "text-muted-foreground line-through"
             )}
           >

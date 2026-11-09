@@ -27,3 +27,5 @@ Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:rol
 - Read-only by design: no mutations, so no optimistic-update code.
 - Prototype zoom animations and hash routes were not ported; React Router paths replace them.
 - Adoptions (`adopt_roots`) need no UI of their own: an adopted root disappears from the roots list and shows under its new parent, and its event reads "placed it under a bigger goal".
+- Long words (titles without spaces, URLs) wrap through the global `overflow-wrap: anywhere` on `body` in `src/index.css`, not per component.
+- Lists (tiles, rows) cut a title off after 3 lines with the full text on hover; the goal's own page shows it in full.

@@ -20,9 +20,9 @@ export const GoalEventLog = ({ events }: { events: GoalEvent[] }) => (
               <span className="font-medium">{event.actor}</span> ·{" "}
               {describeGoalEvent(event.type, event.verdict)}
             </span>
-            {event.body && <span className="break-words text-muted-foreground">{event.body}</span>}
+            {event.body && <span className="text-muted-foreground">{event.body}</span>}
             {event.evidence && (
-              <span className="break-words text-muted-foreground">Evidence: {event.evidence}</span>
+              <span className="text-muted-foreground">Evidence: {event.evidence}</span>
             )}
             <span className="text-xs text-muted-foreground">
               {formatRelativeTime(event.created_at)}
