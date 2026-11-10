@@ -1,13 +1,8 @@
 [
   {
-    "title": "Make the interface yours",
-    "description": "Everything visible still shows the template. Your coding agent renames the app (browser tab title in index.html, top bar in src/layouts/Topbar/Topbar.tsx), walks through the home page and top bar with you (keep or change each), and removes the harness overview card (src/features/harness-overview/, src/pages/HarnessOverviewPage.tsx and its test, the /harness route in src/App.tsx, the card in src/pages/HomePage.tsx, public/harness-overview.png, plus its README.md image and documentation/DOC_INDEX.md row). Then restyle via the design token files in src/shared/theme/tokens/ and run pnpm tokens:build (documentation/DOC_THEMING.md); verify both modes with the theme icon in the profile menu. It also replaces the template icon and adds your app icons, theme color and link-preview card (title, description, image) in public/ and index.html; you supply a logo or approve a drawn one, and paste your preview link into a chat app to check the card. Agent gate: .agents/skills/loop-backlog/references/onboarding.md § Configuration tasks gate (Interface). Status (2026-11-04): app renamed to Point At, harness overview and the old home page removed. Status (2026-11-10): theme kept as is (owner choice); logo P4 'shoot' chosen; tab icon, app icons, manifest, theme color and link-preview card added. Still open: owner checks the link-preview card in a chat app.",
-    "status": "in-progress"
-  },
-  {
     "title": "Contributor identity for MCP writes",
     "description": "Actors are free-text names; anyone with the function URL can write. Decide and build how contributors are identified (e.g. Supabase Auth with OAuth for MCP clients, per-person API tokens) before the tree is shared publicly. Auth permission model: needs an owner decision. Context: DOC_POINT_AT_RISKS.md § Process and governance.",
-    "status": "to-do"
+    "status": "in-progress"
   },
   {
     "title": "Rate limiting on the point-at Edge Function",
