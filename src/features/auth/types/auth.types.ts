@@ -29,28 +29,18 @@ export interface UserProfile {
   settings?: Record<string, unknown> | null;
 }
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface SignUpCredentials {
-  email: string;
-  password: string;
-  // Add any additional signup fields here
-}
+/** OAuth providers enabled for sign-in (owner decision 2026-11-10: GitHub added, Google kept). */
+export type OAuthProvider = "google" | "github";
 
 /** Auth context and useAuth return shape */
 export interface AuthContextValue {
   user: User | null;
   loading: boolean;
   error: string | null;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  signUp: (credentials: SignUpCredentials) => Promise<void>;
   logout: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  requestPasswordReset: (email: string) => Promise<boolean>;
-  updatePassword: (password: string) => Promise<boolean>;
+  signInWithOAuthProvider: (provider: OAuthProvider) => Promise<void>;
+  /** Resolves true when the sign-in link was sent; failures land in `error`. */
+  sendEmailSignInLink: (email: string) => Promise<boolean>;
   clearAuthError: () => void;
   setAuthError: (message: string | null) => void;
 }

@@ -4,8 +4,10 @@ User authentication and session management via Supabase.
 
 ## Purpose
 
-- Email/password login, sign-up, and password reset
-- Google OAuth sign-in (PKCE callback on `/`)
+- Passwordless email sign-in link (Supabase magic link; a new address gets an account on first use)
+- GitHub and Google OAuth sign-in
+- All three return to `/` and finish through the same PKCE `?code=` exchange
+- No passwords: owner decision, 2026-11-10 — sign-in is email link + GitHub, Google kept. The built-in Supabase mailer allows 2 emails/hour (and only to project team addresses) until own SMTP is set up
 - No anonymous sessions: visitors without a session stay signed out (owner decision, 2026-11-06; the Point At tree is public and read-only)
 - Session persistence and auth state subscription
 - Auth redirect and callback handling
@@ -13,12 +15,12 @@ User authentication and session management via Supabase.
 
 ## Structure
 
-| Layer | Path | Purpose |
-|-------|------|---------|
-| Hooks | `hooks/` | `useAuth`, `useAuthSession`, `useAuthRedirect`, `useAuthCallbackHandler`, `useUserProfileQuery` |
-| Services | `services/` | `authService`, `authCallbackService`, `authErrorMessages`, `authValidation`, `userProfileService`, `authHandlerUtils` |
-| Components | `components/` | `SignInPanel`, `EmailAuthForm` |
-| Types | `types/` | `User`, `UserProfile`, `AuthContextValue`, credentials types |
+| Layer      | Path          | Purpose                                                                                                                              |
+| ---------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Hooks      | `hooks/`      | `useAuth`, `useAuthSession`, `useAuthRedirect`, `useAuthCallbackHandler`, `useUserProfileQuery`                                      |
+| Services   | `services/`   | `authService`, `authCallbackService`, `authErrorMessages`, `authValidation` (email format), `userProfileService`, `authHandlerUtils` |
+| Components | `components/` | `SignInPanel`, `EmailLinkForm`, `GithubIcon`, `GoogleIcon`                                                                           |
+| Types      | `types/`      | `User`, `UserProfile`, `AuthContextValue`, `OAuthProvider`                                                                           |
 
 **Cross-layout UI:** `ProfileMenu` lives in `@/layouts/ProfileMenu` (app-shell widget used by Topbar; layouts may compose features, `components/common` may not). Shared viewport/form layout tokens live in `@/shared/theme/appViewLayout`.
 
@@ -28,7 +30,10 @@ User authentication and session management via Supabase.
 
 Returns:
 
-`{ user, loading, error, login, signUp, logout, signInWithGoogle, requestPasswordReset, updatePassword, clearAuthError, setAuthError }`
+`{ user, loading, error, logout, signInWithOAuthProvider, sendEmailSignInLink, clearAuthError, setAuthError }`
+
+- `signInWithOAuthProvider(provider)` — `"google"` or `"github"`; redirects away, errors land in `error`.
+- `sendEmailSignInLink(email)` — resolves `true` when the link was sent; validation and Supabase errors land in `error`. It does not toggle `loading` (a page that shows a loading screen while `loading` is true would unmount the form and lose its "check your inbox" state); `EmailLinkForm` keeps its own sending state.
 
 - Requires Supabase configured (`isSupabaseConfigured()`). If not, `loading` becomes `false` and handlers no-op.
 - The app never creates anonymous sessions; an anonymous Supabase user (if one exists) is still treated as logged out (`user === null`).
@@ -37,15 +42,14 @@ Returns:
 
 ### User feedback policy
 
-- **Form-blocking errors:** inline `Alert` (`src/components/common/Alert`) (sign-in panel, email form).
+- **Form-blocking errors:** inline `Alert` (`src/components/common/Alert`) in the sign-in panel (OAuth and email-link errors share it). A sent link replaces the email form with a "Check your inbox" message.
 - **OAuth/callback errors:** `setAuthError` on auth context; shown on Home via single Alert.
 - **Profile mutations:** none shipped; follow `documentation/DOC_TANSTACK_QUERY.md` § Example mutation (merge server response via `setQueryData`, no happy-path invalidation).
 
 ### Routes
 
 - `/login` – dedicated sign-in page (redirects to `/` when already authenticated)
-- `/reset-password` – password recovery from email link
-- `/` – inline sign-in when logged out; primary OAuth PKCE callback handler. supabase-js exchanges the `?code=` itself while the client initializes, so `handleCodeExchange` first checks `hasSignedInSession()` and only exchanges when there is no signed-in session (a second exchange fails with "PKCE code verifier not found"). The Google return address is `<origin>/` (ends with a slash so `<origin>/**` redirect patterns match)
+- `/` – inline sign-in when logged out; primary OAuth PKCE callback handler. supabase-js exchanges the `?code=` itself while the client initializes, so `handleCodeExchange` first checks `hasSignedInSession()` and only exchanges when there is no signed-in session (a second exchange fails with "PKCE code verifier not found"). The OAuth and email-link return address is `<origin>/` (ends with a slash so `<origin>/**` redirect patterns match)
 - `/auth/callback` – legacy OAuth callback (kept for backward compatibility)
 
 ## Dependencies
@@ -60,8 +64,9 @@ Returns:
 
 ## Configuration checklist
 
-- Supabase Redirect URLs: app origin (`getAppOrigin()`), full `/reset-password` URL
-- Google OAuth provider enabled in Supabase
+- Supabase Redirect URLs: app origin with `/**` (covers `<origin>/`)
+- Google and GitHub OAuth providers enabled in Supabase; Email provider enabled (magic link)
+- Custom SMTP in Supabase before real users: the built-in mailer sends 2 emails/hour, only to team addresses
 - Env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (or `VITE_SUPABASE_ANON_KEY`)
 - Update `LEGAL_ORIGIN` in `src/config/legal.ts` when product URLs are available
 

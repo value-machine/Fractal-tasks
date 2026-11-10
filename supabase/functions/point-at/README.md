@@ -2,7 +2,7 @@
 
 Backend of Point At, a shared tree of tasks that people point their AI agents at. One function serves two audiences:
 
-- **The browser UI** reads the tree through a small read-only JSON API.
+- **The browser UI** reads the tree through a small read-only JSON API, and a signed-in person manages their personal agent tokens under `/api/me/tokens`.
 - **Agents** (Claude Code, a claude.ai custom connector, any MCP client) read and change the tree through an MCP server at `/mcp`.
 
 The domain rules (node format, leaf rule, claiming, verification levels, adversarial review) live in `supabase/functions/_shared/pointAt/store.ts` and encode the process document. Tables: `supabase/README.md` § Point At tree. Migration: `supabase/migrations/20261102120000_point_at_tree.sql`.
@@ -20,13 +20,19 @@ Base URL: `https://<ref>.supabase.co/functions/v1/point-at`. Browser calls send 
 | GET    | `/api/search?q=`             | `NodeSummary[]` (limit 30; blank `q` returns `[]`)                                             |
 | GET    | `/api/views/:role?label=&q=` | `(NodeSummary & { why? })[]` (limit 50); `role` is `donor` or `executor`, anything else is 400 |
 | GET    | `/api/process`               | The process document as `text/plain`                                                           |
+| GET    | `/api/me/tokens`             | The signed-in person's agent tokens (no secrets), newest first                                 |
+| POST   | `/api/me/tokens`             | `{ token, record }` for body `{ name }`; the token is shown only here                          |
+| DELETE | `/api/me/tokens/:id`         | The revoked token's record                                                                      |
 | ALL    | `/mcp`                       | MCP streamable HTTP, stateless, JSON responses                                                 |
 
-`NodeSummary` is a `nodes` row plus `child_count` and `done_child_count`. Errors are JSON `{ "error": "..." }`: unknown node (or malformed id) is 404, a bad role is 400, a non-GET on `/api/*` is 405, anything unexpected is 500 with a generic message (details go to the function logs). CORS allows `GET`/`OPTIONS` from any origin with headers `apikey`, `authorization`, `content-type`, `x-point-at-actor`.
+`NodeSummary` is a `nodes` row plus `child_count` and `done_child_count`. Errors are JSON `{ "error": "..." }`: unknown node (or malformed id) is 404, a bad role is 400, a non-GET on the read API is 405, `/api/me/*` without a valid Supabase session is 401 (the browser sends the person's session token as `authorization` there, checked against Supabase Auth), a refused token request is 400 (no name, 20 active tokens) or 404 (not your token), anything unexpected is 500 with a generic message (details go to the function logs). CORS allows `GET`/`POST`/`DELETE`/`OPTIONS` from any origin with headers `apikey`, `authorization`, `content-type`, `x-point-at-actor`.
 
 ## MCP tools
 
-Actor comes from the `x-point-at-actor` request header (default `anonymous agent`); each write tool also takes an optional `actor` argument that wins over the header.
+Who acts depends on the bearer token:
+
+- **Personal agent token** (`pa_…`, created on the site at `/agents`): every write is attributed to the token's owner, as `<display name> via <agent label>`. The label is the tool's `actor` argument, else the `x-point-at-actor` header; an agent cannot write as someone else. Revoked tokens get 401. Logic and tests: `supabase/functions/_shared/pointAt/contributors.ts`.
+- **Shared token** `POINT_AT_MCP_TOKEN` (being phased out): the actor is whatever the agent sends (`actor` argument, else the header, else `anonymous agent`).
 
 - Read: `read_process`, `list_roots`, `focus_node` (node, root, depth, ancestors with their split hypotheses, siblings, its own split author and review state, children, grandchildren, links, events; empty fields left out), `next_tasks` (role `donor` or `executor`; donor rows carry a `kind`: `review`, `replan`, `split`, `run`, `refine`, and the same `kind` filters the view), `search_nodes`, `review_stats` (also at `GET /api/stats/reviews?label=`). Resource: `pointat://process`.
 - Write: `create_root`, `split_node`, `adopt_roots` (place existing roots under a node as a reviewed split; only roots move, loops are refused), `mark_leaf`, `update_node`, `claim_node`, `release_node`, `report`, `mark_overtaken`, `review_split`, `link_nodes`, `add_dependency` (a node needs another closed first; a leaf with an open dependency is left out of `next_tasks` and the Actions view; loops are refused).
@@ -83,15 +89,16 @@ Set `BASE=https://<ref>.supabase.co/functions/v1/point-at`, `KEY=<publishable ke
 MCP URL: `https://<ref>.supabase.co/functions/v1/point-at/mcp?forceFunctionRegion=eu-west-1`. The query parameter runs the function next to the database (eu-west-1); without it every query crosses from the region nearest the caller, measured 2026-11-08 at about 4x slower per page. The web view pins its `/api` calls the same way.
 
 - **Process text:** `read_process` and `/api/process` serve a generated copy of `documentation/DOC_POINT_AT_PROCESS.md`. After editing that document, run `pnpm sync:process-doc` and redeploy.
-- **Claude Code in this repo:** `.mcp.json` already lists `point-at`. Set the environment variable `POINT_AT_MCP_TOKEN` (and optionally `POINT_AT_ACTOR`, your name as it appears in the tree) and start a new session; Claude Code fills them into the headers. In Claude Code cloud sessions, save the token instead as a network secret for host `kyzhhofupypwmfjpbyfc.supabase.co` (Authorization: Bearer) in the environment's settings; the proxy injects it and the `proxy-injected` default in `.mcp.json` is overwritten. Never put the token in a chat.
+- **Your own token (recommended):** sign in at https://fractal-tasks.tom-fab.workers.dev/agents, create a token, and copy the Claude Code command or JSON settings shown there. Writes are then in your name.
+- **Claude Code in this repo (shared token, being phased out):** `.mcp.json` already lists `point-at`. Set the environment variable `POINT_AT_MCP_TOKEN` (and optionally `POINT_AT_ACTOR`, your name as it appears in the tree) and start a new session; Claude Code fills them into the headers. In Claude Code cloud sessions, save the token instead as a network secret for host `kyzhhofupypwmfjpbyfc.supabase.co` (Authorization: Bearer) in the environment's settings; the proxy injects it and the `proxy-injected` default in `.mcp.json` is overwritten. Never put the token in a chat.
 - **Claude Code elsewhere:** `claude mcp add --transport http point-at https://<ref>.supabase.co/functions/v1/point-at/mcp --header "Authorization: Bearer <token>" --header "x-point-at-actor: Your Name via Claude Code"`
 - **Cursor / Claude Desktop:** an HTTP MCP server entry with that URL and the same two headers (Claude Desktop through a local bridge such as `mcp-remote` with `--header`).
 - **claude.ai web connectors:** not yet. They authenticate with OAuth and cannot send the token, so they wait for contributor sign-in.
 
 ## Known gaps
 
-- **One shared token, no per-person sign-in.** Anyone with the URL can read the whole tree; anyone with the token can create, claim, close or overtake nodes. Actors are free-text names; the "reviewer is not the author" rule compares those names and is not a security boundary. The tree lives in the shared Inventhor website project (ref `kyzhhofupypwmfjpbyfc`), so the token guards that database too. Real contributor identity is a backlog task.
+- **The shared token still works.** Personal agent tokens attribute writes to a person, but the shared `POINT_AT_MCP_TOKEN` still lets an agent write under any typed-in name until it is removed (follow-up task). The tree lives in the shared Inventhor website project (ref `kyzhhofupypwmfjpbyfc`), so that token guards that database too.
 - **Embeddings are unfilled.** `nodes.embedding` exists and is indexed, but nothing writes or queries it; search is full-text plus `ilike`.
-- **No rate limiting.** `.claude/rules/project-specific.md` asks for it on public and write endpoints. It is not added because its helper keys limits on a user id, and this function has no user (no auth yet); an IP or actor key would be spoofable. It should land together with an auth decision.
-- **No tests run.** The function and migration were written without Deno or a Postgres available and have not been executed.
+- **No rate limiting.** `.claude/rules/project-specific.md` asks for it on public and write endpoints. Personal tokens now give a stable key per contributor, so it can be added (backlog task).
+- **Tool callbacks are untyped.** `deno check` reports implicit-any parameters in `mcpServer.ts` tool callbacks (the MCP SDK does not infer zod 4 shapes there). Inputs are still validated by zod at runtime; the rules themselves are tested in `store.test.ts` and `contributors.test.ts`.
 - The process document is an embedded copy (`_shared/pointAt/processDoc.ts`); regenerate it when `documentation/DOC_POINT_AT_PROCESS.md` changes.

@@ -11,7 +11,8 @@ import {
 import { cn } from "@/shared/utils/cn";
 import { PRIVACY_URL, TERMS_URL } from "@/config/legal";
 import { GoogleIcon } from "./GoogleIcon";
-import { EmailAuthForm } from "./EmailAuthForm";
+import { GithubIcon } from "./GithubIcon";
+import { EmailLinkForm } from "./EmailLinkForm";
 
 const SUPABASE_CONFIG_MESSAGE =
   "Authentication requires Supabase configuration. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (or VITE_SUPABASE_ANON_KEY) in your environment.";
@@ -19,7 +20,7 @@ const SUPABASE_CONFIG_MESSAGE =
 const footerLinkClassName = "text-foreground hover:text-primary";
 
 export const SignInPanel = () => {
-  const { signInWithGoogle, loading, error } = useAuthContext();
+  const { signInWithOAuthProvider, loading, error } = useAuthContext();
   const { isConfigured: authBackendConfigured } = useAuthBackendConfigured();
   const authDisabled = !authBackendConfigured;
 
@@ -34,11 +35,21 @@ export const SignInPanel = () => {
       <Button
         variant="outline"
         className={cn("w-full", formStackSpacing.sectionBelow)}
-        onClick={() => void signInWithGoogle()}
+        onClick={() => void signInWithOAuthProvider("github")}
+        disabled={loading || authDisabled}
+      >
+        <GithubIcon />
+        Continue with GitHub
+      </Button>
+
+      <Button
+        variant="outline"
+        className={cn("w-full", formStackSpacing.sectionBelow)}
+        onClick={() => void signInWithOAuthProvider("google")}
         disabled={loading || authDisabled}
       >
         <GoogleIcon />
-        Sign in with Google
+        Continue with Google
       </Button>
 
       {error && (
@@ -53,7 +64,7 @@ export const SignInPanel = () => {
         <Separator className="flex-1" />
       </div>
 
-      <EmailAuthForm authDisabled={authDisabled} />
+      <EmailLinkForm authDisabled={authDisabled} />
 
       <p className={cn("text-center text-xs text-muted-foreground", formStackSpacing.sectionAbove)}>
         <a

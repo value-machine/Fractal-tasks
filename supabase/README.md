@@ -36,8 +36,11 @@ Migration `*_point_at_tree.sql`. Served by the `point-at` Edge Function (`functi
 | `node_events`       | Per-node log: created, split, claimed, reports, reviews, bounce-backs                         | Only the `point-at` function | Only the `point-at` function |
 | `node_links`        | "Also serves" links across branches                                                           | Only the `point-at` function | Only the `point-at` function |
 | `node_dependencies` | "Needs first" links: a node waits until another is closed                                     | Only the `point-at` function | Only the `point-at` function |
+| `node_splits`       | Every split and adoption of a node with its hypothesis (the node keeps only the latest)       | Only the `point-at` function | Only the `point-at` function |
+| `contributors`      | One per signed-in person who made an agent token: their display name (references `auth.users`) | Only the `point-at` function | Only the `point-at` function |
+| `agent_tokens`      | Personal agent tokens: SHA-256 hash, visible prefix, name, last used, revoked                 | Only the `point-at` function | Only the `point-at` function |
 
-RLS is enabled with no policies and table privileges are revoked from `anon` and `authenticated`, so the publishable key cannot touch these tables. The function connects with the `SUPABASE_DB_URL` secret (role `postgres`, bypasses RLS) and exposes a read-only JSON API to the browser and an MCP endpoint to agents. That endpoint has no authentication yet: the tables are closed to the API keys but writes are open to anyone who has the function URL (see the function README § Known gaps). `nodes.embedding` (pgvector, in the `extensions` schema) is not filled yet.
+RLS is enabled with no policies and table privileges are revoked from `anon` and `authenticated`, so the publishable key cannot touch these tables. The function connects with the `SUPABASE_DB_URL` secret (role `postgres`, bypasses RLS) and exposes a read-only JSON API to the browser and an MCP endpoint to agents. That endpoint needs a bearer token: a personal agent token (writes attributed to its owner) or, while agents switch over, the shared `POINT_AT_MCP_TOKEN` secret (function README § MCP tools). `nodes.embedding` (pgvector, in the `extensions` schema) is not filled yet.
 
 ## Applying migrations
 

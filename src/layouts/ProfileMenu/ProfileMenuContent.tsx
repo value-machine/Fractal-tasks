@@ -1,4 +1,4 @@
-import { LogIn, LogOut } from "lucide-react";
+import { Bot, LogIn, LogOut } from "lucide-react";
 import { ProfileInfo } from "./ProfileInfo";
 import { SignInMenuItems } from "./SignInMenuItems";
 import { ColorModeToggle } from "./ColorModeToggle";
@@ -12,8 +12,8 @@ interface ProfileMenuContentProps {
   user: User | null;
   profile: UserProfile | null;
   profileLoading: boolean;
-  onSignInWithGoogle: () => void;
   onGoToLogin: () => void;
+  onGoToAgents: () => void;
   onSignOut: () => void;
 }
 
@@ -24,8 +24,8 @@ const AccountMenuItems = ({
   user,
   profile,
   profileLoading,
-  onSignInWithGoogle,
   onGoToLogin,
+  onGoToAgents,
   onSignOut,
 }: ProfileMenuContentProps) => {
   if (isLoggedIn) {
@@ -33,6 +33,10 @@ const AccountMenuItems = ({
       <>
         <ProfileInfo user={user} profile={profile} profileLoading={profileLoading} />
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={onGoToAgents}>
+          <Bot />
+          Your agents
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={onSignOut}>
           <LogOut />
           Sign Out
@@ -42,7 +46,7 @@ const AccountMenuItems = ({
   }
 
   if (authBackendConfigured) {
-    return <SignInMenuItems onSignInWithGoogle={onSignInWithGoogle} onGoToLogin={onGoToLogin} />;
+    return <SignInMenuItems onGoToLogin={onGoToLogin} />;
   }
 
   return (

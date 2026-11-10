@@ -1,9 +1,9 @@
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/common/Card";
-import { useGoalTreeMcpUrl } from "@/features/goal-tree/hooks/useGoalTreeMcpUrl";
+import { usePointAtMcpUrl } from "@/shared/hooks/usePointAtMcpUrl";
 
 /** Explains that the tree is read-only and shows the MCP URL agents connect to. */
 export const AgentHint = () => {
-  const mcpUrl = useGoalTreeMcpUrl();
+  const mcpUrl = usePointAtMcpUrl();
   return (
     <Card hoverable={false} className="max-w-none gap-1 py-4">
       <CardContent className="flex flex-col gap-1">

@@ -1,26 +1,40 @@
-// Point At: read-only JSON API for the browser UI, plus the MCP server over HTTP at /mcp.
+// Point At: read-only JSON API for the browser UI, the signed-in person's agent tokens under
+// /api/me/tokens, and the MCP server over HTTP at /mcp.
 // Contract and test procedure: README.md in this folder.
+import {
+  createAgentToken,
+  listAgentTokens,
+  resolveAgentToken,
+  revokeAgentToken,
+} from "../_shared/pointAt/contributors.ts";
+import type { Db } from "../_shared/pointAt/db.ts";
 import { connectPostgres } from "../_shared/pointAt/postgresDb.ts";
 import { PROCESS_DOC } from "../_shared/pointAt/processDoc.ts";
 import { ProcessError, Store, type Role } from "../_shared/pointAt/store.ts";
 
 const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET, OPTIONS",
+  "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
   "access-control-allow-headers": "apikey, authorization, content-type, x-point-at-actor",
   "access-control-max-age": "86400",
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+let db: Db | undefined;
 let store: Store | undefined;
 
 /** One connection pool per isolate, created on first use. */
-function getStore(): Store {
-  if (store) return store;
+function getDb(): Db {
+  if (db) return db;
   const url = Deno.env.get("SUPABASE_DB_URL");
   if (!url) throw new Error("SUPABASE_DB_URL is not set");
-  store = new Store(connectPostgres(url));
+  db = connectPostgres(url);
+  return db;
+}
+
+function getStore(): Store {
+  store ??= new Store(getDb());
   return store;
 }
 
@@ -85,6 +99,72 @@ async function handleApi(path: string, url: URL): Promise<Response> {
   return json({ error: "Not found" }, 404);
 }
 
+const bearer = (req: Request): string =>
+  (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+
+interface SignedInUser {
+  id: string;
+  displayName: string;
+}
+
+/**
+ * The person behind a browser request, from their Supabase session token. Asks Supabase Auth
+ * itself, so an expired or forged token is refused. Null when not signed in.
+ */
+async function signedInUser(req: Request): Promise<SignedInUser | null> {
+  const token = bearer(req);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!token || !supabaseUrl || !anonKey) return null;
+  const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: { apikey: anonKey, authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  const user = await res.json();
+  if (!user?.id || user.is_anonymous) return null;
+  const meta = user.user_metadata ?? {};
+  const displayName =
+    meta.user_name || meta.full_name || meta.name || String(user.email ?? "").split("@")[0];
+  return { id: user.id, displayName: String(displayName).slice(0, 80) };
+}
+
+/** The signed-in person's agent tokens: list (GET), create (POST {name}), revoke (DELETE /:id). */
+async function handleMyTokens(req: Request, path: string): Promise<Response> {
+  try {
+    return await myTokens(req, path);
+  } catch (err: unknown) {
+    // A refused request (no name, too many tokens, unknown token) is the caller's to fix.
+    if (err instanceof ProcessError) {
+      return json({ error: err.message }, err.message === "No such token." ? 404 : 400);
+    }
+    throw err;
+  }
+}
+
+async function myTokens(req: Request, path: string): Promise<Response> {
+  const user = await signedInUser(req);
+  if (!user) return json({ error: "Sign in first" }, 401);
+  if (path === "/api/me/tokens" && req.method === "GET") {
+    return json(await listAgentTokens(getDb(), user.id));
+  }
+  if (path === "/api/me/tokens" && req.method === "POST") {
+    const body = await req.json().catch(() => ({}));
+    const created = await createAgentToken(getDb(), {
+      userId: user.id,
+      displayName: user.displayName,
+      name: String(body?.name ?? ""),
+    });
+    return json(created, 201);
+  }
+  const revoke = path.match(/^\/api\/me\/tokens\/([^/]+)$/);
+  if (revoke && req.method === "DELETE") {
+    const tokenId = decodeURIComponent(revoke[1]);
+    if (!UUID_PATTERN.test(tokenId)) throw new ProcessError("No such token.");
+    return json(await revokeAgentToken(getDb(), { userId: user.id, tokenId }));
+  }
+  return json({ error: "Method not allowed" }, 405);
+}
+
 /** Constant-time comparison, so response timing does not reveal how much of a token matched. */
 function tokensMatch(given: string, expected: string): boolean {
   const a = new TextEncoder().encode(given);
@@ -95,23 +175,26 @@ function tokensMatch(given: string, expected: string): boolean {
 }
 
 /**
- * Writes go through MCP, so MCP needs the shared secret POINT_AT_MCP_TOKEN as a bearer token
- * until contributor sign-in exists. Fails closed: without the secret set, MCP is refused.
+ * Writes go through MCP, so MCP needs a bearer token: a personal agent token (the write is
+ * attributed to its owner), or the shared secret POINT_AT_MCP_TOKEN while agents switch over.
  */
-function mcpAuthError(req: Request): Response | null {
-  const expected = Deno.env.get("POINT_AT_MCP_TOKEN");
-  if (!expected) return json({ error: "MCP is not enabled on this deployment" }, 503);
-  const given = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!given || !tokensMatch(given, expected)) {
-    return json({ error: "Unauthorized" }, 401, { "www-authenticate": "Bearer" });
+async function authenticateMcp(req: Request): Promise<{ contributor?: string } | Response> {
+  const given = bearer(req);
+  const unauthorized = () =>
+    json({ error: "Unauthorized" }, 401, { "www-authenticate": "Bearer" });
+  if (!given) return unauthorized();
+  if (given.startsWith("pa_")) {
+    const owner = await resolveAgentToken(getDb(), given);
+    return owner ? { contributor: owner.displayName } : unauthorized();
   }
-  return null;
+  const shared = Deno.env.get("POINT_AT_MCP_TOKEN");
+  return shared && tokensMatch(given, shared) ? {} : unauthorized();
 }
 
 /** MCP over streamable HTTP, stateless: a fresh server and transport per request. */
 async function handleMcp(req: Request): Promise<Response> {
-  const denied = mcpAuthError(req);
-  if (denied) return denied;
+  const caller = await authenticateMcp(req);
+  if (caller instanceof Response) return caller;
   // Loaded on first MCP request only: the MCP SDK and zod are the heaviest imports, and the web
   // view's /api calls never need them, so a cold start for the browser stays light.
   const [{ WebStandardStreamableHTTPServerTransport }, { createMcpServer }] = await Promise.all([
@@ -122,7 +205,10 @@ async function handleMcp(req: Request): Promise<Response> {
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
-  const server = createMcpServer(getStore(), req.headers.get("x-point-at-actor") || undefined);
+  const server = createMcpServer(getStore(), {
+    contributor: caller.contributor,
+    defaultActor: req.headers.get("x-point-at-actor") || undefined,
+  });
   await server.connect(transport);
   return transport.handleRequest(req);
 }
@@ -135,6 +221,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
   try {
     if (path === "/mcp") return await handleMcp(req);
+    if (path.startsWith("/api/me/")) return await handleMyTokens(req, path);
     if (path.startsWith("/api/")) {
       if (req.method !== "GET")
         return json({ error: "Method not allowed" }, 405, { allow: "GET, OPTIONS" });

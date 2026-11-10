@@ -6,12 +6,12 @@ Read-only navigation of the shared goal tree ("Point At"): zoomable nested tiles
 
 ## Structure
 
-| Layer      | Path                                                        | Purpose                                                                                               |
-| ---------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Types      | `types/goalTree.types.ts`, `types/goalTreeLabels.ts`        | API shapes (copied from the prototype store) and display labels/copy                                  |
-| Services   | `services/goalTreeApiService.ts`                            | Plain `fetch` client for the `point-at` Edge Function read API; `GoalTreeNotConfiguredError`; MCP URL |
-| Hooks      | `hooks/useGoalTreeQueries.ts`, `hooks/useGoalTreeMcpUrl.ts` | TanStack Query hooks with `goalTreeKeys`; MCP URL for the hint                                        |
-| Components | `components/Goal*.tsx`, `AgentHint.tsx`                     | Tiles, rows, pills, breadcrumbs, node detail, nav + search, query-state wrapper, agent hint           |
+| Layer      | Path                                                 | Purpose                                                                                                                                                                                                                |
+| ---------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Types      | `types/goalTree.types.ts`, `types/goalTreeLabels.ts` | API shapes (copied from the prototype store) and display labels/copy                                                                                                                                                   |
+| Services   | `services/goalTreeApiService.ts`                     | Plain `fetch` client for the `point-at` Edge Function read API; function URL, region pin, MCP URL and `PointAtNotConfiguredError` come from `src/shared/services/pointAtFunctionService.ts` (shared with agent tokens) |
+| Hooks      | `hooks/useGoalTreeQueries.ts`                        | TanStack Query hooks with `goalTreeKeys`; the hint gets the MCP URL from `src/shared/hooks/usePointAtMcpUrl.ts`                                                                                                        |
+| Components | `components/Goal*.tsx`, `AgentHint.tsx`              | Tiles, rows, pills, breadcrumbs, node detail, nav + search, query-state wrapper, agent hint                                                                                                                            |
 
 Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:role` (`donor` or `executor`), `/search?q=`, wired in `src/App.tsx`.
 

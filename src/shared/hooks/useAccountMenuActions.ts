@@ -7,17 +7,17 @@ interface UseAccountMenuActionsProps {
 }
 
 export const useAccountMenuActions = ({ onClose }: UseAccountMenuActionsProps) => {
-  const { signInWithGoogle, logout } = useAuthContext();
+  const { logout } = useAuthContext();
   const navigate = useNavigate();
-
-  const handleSignIn = useCallback(() => {
-    void signInWithGoogle();
-    onClose();
-  }, [signInWithGoogle, onClose]);
 
   const handleGoToLogin = useCallback(() => {
     onClose();
     void navigate("/login");
+  }, [navigate, onClose]);
+
+  const handleGoToAgents = useCallback(() => {
+    onClose();
+    void navigate("/agents");
   }, [navigate, onClose]);
 
   const handleSignOut = useCallback(async () => {
@@ -26,8 +26,8 @@ export const useAccountMenuActions = ({ onClose }: UseAccountMenuActionsProps) =
   }, [logout, onClose]);
 
   return {
-    handleSignIn,
     handleGoToLogin,
+    handleGoToAgents,
     handleSignOut,
   };
 };

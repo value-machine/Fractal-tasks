@@ -3,10 +3,12 @@ import {
   fetchGoalNode,
   fetchGoalRoleView,
   fetchGoalRoots,
-  getGoalTreeMcpUrl,
-  GoalTreeNotConfiguredError,
   searchGoals,
 } from "./goalTreeApiService";
+import {
+  getPointAtMcpUrl,
+  PointAtNotConfiguredError,
+} from "@/shared/services/pointAtFunctionService";
 import { getEdgeFunctionConfig } from "@/shared/services/supabaseService";
 
 vi.mock("@/shared/services/supabaseService", () => ({ getEdgeFunctionConfig: vi.fn() }));
@@ -88,14 +90,14 @@ describe("goalTreeApiService", () => {
     await expect(fetchGoalRoots()).rejects.toThrow("Request failed (500)");
   });
 
-  it("should throw GoalTreeNotConfiguredError without calling fetch when Supabase is not configured", async () => {
+  it("should throw PointAtNotConfiguredError without calling fetch when Supabase is not configured", async () => {
     vi.mocked(getEdgeFunctionConfig).mockReturnValue(null);
 
-    await expect(fetchGoalRoots()).rejects.toBeInstanceOf(GoalTreeNotConfiguredError);
+    await expect(fetchGoalRoots()).rejects.toBeInstanceOf(PointAtNotConfiguredError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("should build the MCP url when Supabase is configured", () => {
-    expect(getGoalTreeMcpUrl()).toBe(`${CONFIG.baseUrl}/mcp?forceFunctionRegion=eu-west-1`);
+    expect(getPointAtMcpUrl()).toBe(`${CONFIG.baseUrl}/mcp?forceFunctionRegion=eu-west-1`);
   });
 });

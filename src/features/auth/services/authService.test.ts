@@ -4,13 +4,9 @@ import { isSupabaseConfigured } from "@/shared/services/supabaseService";
 
 const mockSupabase = {
   auth: {
-    signInWithPassword: vi.fn(),
-    signUp: vi.fn(),
     signOut: vi.fn(),
-    getUser: vi.fn(),
     signInWithOAuth: vi.fn(),
-    resetPasswordForEmail: vi.fn(),
-    updateUser: vi.fn(),
+    signInWithOtp: vi.fn(),
     exchangeCodeForSession: vi.fn(),
     getSession: vi.fn(),
   },
@@ -30,72 +26,8 @@ describe("authService", () => {
     vi.clearAllMocks();
   });
 
-  describe("login", () => {
-    it("should login successfully with valid credentials", async () => {
-      const mockUser = {
-        id: "123",
-        email: "test@example.com",
-        created_at: "2024-01-01",
-      };
-
-      vi.mocked(mockSupabase.auth.signInWithPassword).mockResolvedValue({
-        data: { user: mockUser, session: null },
-        error: null,
-      } as unknown as Awaited<ReturnType<typeof mockSupabase.auth.signInWithPassword>>);
-
-      const result = await authService.login({
-        email: "test@example.com",
-        password: "password123",
-      });
-
-      expect(result.error).toBeNull();
-      expect(result.user).toEqual({
-        id: "123",
-        email: "test@example.com",
-        created_at: "2024-01-01",
-      });
-    });
-
-    it("should return mapped error on invalid credentials", async () => {
-      const mockError = { message: "Invalid login credentials" };
-
-      vi.mocked(mockSupabase.auth.signInWithPassword).mockResolvedValue({
-        data: { user: null, session: null },
-        error: mockError,
-      } as unknown as Awaited<ReturnType<typeof mockSupabase.auth.signInWithPassword>>);
-
-      const result = await authService.login({
-        email: "test@example.com",
-        password: "wrongpassword",
-      });
-
-      expect(result.user).toBeNull();
-      expect(result.error?.message).toBe("Invalid email or password.");
-    });
-  });
-
-  describe("signUp", () => {
-    it("should detect duplicate sign-up via empty identities", async () => {
-      vi.mocked(mockSupabase.auth.signUp).mockResolvedValue({
-        data: {
-          user: { id: "123", email: "test@example.com", identities: [] },
-          session: null,
-        },
-        error: null,
-      } as unknown as Awaited<ReturnType<typeof mockSupabase.auth.signUp>>);
-
-      const result = await authService.signUp({
-        email: "test@example.com",
-        password: "password123",
-      });
-
-      expect(result.user).toBeNull();
-      expect(result.error?.message).toContain("Google");
-    });
-  });
-
   describe("logout", () => {
-    it("should logout successfully", async () => {
+    it("should return no error when sign-out succeeds", async () => {
       vi.mocked(mockSupabase.auth.signOut).mockResolvedValue({
         error: null,
       } as unknown as Awaited<ReturnType<typeof mockSupabase.auth.signOut>>);
@@ -106,18 +38,59 @@ describe("authService", () => {
     });
   });
 
-  describe("signInWithGoogle", () => {
-    it("should send a redirect address that ends with a slash so '<origin>/**' allow-list patterns match", async () => {
-      vi.mocked(mockSupabase.auth.signInWithOAuth).mockResolvedValue({
+  describe("signInWithOAuthProvider", () => {
+    it.each(["google", "github"] as const)(
+      "should redirect back to '<origin>/' when signing in with %s",
+      async (provider) => {
+        vi.mocked(mockSupabase.auth.signInWithOAuth).mockResolvedValue({
+          data: {},
+          error: null,
+        } as never);
+
+        await authService.signInWithOAuthProvider(provider);
+
+        const [args] = vi.mocked(mockSupabase.auth.signInWithOAuth).mock.calls[0];
+        expect(args.provider).toBe(provider);
+        // Ends with a slash so '<origin>/**' allow-list patterns match
+        expect(args.options?.redirectTo).toBe(`${window.location.origin}/`);
+      }
+    );
+  });
+
+  describe("sendEmailSignInLink", () => {
+    it("should send a trimmed email with the '<origin>/' return address when the email is valid", async () => {
+      vi.mocked(mockSupabase.auth.signInWithOtp).mockResolvedValue({
         data: {},
         error: null,
       } as never);
 
-      await authService.signInWithGoogle();
+      const result = await authService.sendEmailSignInLink("  ada@example.com ");
 
-      const [args] = vi.mocked(mockSupabase.auth.signInWithOAuth).mock.calls[0];
-      expect(args.provider).toBe("google");
-      expect(args.options?.redirectTo).toBe(`${window.location.origin}/`);
+      expect(result.error).toBeNull();
+      expect(mockSupabase.auth.signInWithOtp).toHaveBeenCalledWith({
+        email: "ada@example.com",
+        options: { emailRedirectTo: `${window.location.origin}/`, shouldCreateUser: true },
+      });
+    });
+
+    it("should return a validation error without calling Supabase when the email is invalid", async () => {
+      const result = await authService.sendEmailSignInLink("not-an-email");
+
+      expect(result.error?.message).toBe("Enter a valid email address.");
+      expect(mockSupabase.auth.signInWithOtp).not.toHaveBeenCalled();
+    });
+
+    it("should return the mapped error when Supabase refuses to send", async () => {
+      vi.mocked(mockSupabase.auth.signInWithOtp).mockResolvedValue({
+        data: {},
+        error: { message: "Request rate limit reached" },
+      } as never);
+
+      const result = await authService.sendEmailSignInLink("ada@example.com");
+
+      expect(result.error?.message).toBe(
+        "Too many attempts. Please wait a few minutes and try again."
+      );
     });
   });
 
@@ -163,15 +136,14 @@ describe("authService", () => {
       vi.mocked(isSupabaseConfigured).mockReturnValue(true);
     });
 
-    it("should return a configuration error without calling Supabase", async () => {
-      const result = await authService.login({ email: "a@b.c", password: "x" });
+    it("should return a configuration error without calling Supabase when sending a sign-in link", async () => {
+      const result = await authService.sendEmailSignInLink("ada@example.com");
 
-      expect(result.user).toBeNull();
       expect(result.error?.message).toMatch(/configured/i);
-      expect(mockSupabase.auth.signInWithPassword).not.toHaveBeenCalled();
+      expect(mockSupabase.auth.signInWithOtp).not.toHaveBeenCalled();
     });
 
-    it("should no-op logout without an error", async () => {
+    it("should return no error without calling Supabase when logging out", async () => {
       const result = await authService.logout();
 
       expect(result.error).toBeNull();

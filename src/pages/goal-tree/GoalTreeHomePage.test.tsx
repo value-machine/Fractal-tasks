@@ -2,10 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "tests/test-utils";
 import { GoalTreeHomePage } from "./GoalTreeHomePage";
-import {
-  fetchGoalRoots,
-  GoalTreeNotConfiguredError,
-} from "@/features/goal-tree/services/goalTreeApiService";
+import { fetchGoalRoots } from "@/features/goal-tree/services/goalTreeApiService";
+import { PointAtNotConfiguredError } from "@/shared/services/pointAtFunctionService";
 
 vi.mock("@/features/goal-tree/services/goalTreeApiService", async (importOriginal) => {
   const actual =
@@ -13,7 +11,14 @@ vi.mock("@/features/goal-tree/services/goalTreeApiService", async (importOrigina
   return {
     ...actual,
     fetchGoalRoots: vi.fn(),
-    getGoalTreeMcpUrl: () => "https://proj.supabase.co/functions/v1/point-at/mcp",
+  };
+});
+
+vi.mock("@/shared/services/pointAtFunctionService", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/shared/services/pointAtFunctionService")>();
+  return {
+    ...actual,
+    getPointAtMcpUrl: () => "https://proj.supabase.co/functions/v1/point-at/mcp",
   };
 });
 
@@ -57,7 +62,7 @@ describe("GoalTreeHomePage", () => {
   });
 
   it("should show the not-configured message when Supabase is not configured", async () => {
-    vi.mocked(fetchGoalRoots).mockRejectedValue(new GoalTreeNotConfiguredError());
+    vi.mocked(fetchGoalRoots).mockRejectedValue(new PointAtNotConfiguredError());
 
     renderWithProviders(<GoalTreeHomePage />);
 
