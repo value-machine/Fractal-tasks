@@ -1,6 +1,7 @@
 import { McpServer } from "npm:@modelcontextprotocol/sdk@1.32.2/server/mcp.js";
 import { z } from "npm:zod@4.6.7";
 
+import { actorFor } from "./contributors.ts";
 import { PROCESS_DOC } from "./processDoc.ts";
 import { ProcessError, type Store } from "./store.ts";
 
@@ -18,7 +19,7 @@ const actorField = z
   .string()
   .optional()
   .describe(
-    'Who is acting, e.g. "Tom via Claude". Defaults to the x-point-at-actor header, else "anonymous agent".'
+    'Who is acting. With a personal agent token the write is always attributed to its owner, and this only names the agent (e.g. "Claude Code"); with the shared token it is the whole actor, e.g. "Tom via Claude". Defaults to the x-point-at-actor header.'
   );
 
 const newNode = z.object({
@@ -31,13 +32,27 @@ const newNode = z.object({
   labels: z.array(z.string()).optional().describe('Lens labels, e.g. ["health", "Utrecht"].'),
 });
 
-/** Build a Point At MCP server over the store. `defaultActor` names whoever acts when a tool call gives no actor. */
-export function createMcpServer(store: Store, defaultActor = "anonymous agent"): McpServer {
+/**
+ * Who is calling. With a personal agent token, `contributor` is the signed-in person and every
+ * write is theirs; the agent's own label (tool `actor` or `defaultActor`) only adds "via ...".
+ * With the shared token, the typed-in actor is all there is.
+ */
+export interface McpIdentity {
+  contributor?: string;
+  defaultActor?: string;
+}
+
+/** Build a Point At MCP server over the store, acting for `identity`. */
+export function createMcpServer(store: Store, identity: McpIdentity = {}): McpServer {
+  const defaultActor = identity.defaultActor || "anonymous agent";
   const server = new McpServer(
     { name: "point-at", version: "0.1.0" },
     { instructions: INSTRUCTIONS }
   );
-  const who = (actor?: string) => actor?.trim() || defaultActor;
+  const who = (actor?: string) =>
+    identity.contributor
+      ? actorFor(identity.contributor, actor?.trim() || identity.defaultActor)
+      : actor?.trim() || defaultActor;
 
   const run = async (fn: () => Promise<unknown>) => {
     try {

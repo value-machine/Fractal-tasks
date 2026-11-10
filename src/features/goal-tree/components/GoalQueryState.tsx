@@ -4,7 +4,7 @@ import { Alert } from "@/components/common/Alert";
 import { PageLoadingState } from "@/components/common/PageLoadingState";
 
 const isNotConfigured = (error: unknown): boolean =>
-  error instanceof Error && error.name === "GoalTreeNotConfiguredError";
+  error instanceof Error && error.name === "PointAtNotConfiguredError";
 
 /**
  * Renders loading, error and "Supabase not configured" states for a goal query, and the

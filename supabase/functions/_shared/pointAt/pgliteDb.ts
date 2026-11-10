@@ -32,7 +32,9 @@ export async function createMigratedPglite(): Promise<{ db: Db; reset: () => Pro
   const pg = await PGlite.create({ extensions: { vector } });
   // Objects Supabase provides that the migrations reference.
   await pg.exec(
-    "create schema if not exists extensions; create role anon; create role authenticated;"
+    "create schema if not exists extensions; create role anon; create role authenticated;" +
+      // Stand-in for Supabase Auth's user table, which contributor tables reference.
+      " create schema if not exists auth; create table if not exists auth.users (id uuid primary key);"
   );
   for (const file of readdirSync(MIGRATIONS_DIR).sort()) {
     if (POINT_AT_MIGRATION.test(file)) {
@@ -54,7 +56,7 @@ export async function createMigratedPglite(): Promise<{ db: Db; reset: () => Pro
   );
   const reset = async () => {
     await pg.exec(
-      "truncate node_splits, node_dependencies, node_links, node_events, nodes restart identity cascade"
+      "truncate agent_tokens, contributors, node_splits, node_dependencies, node_links, node_events, nodes restart identity cascade"
     );
   };
   return { db, reset };

@@ -28,8 +28,8 @@ const TasksPage = lazy(() =>
   import("@/pages/tasks/TasksPage").then((m) => ({ default: m.TasksPage }))
 );
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
-const ResetPasswordPage = lazy(() =>
-  import("@/pages/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage }))
+const AgentTokensPage = lazy(() =>
+  import("@/pages/agents/AgentTokensPage").then((m) => ({ default: m.AgentTokensPage }))
 );
 const AuthCallbackPage = lazy(() =>
   import("@/pages/AuthCallbackPage").then((m) => ({ default: m.AuthCallbackPage }))
@@ -55,9 +55,9 @@ function AppContent() {
                 <Route path="/nodes/:id" element={<GoalNodePage />} />
                 <Route path="/views/:role" element={<GoalRoleViewPage />} />
                 <Route path="/search" element={<GoalSearchPage />} />
+                <Route path="/agents" element={<AgentTokensPage />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/tasks" element={<TasksPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />

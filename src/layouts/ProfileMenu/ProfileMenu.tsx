@@ -18,7 +18,7 @@ export const ProfileMenu = () => {
   const [open, setOpen] = useState(false);
   const handleClose = useCallback(() => setOpen(false), []);
 
-  const { handleSignIn, handleGoToLogin, handleSignOut } = useAccountMenuActions({
+  const { handleGoToLogin, handleGoToAgents, handleSignOut } = useAccountMenuActions({
     onClose: handleClose,
   });
 
@@ -32,8 +32,8 @@ export const ProfileMenu = () => {
           user={user}
           profile={profile ?? null}
           profileLoading={profileLoading}
-          onSignInWithGoogle={handleSignIn}
           onGoToLogin={handleGoToLogin}
+          onGoToAgents={handleGoToAgents}
           onSignOut={handleSignOut}
         />
       </DropdownMenuContent>

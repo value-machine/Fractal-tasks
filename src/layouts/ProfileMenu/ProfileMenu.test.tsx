@@ -12,7 +12,6 @@ vi.mock("@/shared/context/AuthContext");
 vi.mock("@/features/auth/hooks/useUserProfileQuery");
 vi.mock("@/shared/hooks/useAuthBackendConfigured");
 
-const mockSignInWithGoogle = vi.fn();
 const mockLogout = vi.fn();
 const mockNavigate = vi.fn();
 
@@ -27,7 +26,6 @@ vi.mock("react-router-dom", async () => {
 describe("ProfileMenu", () => {
   const defaultAuthContext = createDefaultAuthContextValue({
     logout: mockLogout,
-    signInWithGoogle: mockSignInWithGoogle,
   });
 
   const defaultUserProfileQuery = {
@@ -80,7 +78,7 @@ describe("ProfileMenu", () => {
       });
     });
 
-    it("should show sign-in options when menu is opened and user is not logged in", async () => {
+    it("should show one sign-in entry when menu is opened and user is not logged in", async () => {
       const user = userEvent.setup();
       renderMenu();
 
@@ -88,9 +86,9 @@ describe("ProfileMenu", () => {
       await user.click(triggerButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/sign in with google/i)).toBeInTheDocument();
-        expect(screen.getByText(/sign in with email/i)).toBeInTheDocument();
+        expect(screen.getByText(/^sign in$/i)).toBeInTheDocument();
       });
+      expect(screen.queryByText(/your agents/i)).not.toBeInTheDocument();
     });
 
     it("should show profile info and sign-out when menu is opened and user is logged in", async () => {
@@ -112,10 +110,24 @@ describe("ProfileMenu", () => {
         expect(screen.getByText(/sign out/i)).toBeInTheDocument();
       });
     });
+
+    it("should go to the agents page when Your agents is clicked by a signed-in user", async () => {
+      vi.mocked(useAuthContext).mockReturnValue({
+        ...defaultAuthContext,
+        user: { id: "123", email: "test@example.com" } as User,
+      });
+      const user = userEvent.setup();
+      renderMenu();
+
+      await user.click(screen.getByRole("button"));
+      await user.click(await screen.findByText(/your agents/i));
+
+      expect(mockNavigate).toHaveBeenCalledWith("/agents");
+    });
   });
 
   describe("Sign-in interactions", () => {
-    it("should call signInWithGoogle when Google sign-in is clicked", async () => {
+    it("should navigate to login when sign-in is clicked", async () => {
       const user = userEvent.setup();
       renderMenu();
 
@@ -123,27 +135,10 @@ describe("ProfileMenu", () => {
       await user.click(triggerButton);
 
       await waitFor(() => {
-        expect(screen.getByText(/sign in with google/i)).toBeInTheDocument();
+        expect(screen.getByText(/^sign in$/i)).toBeInTheDocument();
       });
 
-      const signInButton = screen.getByText(/sign in with google/i);
-      await user.click(signInButton);
-
-      expect(mockSignInWithGoogle).toHaveBeenCalled();
-    });
-
-    it("should navigate to login when email sign-in is clicked", async () => {
-      const user = userEvent.setup();
-      renderMenu();
-
-      const triggerButton = screen.getByRole("button");
-      await user.click(triggerButton);
-
-      await waitFor(() => {
-        expect(screen.getByText(/sign in with email/i)).toBeInTheDocument();
-      });
-
-      const signInButton = screen.getByText(/sign in with email/i);
+      const signInButton = screen.getByText(/^sign in$/i);
       await user.click(signInButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/login");

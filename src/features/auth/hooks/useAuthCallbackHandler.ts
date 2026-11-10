@@ -4,7 +4,6 @@ import {
   getOAuthErrorMessage,
   handleCodeExchange,
 } from "@/features/auth/services/authCallbackService";
-import { isPasswordRecoveryRedirect } from "@/shared/utils/oauthUtils";
 import { isSupabaseConfigured } from "@/shared/services/supabaseService";
 import { useAuthContext } from "@/shared/context/AuthContext";
 
@@ -14,7 +13,7 @@ interface AuthCallbackState {
 }
 
 /**
- * Handles OAuth PKCE callbacks and recovery redirects on the app root.
+ * Handles PKCE returns (OAuth and email sign-in links) on the app root.
  */
 export const useAuthCallbackHandler = (): AuthCallbackState => {
   const navigate = useNavigate();
@@ -24,12 +23,6 @@ export const useAuthCallbackHandler = (): AuthCallbackState => {
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
-      return;
-    }
-
-    if (isPasswordRecoveryRedirect()) {
-      const hash = window.location.hash;
-      void navigate(`/reset-password${hash}`, { replace: true });
       return;
     }
 

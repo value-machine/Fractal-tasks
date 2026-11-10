@@ -2,16 +2,14 @@ import {
   getSupabase,
   isSupabaseConfigured,
   type SupabaseAuth,
-  type SupabaseUser,
 } from "@/shared/services/supabaseService";
 import { queryClient } from "@/shared/utils/queryClient";
 import { getAppUrl } from "@/shared/utils/appOrigin";
-import type { User, LoginCredentials, SignUpCredentials } from "@/features/auth/types/auth.types";
-import { mapProviderUserToAppUser } from "@/shared/utils/userUtils";
-import { DUPLICATE_SIGNUP_MESSAGE, mapAuthError } from "./authErrorMessages";
+import type { OAuthProvider } from "@/features/auth/types/auth.types";
+import { mapAuthError } from "./authErrorMessages";
+import { validateEmail } from "./authValidation";
 
 type AuthResult = { error: Error | null };
-type AuthUserResult = { user: User | null; error: Error | null };
 
 interface RunAuthOptions {
   /** When Supabase is not configured: fail with a configuration error (default) or no-op. */
@@ -40,38 +38,6 @@ const runAuth = async (
   }
 };
 
-/** `runAuth` for calls that return a user; `user` is null whenever `error` is set. */
-const runAuthForUser = async (
-  call: (auth: SupabaseAuth) => Promise<{ data: { user: SupabaseUser | null }; error: unknown }>,
-  validate?: (user: SupabaseUser | null) => Error | null
-): Promise<AuthUserResult> => {
-  let providerUser: SupabaseUser | null = null;
-  const { error } = await runAuth(async (auth) => {
-    const result = await call(auth);
-    providerUser = result.data.user;
-    return result;
-  });
-  const validationError = error ?? validate?.(providerUser) ?? null;
-  return validationError
-    ? { user: null, error: validationError }
-    : { user: mapProviderUserToAppUser(providerUser), error: null };
-};
-
-export const login = (credentials: LoginCredentials): Promise<AuthUserResult> =>
-  runAuthForUser((auth) =>
-    auth.signInWithPassword({ email: credentials.email.trim(), password: credentials.password })
-  );
-
-export const signUp = (credentials: SignUpCredentials): Promise<AuthUserResult> =>
-  runAuthForUser(
-    (auth) => auth.signUp({ email: credentials.email.trim(), password: credentials.password }),
-    // Supabase returns a user without identities when the email is already registered
-    (user) =>
-      user && (!user.identities || user.identities.length === 0)
-        ? new Error(DUPLICATE_SIGNUP_MESSAGE)
-        : null
-  );
-
 export const logout = (): Promise<AuthResult> =>
   runAuth(
     (auth) => {
@@ -82,13 +48,32 @@ export const logout = (): Promise<AuthResult> =>
   );
 
 /**
- * The return address ends with "/" so allow-list patterns like `https://host/**` match it
- * (a bare origin does not match them, and Supabase then sends the user to the Site URL).
+ * Every sign-in returns to `<origin>/`, where the PKCE `?code=` is exchanged. The address ends with
+ * "/" so allow-list patterns like `https://host/**` match it (a bare origin does not match them, and
+ * Supabase then sends the user to the Site URL).
  */
-export const signInWithGoogle = (): Promise<AuthResult> =>
-  runAuth((auth) =>
-    auth.signInWithOAuth({ provider: "google", options: { redirectTo: getAppUrl("/") } })
+const signInReturnUrl = (): string => getAppUrl("/");
+
+/** Starts an OAuth redirect to the given provider (Google, GitHub). */
+export const signInWithOAuthProvider = (provider: OAuthProvider): Promise<AuthResult> =>
+  runAuth((auth) => auth.signInWithOAuth({ provider, options: { redirectTo: signInReturnUrl() } }));
+
+/**
+ * Emails a one-time sign-in link (no password). New addresses get an account on first use, so
+ * sign-in and sign-up are the same step. The link returns through the same PKCE path as OAuth.
+ */
+export const sendEmailSignInLink = (email: string): Promise<AuthResult> => {
+  const emailError = validateEmail(email);
+  if (emailError) {
+    return Promise.resolve({ error: new Error(emailError) });
+  }
+  return runAuth((auth) =>
+    auth.signInWithOtp({
+      email: email.trim(),
+      options: { emailRedirectTo: signInReturnUrl(), shouldCreateUser: true },
+    })
   );
+};
 
 /**
  * True when a signed-in (non-anonymous) session exists. Reading the session waits for the client's
@@ -107,14 +92,6 @@ export const hasSignedInSession = async (): Promise<boolean> => {
   }
 };
 
-export const requestPasswordReset = (email: string): Promise<AuthResult> =>
-  runAuth((auth) =>
-    auth.resetPasswordForEmail(email.trim(), { redirectTo: getAppUrl("/reset-password") })
-  );
-
-export const updatePassword = (password: string): Promise<AuthResult> =>
-  runAuth((auth) => auth.updateUser({ password }));
-
-/** Exchange authorization code for session (used in OAuth PKCE callback) */
+/** Exchange authorization code for session (PKCE return from OAuth and email sign-in links) */
 export const exchangeCodeForSession = (code: string): Promise<AuthResult> =>
   runAuth((auth) => auth.exchangeCodeForSession(code));

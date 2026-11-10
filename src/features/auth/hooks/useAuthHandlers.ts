@@ -1,12 +1,9 @@
 import { useRef, useCallback, useMemo } from "react";
 import * as authService from "@/features/auth/services/authService";
-import type { User, LoginCredentials, SignUpCredentials } from "@/features/auth/types/auth.types";
+import type { OAuthProvider, User } from "@/features/auth/types/auth.types";
 import {
-  handleLogin as handleLoginUtil,
-  handleSignUp as handleSignUpUtil,
   handleLogout as handleLogoutUtil,
-  handleRequestPasswordReset as handleRequestPasswordResetUtil,
-  handleUpdatePassword as handleUpdatePasswordUtil,
+  handleSendEmailSignInLink as handleSendEmailSignInLinkUtil,
 } from "@/features/auth/services/authHandlerUtils";
 
 interface UseAuthHandlersOptions {
@@ -20,62 +17,35 @@ export const useAuthHandlers = ({ setUser, setLoading, setError }: UseAuthHandle
   const stateRef = useRef({ setUser, setLoading, setError });
   stateRef.current = { setUser, setLoading, setError };
 
-  const executeSignIn = useCallback(
-    async (signInMethod: () => Promise<{ error: Error | null }>, errorMessage: string) => {
-      if (signInInFlightRef.current) return;
-      signInInFlightRef.current = true;
-      const { setLoading: setLoadingState, setError: setErrorState } = stateRef.current;
-      try {
-        setLoadingState(true);
-        setErrorState(null);
-        const { error: signInError } = await signInMethod();
-        if (signInError) setErrorState(signInError.message);
-      } catch (err) {
-        setErrorState(err instanceof Error ? err.message : errorMessage);
-      } finally {
-        setLoadingState(false);
-        signInInFlightRef.current = false;
-      }
-    },
-    []
-  );
+  const signInWithOAuthProvider = useCallback(async (provider: OAuthProvider) => {
+    if (signInInFlightRef.current) return;
+    signInInFlightRef.current = true;
+    const { setLoading: setLoadingState, setError: setErrorState } = stateRef.current;
+    try {
+      setLoadingState(true);
+      setErrorState(null);
+      const { error: signInError } = await authService.signInWithOAuthProvider(provider);
+      if (signInError) setErrorState(signInError.message);
+    } catch (err) {
+      setErrorState(err instanceof Error ? err.message : "Sign-in could not be started.");
+    } finally {
+      setLoadingState(false);
+      signInInFlightRef.current = false;
+    }
+  }, []);
 
-  const login = useCallback(
-    (credentials: LoginCredentials) => handleLoginUtil(credentials, stateRef.current),
-    []
-  );
-  const signUp = useCallback(
-    (credentials: SignUpCredentials) => handleSignUpUtil(credentials, stateRef.current),
+  const sendEmailSignInLink = useCallback(
+    (email: string) => handleSendEmailSignInLinkUtil(email, stateRef.current),
     []
   );
   const logout = useCallback(() => handleLogoutUtil(stateRef.current), []);
-  const requestPasswordReset = useCallback(
-    (email: string) => handleRequestPasswordResetUtil(email, stateRef.current),
-    []
-  );
-  const updatePassword = useCallback(
-    (password: string) => handleUpdatePasswordUtil(password, stateRef.current),
-    []
-  );
-  const signInWithGoogle = useCallback(
-    () => executeSignIn(authService.signInWithGoogle, "Failed to sign in with Google"),
-    [executeSignIn]
-  );
 
   const clearAuthError = useCallback(() => {
     stateRef.current.setError(null);
   }, []);
 
   return useMemo(
-    () => ({
-      login,
-      signUp,
-      logout,
-      signInWithGoogle,
-      requestPasswordReset,
-      updatePassword,
-      clearAuthError,
-    }),
-    [login, signUp, logout, signInWithGoogle, requestPasswordReset, updatePassword, clearAuthError]
+    () => ({ logout, signInWithOAuthProvider, sendEmailSignInLink, clearAuthError }),
+    [logout, signInWithOAuthProvider, sendEmailSignInLink, clearAuthError]
   );
 };
