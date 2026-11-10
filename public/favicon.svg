@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="App">
-  <!-- Placeholder mark in the theme primary (src/shared/theme/tokens/light.tokens.json); onboarding replaces it. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Point At">
+  <!-- Point At mark: a young shoot with a leaf-shaped tip. Colours: the theme primary (light.tokens.json / dark.tokens.json). -->
   <style>
-    path { fill: #8a5a2b; }
-    @media (prefers-color-scheme: dark) { path { fill: #d4a05e; } }
+    svg { color: #8a5a2b; }
+    @media (prefers-color-scheme: dark) { svg { color: #d4a05e; } }
   </style>
-  <path d="M16 5l5 8h-2v7.2L17.2 22h-2.4L15 20.2V13h-2L16 5zm-3 15.5L8 25l5-2.5zm6 0L24 25l-5-2.5zM14 22h4l-2 5z" />
+  <g fill="currentColor"><path d="M14.5 30.5C14.5 24 17.5 20 16.6 13" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15.6 23.4C12.4 22.6 9.6 20.6 8.6 17.2M16.7 18.4C19.4 17.8 22 16.2 23.4 13.4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8.3" cy="16.4" r="2.2"/><circle cx="23.8" cy="12.6" r="2.2"/><path d="M16.4 1.8C19.8 5.6 21 9 20 11.8C19.2 13.8 17.6 14.6 16 14.4C14.4 14.2 12.9 13 12.6 11C12.1 8 13.6 4.8 16.4 1.8Z"/></g>
 </svg>
