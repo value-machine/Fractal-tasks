@@ -66,7 +66,7 @@
   },
   {
     "title": "Process wording for human leaves (first-tests findings)",
-    "description": "Decide and write into DOC_POINT_AT_PROCESS.md 3: generic targets instead of an exact recipient, send-only leaves when a reply comes later, done checks observed by a third party or much later, and a constraints field on splits. Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open. Result (2026-11-06): process v0.4 merged (value-machine/Fractal-tasks#13) and deployed: role-plus-how-to-find targets, send-only done signals, late or third-party done checks with observer and time, hard constraints named on every split.",
+    "description": "Decide and write into DOC_POINT_AT_PROCESS.md 3: generic targets instead of an exact recipient, send-only leaves when a reply comes later, done checks observed by a third party or much later, and a constraints field on splits. Context: documentation/jobs/temp_job_first-tests/RESULTS.md, section Open. Result (2026-11-06): process v0.4 merged (value-machine/Fractal-tasks#13) and deployed: role-plus-how-to-find targets, send-only done signals, late or third-party done checks with observer and time.",
     "status": "done"
   },
   {

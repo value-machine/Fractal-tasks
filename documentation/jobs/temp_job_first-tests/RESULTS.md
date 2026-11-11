@@ -37,7 +37,6 @@ Verified live after the deploy: 1 (report by a non-claimer refused), 3 (whitespa
    - "Exact recipient" conflicts with generic targets an agent may not name (a role plus how to find it, or a preceding lookup leaf).
    - A human leaf that waits on someone else's reply: allow "send-only" leaves, or split send from receive.
    - Done checks that can only be observed years later or by a third party (a municipal survey): add an "observed by / when" field?
-   - Hard constraints live only in free-text assumptions; a constraints field on a split would prompt for them.
 5. **Navigation (Bob, Rita).** `focus_node` lacks siblings, a root marker and the parent's hypothesis; output is verbose; dependencies between leaves cannot be recorded; `next_tasks` has no "needs review" filter.
 
 ## Test data

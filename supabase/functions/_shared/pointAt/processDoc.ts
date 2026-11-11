@@ -3,7 +3,7 @@
 // Run `node scripts/sync-process-doc.mjs` whenever that document changes.
 export const PROCESS_DOC = `# The Process
 
-Version: 0.5 (draft)
+Version: 0.6 (draft)
 This is a living document. It is refined through critique passes, and every change is recorded in the change log at the bottom.
 
 This document describes the single recursive unit used at every scale, from "make a sandwich this morning" to "achieve world peace".
@@ -54,7 +54,7 @@ A node can carry many labels. Choosing a lens selects and regroups nodes, so the
 
 ### 3.1 Definition
 
-A node is a **leaf** when the actor who would execute it, either an agent or the interfacing human, confirms they can do it in **one turn**.
+A node is a **leaf** when the actor who would execute it, either an agent or the interfacing human, can do it in **one turn**. An agent proposes the leaf; the executor confirms it by claiming it, or bounces it back as unclear.
 
 - **Agent leaf:** the agent can complete it in **one uninterrupted run**, with no human input or handoff in between. This works across tools (chat models, long-running coding agents) and can be checked afterwards: did the agent have to stop and ask?
 - **Human leaf:** the agent has done all the thinking but lacks the capability to act, for example because the step needs an email account, a sign-in, or a real-world presence. The agent hands the human a precise instruction. The human acts and reports back into the system.
@@ -127,7 +127,7 @@ No separate mechanism is needed against endless vague splitting. The leaf rule a
 - **Process documents** live in the Git repository, where they are versioned and reviewed.
 - **Nodes** live in a database, because millions of nodes in Git files would be slow to search and painful to merge. Postgres with pgvector (for example through Supabase) supports fast search, links between nodes, embeddings for finding related tasks, and grouping by lens.
 
-**No app, an MCP server instead.** We do not build a separate app. We build the database plus an MCP server that connects to the agents people already use, such as their own Claude. Anyone can ask their agent "what could I do to drive progress?" and the system returns the next best task for them, through the role views in section 2.3. A read-only web view lets people navigate the tree visually.
+**Agents through MCP, people through a website.** Agent work goes through an MCP server on the database, connected to the agents people already use, such as their own Claude. Anyone can ask their agent "what could I do to drive progress?" and the system returns the next best task for them, through the role views in section 2.3. Human work (real-world actions) is claimed, reported, checked or bounced back on a website, which also lets anyone navigate the tree.
 
 **Leave judgement to the models.** The system provides structure and data, not detailed procedures. Choosing the next best task, and similar judgement calls, is left to the person's agent. Too much prescribed process would hamper models once their intelligence surpasses the intelligence built into the process. The process should only fix what must be shared for coordination: the node format, the leaf rule, statuses, verification levels and review.
 
@@ -143,21 +143,15 @@ Because the structure is fractal, the same hypothesis applies at every level: a 
 
 **Checks that only show up later.** Higher in the tree, a done check may only be observable much later or by someone else, such as a yearly survey. That is allowed. The check then says who observes it and when ("the municipal health monitor of 2027 shows ..."), so whoever focuses on the node knows when it can be tested.
 
-## 7. How much scrutiny a node gets
+## 7. Review
 
-- Scrutiny scales with risk: the more uncertain and irreversible an action, the more its assumptions and its second and third order effects deserve examination. How to examine them is left to the agent.
-- Never trade away a hard constraint (consent, freedom, reversibility) to achieve a goal.
-- Every split names, in its assumptions, which hard constraints its children touch and how each is kept (for example "participation is voluntary; referral only with the person's consent"). Reviewers check this first.
+Every split is reviewed by another agent who tries to break it. A split is live as soon as it is made and shows as not yet reviewed; work on its children before review is at the worker's own risk. Whether claiming or closing should wait for an accepted review is decided later, from the review statistics. How to attack a split is left to the reviewing agent. A split cannot be reviewed by its own author. Second and third order effects are worth considering, in proportion to what is at stake; they are a consideration for the reviewer, not a rule a split must satisfy.
 
-## 8. Review
-
-No contribution is merged until another agent has tried to break it. How to attack a split is left to the reviewing agent. A split cannot be reviewed by its own author.
-
-## 9. Working together
+## 8. Working together
 
 Agents read this document first. They claim a node before working on it, cite evidence for claims, and follow the review rules.
 
-## 10. Prior art
+## 9. Prior art
 
 - **Plasma AI Fractal** (open source, Apache 2.0): coding-agent loops in a tree of Git worktrees. Each node has a NODE.md goal file that humans can edit while it runs, a per-node memory of cross-linked Markdown pages, and hard caps on iterations, depth, children, cost and time. Coordination is kept in a central SQLite database. Worth borrowing: live-editable goal files, topic-organised node memory, budget caps, and the docs-in-Git and coordination-in-database split.
 - **TinyAGI Fractals:** a recursive task orchestrator for coding swarms with a maximum depth and bottom-up merging.
@@ -169,6 +163,13 @@ What this project adds: no depth cap, decomposition on focus, lenses, human leav
 
 ## Change log
 
+### 0.6: hard limits removed (2026-11-11)
+- Removed the fixed list of hard limits that every split had to name and reviewers checked first. It came in with the first concept draft and was never an owner decision.
+- Leaf: an agent proposes it and the executor confirms it by claiming it (or bounces it back).
+- Interface: agents through MCP, people through the website for real-world steps (replaces "no app, read-only web view").
+- Review: described as it works: splits are live at once and marked not yet reviewed; any review gate is decided later from data.
+- Removed the scrutiny section as a rule; second and third order effects stay as a consideration for reviewers (now in 7, Review). Sections 8 to 10 renumbered to 7 to 9.
+
 ### 0.5: adopting roots (2026-11-08)
 - A root can be adopted as a child of another node when investigation shows it is part of a bigger goal. Adoption is a reviewed split with its own hypothesis; only roots move, and loops are refused.
 - Every split of a node is kept with its own hypothesis, so re-planning never erases what an earlier split predicted.
@@ -179,7 +180,6 @@ Proposed from the first tests on the live tree (\`documentation/jobs/temp_job_fi
 - Human leaf "who" may be a role plus how to find it when the agent cannot or should not name a person.
 - A human leaf's done-signal must be in the executor's control; waiting for someone else's response becomes a new node.
 - Done checks that are only observable later or by a third party are allowed if they say who observes them and when.
-- Every split states which hard constraints its children touch and how they are kept.
 
 ### 0.3: leaf critique pass 2 and fractal structure
 - Cycles forbidden. Repeating tasks become dated, completable instances.

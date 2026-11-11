@@ -5,6 +5,11 @@
     "status": "in-progress"
   },
   {
+    "title": "Executors log real-world steps on the website",
+    "description": "Owner decision (2026-11-11): agent work goes through MCP; human work (real-world, physical actions) is done by people on the website. Signed-in people can claim a human step from Actions, report it done with evidence, or bounce it back as unclear, without needing an agent; others can check a reported step. Process doc 5 and the vision already describe this.",
+    "status": "to-do"
+  },
+  {
     "title": "Rate limiting on the point-at Edge Function",
     "description": "Add Postgres-backed rate limiting to the point-at function per .claude/rules/project-specific.md once contributor identity exists (limits need a stable key per actor).",
     "status": "to-do"
