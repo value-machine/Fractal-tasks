@@ -1,4 +1,3 @@
-import { isValidDisplayName } from "./actors.ts";
 import type { Db } from "./db.ts";
 import { ProcessError } from "./store.ts";
 
@@ -37,53 +36,19 @@ function newToken(): string {
 
 const TOKEN_COLUMNS = "id, name, token_prefix, created_at, last_used_at, revoked_at";
 
-export interface Contributor {
-  user_id: string;
-  display_name: string;
-}
-
-/** The person's contributor record, or null before they chose a public name. */
-export async function getContributor(db: Db, userId: string): Promise<Contributor | null> {
-  const [row] = await db.query<Contributor>(
-    `select user_id, display_name from contributors where user_id = $1`,
-    [userId]
-  );
-  return row ?? null;
-}
-
-/**
- * Set the name shown on everything the person's agents write. Chosen by the person, never taken
- * from their email address: the tree is public. Applies to future writes only.
- */
-export async function setDisplayName(
-  db: Db,
-  input: { userId: string; displayName: string }
-): Promise<Contributor> {
-  const displayName = input.displayName.trim().replace(/\s+/g, " ");
-  if (!isValidDisplayName(displayName)) {
-    throw new ProcessError("Choose a public name of 1 to 80 characters, without ' via '.");
-  }
-  const [row] = await db.query<Contributor>(
-    `insert into contributors (user_id, display_name) values ($1, $2)
-     on conflict (user_id) do update set display_name = excluded.display_name
-     returning user_id, display_name`,
-    [input.userId, displayName]
-  );
-  return row;
-}
-
-/** Create a named token for someone who has chosen a public name. Returns the token once. */
+/** Create the contributor on first use, then a named token for them. Returns the token once. */
 export async function createAgentToken(
   db: Db,
-  input: { userId: string; name: string }
+  input: { userId: string; displayName: string; name: string }
 ): Promise<{ token: string; record: AgentTokenRecord }> {
   const name = input.name.trim();
-  if (!name)
-    throw new ProcessError("Give the token a name, such as the agent or device it is for.");
+  if (!name) throw new ProcessError("Give the token a name, such as the agent or device it is for.");
   return db.transaction(async (tx) => {
-    if (!(await getContributor(tx, input.userId))) {
-      throw new ProcessError("Choose your public name before creating a token.");
-    }
+    await tx.query(
+      `insert into contributors (user_id, display_name) values ($1, $2)
+       on conflict (user_id) do nothing`,
+      [input.userId, input.displayName.trim() || "Contributor"]
+    );
     const [{ active }] = await tx.query<{ active: number }>(
       `select count(*)::int as active from agent_tokens where user_id = $1 and revoked_at is null`,
       [input.userId]
@@ -139,4 +104,10 @@ export async function resolveAgentToken(
     [await sha256Hex(token)]
   );
   return row ? { userId: row.user_id, displayName: row.display_name, tokenId: row.id } : null;
+}
+
+/** The actor recorded on a write: the person, plus the agent they say is acting for them. */
+export function actorFor(displayName: string, agentLabel: string | undefined): string {
+  const label = agentLabel?.trim();
+  return label ? `${displayName} via ${label}` : displayName;
 }

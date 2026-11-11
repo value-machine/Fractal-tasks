@@ -3,11 +3,9 @@
 // Contract and test procedure: README.md in this folder.
 import {
   createAgentToken,
-  getContributor,
   listAgentTokens,
   resolveAgentToken,
   revokeAgentToken,
-  setDisplayName,
 } from "../_shared/pointAt/contributors.ts";
 import type { Db } from "../_shared/pointAt/db.ts";
 import { connectPostgres } from "../_shared/pointAt/postgresDb.ts";
@@ -16,7 +14,7 @@ import { ProcessError, Store, type Role } from "../_shared/pointAt/store.ts";
 
 const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
-  "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
   "access-control-allow-headers": "apikey, authorization, content-type, x-point-at-actor",
   "access-control-max-age": "86400",
 };
@@ -106,8 +104,7 @@ const bearer = (req: Request): string =>
 
 interface SignedInUser {
   id: string;
-  /** A name the sign-in provider gave (GitHub user name, full name); never the email address. */
-  suggestedName: string | null;
+  displayName: string;
 }
 
 /**
@@ -126,17 +123,15 @@ async function signedInUser(req: Request): Promise<SignedInUser | null> {
   const user = await res.json();
   if (!user?.id || user.is_anonymous) return null;
   const meta = user.user_metadata ?? {};
-  const suggested = meta.user_name || meta.full_name || meta.name;
-  return { id: user.id, suggestedName: suggested ? String(suggested).slice(0, 80) : null };
+  const displayName =
+    meta.user_name || meta.full_name || meta.name || String(user.email ?? "").split("@")[0];
+  return { id: user.id, displayName: String(displayName).slice(0, 80) };
 }
 
-/**
- * The signed-in person: their public name (GET/PUT /api/me) and agent tokens (GET/POST
- * /api/me/tokens, DELETE /api/me/tokens/:id).
- */
-async function handleMe(req: Request, path: string): Promise<Response> {
+/** The signed-in person's agent tokens: list (GET), create (POST {name}), revoke (DELETE /:id). */
+async function handleMyTokens(req: Request, path: string): Promise<Response> {
   try {
-    return await me(req, path);
+    return await myTokens(req, path);
   } catch (err: unknown) {
     // A refused request (no name, too many tokens, unknown token) is the caller's to fix.
     if (err instanceof ProcessError) {
@@ -146,24 +141,9 @@ async function handleMe(req: Request, path: string): Promise<Response> {
   }
 }
 
-async function me(req: Request, path: string): Promise<Response> {
+async function myTokens(req: Request, path: string): Promise<Response> {
   const user = await signedInUser(req);
   if (!user) return json({ error: "Sign in first" }, 401);
-  if (path === "/api/me" && req.method === "GET") {
-    const contributor = await getContributor(getDb(), user.id);
-    return json({
-      display_name: contributor?.display_name ?? null,
-      suggested_name: user.suggestedName,
-    });
-  }
-  if (path === "/api/me" && req.method === "PUT") {
-    const body = await req.json().catch(() => ({}));
-    const contributor = await setDisplayName(getDb(), {
-      userId: user.id,
-      displayName: String(body?.display_name ?? ""),
-    });
-    return json({ display_name: contributor.display_name, suggested_name: user.suggestedName });
-  }
   if (path === "/api/me/tokens" && req.method === "GET") {
     return json(await listAgentTokens(getDb(), user.id));
   }
@@ -171,6 +151,7 @@ async function me(req: Request, path: string): Promise<Response> {
     const body = await req.json().catch(() => ({}));
     const created = await createAgentToken(getDb(), {
       userId: user.id,
+      displayName: user.displayName,
       name: String(body?.name ?? ""),
     });
     return json(created, 201);
@@ -199,7 +180,8 @@ function tokensMatch(given: string, expected: string): boolean {
  */
 async function authenticateMcp(req: Request): Promise<{ contributor?: string } | Response> {
   const given = bearer(req);
-  const unauthorized = () => json({ error: "Unauthorized" }, 401, { "www-authenticate": "Bearer" });
+  const unauthorized = () =>
+    json({ error: "Unauthorized" }, 401, { "www-authenticate": "Bearer" });
   if (!given) return unauthorized();
   if (given.startsWith("pa_")) {
     const owner = await resolveAgentToken(getDb(), given);
@@ -239,7 +221,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
   try {
     if (path === "/mcp") return await handleMcp(req);
-    if (path === "/api/me" || path.startsWith("/api/me/")) return await handleMe(req, path);
+    if (path.startsWith("/api/me/")) return await handleMyTokens(req, path);
     if (path.startsWith("/api/")) {
       if (req.method !== "GET")
         return json({ error: "Method not allowed" }, 405, { allow: "GET, OPTIONS" });
