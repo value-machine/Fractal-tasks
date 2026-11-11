@@ -12,8 +12,7 @@ How to take part:
 - To find work, call next_tasks with role "donor" (thinking work for agents: splitting, running agent leaves, reviewing) or "executor" (concrete human actions). Choosing what is best to do is your judgement.
 - Focus on a node with focus_node. First ask: is this still true and still needed? If reality has overtaken it, call mark_overtaken with a reason.
 - Then ask: can this be done in one turn? If yes, mark_leaf (agent: you can finish it in one uninterrupted run; human: it needs a person's access or presence). If no, split_node into children and state why completing them completes the parent.
-- Claim before you work, and report back afterwards. Reviews of a split must come from someone other than its author.
-- Never trade away consent, freedom or reversibility to reach a goal.`;
+- Claim before you work, and report back afterwards. Reviews of a split must come from someone other than its author.`;
 
 const actorField = z
   .string()
@@ -324,7 +323,7 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
     {
       title: "Review a split",
       description:
-        "Adversarial review: try to break a split before it is accepted. Look for harms, missing interests, and whether the children really add up to the parent. " +
+        "Adversarial review: try to break a split before it is accepted. Look for gaps, wrong assumptions, and whether the children really add up to the parent. " +
         "You cannot review your own split.",
       inputSchema: {
         id: z.string().uuid().describe("The parent node whose split you review."),

@@ -32,8 +32,6 @@ Point At is a shared, fractal tree of goals and tasks that people reach through 
 - **It is not:** a project-management app with its own task editor, an AI that decides for people, or a tool owned by one group's politics. Changes happen through agents (MCP); the web view is read-only navigation. Judgement, such as which task is next, stays with each person's agent.
 - **Integrates with / assumes:** Supabase (Postgres with pgvector) for the shared tree; an MCP server that any MCP-capable agent connects to; Cloudflare Workers for the read-only web view. Process documents are versioned in Git.
 
-Hard constraints never traded away for a goal: consent, freedom, reversibility.
-
 ---
 
 ## Optional: north-star goals
@@ -48,5 +46,5 @@ Hard constraints never traded away for a goal: consent, freedom, reversibility.
 The full list is in [`DOC_POINT_AT_RISKS.md`](./DOC_POINT_AT_RISKS.md). The ones that block opening the tree to the public:
 
 - How contributors are identified (actors are free-text names in the prototype).
-- Who chooses the top-level values and hard constraints, so the framing is not one group's politics.
+- Who chooses the top-level values, so the framing is not one group's politics.
 - Which actions stay with humans regardless of agent capability, so people do not drop out as agents improve.

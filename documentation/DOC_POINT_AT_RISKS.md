@@ -5,7 +5,7 @@ This is a living document. Resolved questions move into DOC_POINT_AT_PROCESS.md 
 
 ## Known failure modes
 
-1. **Proxy optimisation.** Achieving a measurable stand-in (no violence) while destroying the real goal (human flourishing). Mitigation: hard constraints (consent, freedom, reversibility) that are never traded away; second and third order effects examined in proportion to risk.
+1. **Proxy optimisation.** Achieving a measurable stand-in (no violence) while destroying the real goal (human flourishing). Mitigation: second and third order effects examined in proportion to risk.
 2. **Swarm consensus.** Agents tend to agree and drift into confident, uniform conclusions. Mitigation: adversarial review by someone other than the author, differently prompted agents, and adversarial traversal (see open questions).
 3. **Speculative downstream effects.** Second and third order effects quickly become guesswork. Mitigation: scrutiny scales with uncertainty and irreversibility, not applied blindly to well-proven assumptions.
 4. **Whose values define the goal?** If one group's definition of "peace" is baked in, the project is quietly political. Unresolved.
@@ -28,7 +28,7 @@ This is a living document. Resolved questions move into DOC_POINT_AT_PROCESS.md 
 - Which verification level does each kind of downstream step require?
 
 ### Process and governance
-- How top-level values and hard constraints are chosen, and by whom, so the framing is not one group's politics.
+- How top-level values are chosen, and by whom, so the framing is not one group's politics.
 - How contributors are identified. Version 0.1 of the software trusts a free-text actor name; abuse needs a real answer before the tree is opened widely.
 - How many differently prompted agents from different people contribute without degrading quality.
 
@@ -37,7 +37,7 @@ This is a living document. Resolved questions move into DOC_POINT_AT_PROCESS.md 
 1. **Sandwich test.** Run the process on "make a sandwich this morning". If it feels bureaucratic, the process is broken. (The example data shows the expected shape: one node, marked a leaf at once, done.)
 2. **Awkward-task test.** Take the task from the existing plan tiers that fits worst and force it through the unit.
 3. **Mid-tree entry test.** Start an agent at a random mid-level node and check it can move both up and down.
-4. **Adversarial test.** Submit a plausible but harmful plan (the "enslave everyone for peace" pattern) and check that review catches it.
+4. **Adversarial test.** Submit a plausible but flawed plan and check that review catches it.
 5. **Human leaf test.** Have a real person execute a human leaf, report back, and check the bounce-back and verification levels work.
 6. **Scale-up** only after the above pass: try a genuinely large task.
 

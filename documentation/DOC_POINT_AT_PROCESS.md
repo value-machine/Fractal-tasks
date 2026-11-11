@@ -1,6 +1,6 @@
 # The Process
 
-Version: 0.5 (draft)
+Version: 0.6 (draft)
 This is a living document. It is refined through critique passes, and every change is recorded in the change log at the bottom.
 
 This document describes the single recursive unit used at every scale, from "make a sandwich this morning" to "achieve world peace".
@@ -143,8 +143,6 @@ Because the structure is fractal, the same hypothesis applies at every level: a 
 ## 7. How much scrutiny a node gets
 
 - Scrutiny scales with risk: the more uncertain and irreversible an action, the more its assumptions and its second and third order effects deserve examination. How to examine them is left to the agent.
-- Never trade away a hard constraint (consent, freedom, reversibility) to achieve a goal.
-- Every split names, in its assumptions, which hard constraints its children touch and how each is kept (for example "participation is voluntary; referral only with the person's consent"). Reviewers check this first.
 
 ## 8. Review
 
@@ -166,6 +164,9 @@ What this project adds: no depth cap, decomposition on focus, lenses, human leav
 
 ## Change log
 
+### 0.6: hard limits removed (2026-11-11)
+- Removed the fixed list of hard limits that every split had to name and reviewers checked first. It came in with the first concept draft and was never an owner decision.
+
 ### 0.5: adopting roots (2026-11-08)
 - A root can be adopted as a child of another node when investigation shows it is part of a bigger goal. Adoption is a reviewed split with its own hypothesis; only roots move, and loops are refused.
 - Every split of a node is kept with its own hypothesis, so re-planning never erases what an earlier split predicted.
@@ -176,7 +177,6 @@ Proposed from the first tests on the live tree (`documentation/jobs/temp_job_fir
 - Human leaf "who" may be a role plus how to find it when the agent cannot or should not name a person.
 - A human leaf's done-signal must be in the executor's control; waiting for someone else's response becomes a new node.
 - Done checks that are only observable later or by a third party are allowed if they say who observes them and when.
-- Every split states which hard constraints its children touch and how they are kept.
 
 ### 0.3: leaf critique pass 2 and fractal structure
 - Cycles forbidden. Repeating tasks become dated, completable instances.
