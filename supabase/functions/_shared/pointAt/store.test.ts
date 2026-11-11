@@ -224,24 +224,6 @@ describe("review", () => {
     ).rejects.toThrow(/someone other than its author/);
   });
 
-  it("should refuse a review when the same person wrote the split through another agent", async () => {
-    const root = await store.createRoot({ title: "Root" }, "Alice via Claude Code");
-    await store.split(
-      root.id,
-      { hypothesis: "h", children: [{ title: "X" }] },
-      "Alice via Claude Code"
-    );
-    await expect(
-      store.review(root.id, { verdict: "accept", reasoning: "Looks fine" }, "alice via Cursor")
-    ).rejects.toThrow(/someone other than its author/);
-    const reviewed = await store.review(
-      root.id,
-      { verdict: "accept", reasoning: "Sound" },
-      "Bob via Cursor"
-    );
-    expect(reviewed.status).toBe("reviewed");
-  });
-
   it("should mark the split reviewed when another actor accepts it, and ask for a re-plan when rejected", async () => {
     const a = await rootWithChildren("One");
     const accepted = await store.review(

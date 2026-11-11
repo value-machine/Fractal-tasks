@@ -20,20 +20,18 @@ Base URL: `https://<ref>.supabase.co/functions/v1/point-at`. Browser calls send 
 | GET    | `/api/search?q=`             | `NodeSummary[]` (limit 30; blank `q` returns `[]`)                                             |
 | GET    | `/api/views/:role?label=&q=` | `(NodeSummary & { why? })[]` (limit 50); `role` is `donor` or `executor`, anything else is 400 |
 | GET    | `/api/process`               | The process document as `text/plain`                                                           |
-| GET    | `/api/me`                    | `{ display_name, suggested_name }`: the person's public name (null until chosen) and a suggestion from GitHub or Google, never the email |
-| PUT    | `/api/me`                    | Same shape, for body `{ display_name }` (1 to 80 characters, no " via "); applies to future writes |
 | GET    | `/api/me/tokens`             | The signed-in person's agent tokens (no secrets), newest first                                 |
 | POST   | `/api/me/tokens`             | `{ token, record }` for body `{ name }`; the token is shown only here                          |
-| DELETE | `/api/me/tokens/:id`         | The revoked token's record                                                                     |
+| DELETE | `/api/me/tokens/:id`         | The revoked token's record                                                                      |
 | ALL    | `/mcp`                       | MCP streamable HTTP, stateless, JSON responses                                                 |
 
-`NodeSummary` is a `nodes` row plus `child_count` and `done_child_count`. Errors are JSON `{ "error": "..." }`: unknown node (or malformed id) is 404, a bad role is 400, a non-GET on the read API is 405, `/api/me/*` without a valid Supabase session is 401 (the browser sends the person's session token as `authorization` there, checked against Supabase Auth), a refused request is 400 (no public name chosen yet, an invalid name, no token name, 20 active tokens) or 404 (not your token), anything unexpected is 500 with a generic message (details go to the function logs). CORS allows `GET`/`POST`/`DELETE`/`OPTIONS` from any origin with headers `apikey`, `authorization`, `content-type`, `x-point-at-actor`.
+`NodeSummary` is a `nodes` row plus `child_count` and `done_child_count`. Errors are JSON `{ "error": "..." }`: unknown node (or malformed id) is 404, a bad role is 400, a non-GET on the read API is 405, `/api/me/*` without a valid Supabase session is 401 (the browser sends the person's session token as `authorization` there, checked against Supabase Auth), a refused token request is 400 (no name, 20 active tokens) or 404 (not your token), anything unexpected is 500 with a generic message (details go to the function logs). CORS allows `GET`/`POST`/`DELETE`/`OPTIONS` from any origin with headers `apikey`, `authorization`, `content-type`, `x-point-at-actor`.
 
 ## MCP tools
 
 Who acts depends on the bearer token:
 
-- **Personal agent token** (`pa_…`, created on the site at `/agents`): every write is attributed to the token's owner, as `<display name> via <agent label>`. The label is the tool's `actor` argument, else the `x-point-at-actor` header; an agent cannot write as someone else. Rules about people (a split's author may not review it) compare only the person part, so another agent of the same person counts as the author (`_shared/pointAt/actors.ts`). Revoked tokens get 401. Logic and tests: `supabase/functions/_shared/pointAt/contributors.ts`.
+- **Personal agent token** (`pa_…`, created on the site at `/agents`): every write is attributed to the token's owner, as `<display name> via <agent label>`. The label is the tool's `actor` argument, else the `x-point-at-actor` header; an agent cannot write as someone else. Revoked tokens get 401. Logic and tests: `supabase/functions/_shared/pointAt/contributors.ts`.
 - **Shared token** `POINT_AT_MCP_TOKEN` (being phased out): the actor is whatever the agent sends (`actor` argument, else the header, else `anonymous agent`).
 
 - Read: `read_process`, `list_roots`, `focus_node` (node, root, depth, ancestors with their split hypotheses, siblings, its own split author and review state, children, grandchildren, links, events; empty fields left out), `next_tasks` (role `donor` or `executor`; donor rows carry a `kind`: `review`, `replan`, `split`, `run`, `refine`, and the same `kind` filters the view), `search_nodes`, `review_stats` (also at `GET /api/stats/reviews?label=`). Resource: `pointat://process`.

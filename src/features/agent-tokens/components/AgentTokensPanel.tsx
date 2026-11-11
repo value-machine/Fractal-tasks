@@ -6,11 +6,9 @@ import { Card } from "@/components/common/Card";
 import { Input } from "@/components/common/Input";
 import { formatRelativeTime } from "@/shared/utils/formatRelativeTime";
 import { NewTokenReveal } from "./NewTokenReveal";
-import { PublicNameForm } from "./PublicNameForm";
 import {
   useAgentTokens,
   useCreateAgentToken,
-  usePublicProfile,
   useRevokeAgentToken,
 } from "@/features/agent-tokens/hooks/useAgentTokens";
 import type { AgentToken } from "@/features/agent-tokens/types/agentToken.types";
@@ -51,56 +49,8 @@ const TokenRow = ({
   </li>
 );
 
-/** Your public name, shown before anything else until you have chosen one. */
-const PublicNameSection = ({ userId }: { userId: string }) => {
-  const profile = usePublicProfile(userId);
-  const [editing, setEditing] = useState(false);
-  if (profile.isPending) return <p className="text-sm text-muted-foreground">Loading…</p>;
-  if (profile.error) {
-    return <Alert variant="destructive">{errorText(profile.error)}</Alert>;
-  }
-  const current = profile.data.display_name;
-  if (!current || editing) {
-    return (
-      <Card hoverable={false} className="max-w-none p-5">
-        <PublicNameForm
-          userId={userId}
-          initialName={current ?? profile.data.suggested_name ?? ""}
-          onSaved={() => setEditing(false)}
-        />
-      </Card>
-    );
-  }
-  return (
-    <p className="text-sm text-muted-foreground">
-      Your agents write as <strong className="text-foreground">{current}</strong>.{" "}
-      <Button
-        type="button"
-        variant="link"
-        size="sm"
-        className="h-auto p-0"
-        onClick={() => setEditing(true)}
-      >
-        Change
-      </Button>
-    </p>
-  );
-};
-
-/** Your public name, then your agent tokens: create, show once, list and revoke. */
-export const AgentTokensPanel = ({ userId }: { userId: string }) => {
-  const profile = usePublicProfile(userId);
-  if (!profile.data?.display_name) return <PublicNameSection userId={userId} />;
-  return (
-    <div className="flex flex-col gap-6">
-      <PublicNameSection userId={userId} />
-      <TokenManager userId={userId} />
-    </div>
-  );
-};
-
 /** Create, show once, list and revoke the signed-in person's agent tokens. */
-const TokenManager = ({ userId }: { userId: string }) => {
+export const AgentTokensPanel = ({ userId }: { userId: string }) => {
   const tokens = useAgentTokens(userId);
   const create = useCreateAgentToken(userId);
   const revoke = useRevokeAgentToken(userId);

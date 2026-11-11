@@ -14,10 +14,3 @@ export interface CreatedAgentToken {
   token: string;
   record: AgentToken;
 }
-
-/** The signed-in person's public name; null until they choose one. */
-export interface PublicProfile {
-  display_name: string | null;
-  /** From the sign-in provider (GitHub, Google), never the email address. */
-  suggested_name: string | null;
-}
