@@ -79,3 +79,7 @@ Colocated `*.test.ts(x)` under this feature; shared wrappers in `tests/test-util
 - `documentation/DOC_SUPABASE_GOOGLE_OAUTH.md` – Google Cloud + Supabase dashboard setup
 - `documentation/DOC_MOBILE_LOCAL_DEV.md` – local device testing for OAuth
 - `documentation/DOC_TANSTACK_QUERY.md` – profile query/mutation patterns
+
+## Return page after sign-in
+
+`SignInPanel` takes an optional `returnPath`: provider sign-ins and email links come back to that page, and `useAuthCallbackHandler` stays on the page a link returns to when no path was saved. Used by agent login (`src/features/agent-login/`).

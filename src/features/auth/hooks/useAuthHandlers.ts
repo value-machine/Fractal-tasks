@@ -17,25 +17,32 @@ export const useAuthHandlers = ({ setUser, setLoading, setError }: UseAuthHandle
   const stateRef = useRef({ setUser, setLoading, setError });
   stateRef.current = { setUser, setLoading, setError };
 
-  const signInWithOAuthProvider = useCallback(async (provider: OAuthProvider) => {
-    if (signInInFlightRef.current) return;
-    signInInFlightRef.current = true;
-    const { setLoading: setLoadingState, setError: setErrorState } = stateRef.current;
-    try {
-      setLoadingState(true);
-      setErrorState(null);
-      const { error: signInError } = await authService.signInWithOAuthProvider(provider);
-      if (signInError) setErrorState(signInError.message);
-    } catch (err) {
-      setErrorState(err instanceof Error ? err.message : "Sign-in could not be started.");
-    } finally {
-      setLoadingState(false);
-      signInInFlightRef.current = false;
-    }
-  }, []);
+  const signInWithOAuthProvider = useCallback(
+    async (provider: OAuthProvider, returnPath?: string) => {
+      if (signInInFlightRef.current) return;
+      signInInFlightRef.current = true;
+      const { setLoading: setLoadingState, setError: setErrorState } = stateRef.current;
+      try {
+        setLoadingState(true);
+        setErrorState(null);
+        const { error: signInError } = await authService.signInWithOAuthProvider(
+          provider,
+          returnPath
+        );
+        if (signInError) setErrorState(signInError.message);
+      } catch (err) {
+        setErrorState(err instanceof Error ? err.message : "Sign-in could not be started.");
+      } finally {
+        setLoadingState(false);
+        signInInFlightRef.current = false;
+      }
+    },
+    []
+  );
 
   const sendEmailSignInLink = useCallback(
-    (email: string) => handleSendEmailSignInLinkUtil(email, stateRef.current),
+    (email: string, returnPath?: string) =>
+      handleSendEmailSignInLinkUtil({ email, returnPath }, stateRef.current),
     []
   );
   const logout = useCallback(() => handleLogoutUtil(stateRef.current), []);

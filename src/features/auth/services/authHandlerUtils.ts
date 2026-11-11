@@ -24,11 +24,11 @@ export const handleLogout = async (state: AuthHandlerState): Promise<void> => {
  * screen while `loading` is true would unmount the form and lose its "check your inbox" state.
  */
 export const handleSendEmailSignInLink = async (
-  email: string,
+  request: { email: string; returnPath?: string },
   state: Pick<AuthHandlerState, "setError">
 ): Promise<boolean> => {
   state.setError(null);
-  const { error } = await authService.sendEmailSignInLink(email);
+  const { error } = await authService.sendEmailSignInLink(request.email, request.returnPath);
   if (error) {
     state.setError(error.message);
     return false;

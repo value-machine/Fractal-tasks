@@ -52,17 +52,25 @@ export const logout = (): Promise<AuthResult> =>
  * "/" so allow-list patterns like `https://host/**` match it (a bare origin does not match them, and
  * Supabase then sends the user to the Site URL).
  */
-const signInReturnUrl = (): string => getAppUrl("/");
+const signInReturnUrl = (returnPath = "/"): string => getAppUrl(returnPath);
 
-/** Starts an OAuth redirect to the given provider (Google, GitHub). */
-export const signInWithOAuthProvider = (provider: OAuthProvider): Promise<AuthResult> =>
-  runAuth((auth) => auth.signInWithOAuth({ provider, options: { redirectTo: signInReturnUrl() } }));
+/**
+ * Starts an OAuth redirect to the given provider (Google, GitHub). `returnPath` is the in-app page
+ * to come back to (default the home page), for sign-ins started from a page such as agent approval.
+ */
+export const signInWithOAuthProvider = (
+  provider: OAuthProvider,
+  returnPath?: string
+): Promise<AuthResult> =>
+  runAuth((auth) =>
+    auth.signInWithOAuth({ provider, options: { redirectTo: signInReturnUrl(returnPath) } })
+  );
 
 /**
  * Emails a one-time sign-in link (no password). New addresses get an account on first use, so
  * sign-in and sign-up are the same step. The link returns through the same PKCE path as OAuth.
  */
-export const sendEmailSignInLink = (email: string): Promise<AuthResult> => {
+export const sendEmailSignInLink = (email: string, returnPath?: string): Promise<AuthResult> => {
   const emailError = validateEmail(email);
   if (emailError) {
     return Promise.resolve({ error: new Error(emailError) });
@@ -70,7 +78,7 @@ export const sendEmailSignInLink = (email: string): Promise<AuthResult> => {
   return runAuth((auth) =>
     auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: signInReturnUrl(), shouldCreateUser: true },
+      options: { emailRedirectTo: signInReturnUrl(returnPath), shouldCreateUser: true },
     })
   );
 };

@@ -28,6 +28,9 @@ const TasksPage = lazy(() =>
   import("@/pages/tasks/TasksPage").then((m) => ({ default: m.TasksPage }))
 );
 const LoginPage = lazy(() => import("@/pages/LoginPage").then((m) => ({ default: m.LoginPage })));
+const AgentApprovalPage = lazy(() =>
+  import("@/pages/AgentApprovalPage").then((m) => ({ default: m.AgentApprovalPage }))
+);
 const AgentTokensPage = lazy(() =>
   import("@/pages/agents/AgentTokensPage").then((m) => ({ default: m.AgentTokensPage }))
 );
@@ -59,6 +62,7 @@ function AppContent() {
               </Route>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
+              <Route path="/oauth/consent" element={<AgentApprovalPage />} />
               <Route path="/tasks" element={<TasksPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

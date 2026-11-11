@@ -19,7 +19,12 @@ const SUPABASE_CONFIG_MESSAGE =
 
 const footerLinkClassName = "text-foreground hover:text-primary";
 
-export const SignInPanel = () => {
+interface SignInPanelProps {
+  /** In-app page to come back to after signing in; the home page when omitted. */
+  returnPath?: string;
+}
+
+export const SignInPanel = ({ returnPath }: SignInPanelProps = {}) => {
   const { signInWithOAuthProvider, loading, error } = useAuthContext();
   const { isConfigured: authBackendConfigured } = useAuthBackendConfigured();
   const authDisabled = !authBackendConfigured;
@@ -35,7 +40,7 @@ export const SignInPanel = () => {
       <Button
         variant="outline"
         className={cn("w-full", formStackSpacing.sectionBelow)}
-        onClick={() => void signInWithOAuthProvider("github")}
+        onClick={() => void signInWithOAuthProvider("github", returnPath)}
         disabled={loading || authDisabled}
       >
         <GithubIcon />
@@ -45,7 +50,7 @@ export const SignInPanel = () => {
       <Button
         variant="outline"
         className={cn("w-full", formStackSpacing.sectionBelow)}
-        onClick={() => void signInWithOAuthProvider("google")}
+        onClick={() => void signInWithOAuthProvider("google", returnPath)}
         disabled={loading || authDisabled}
       >
         <GoogleIcon />
@@ -64,7 +69,7 @@ export const SignInPanel = () => {
         <Separator className="flex-1" />
       </div>
 
-      <EmailLinkForm authDisabled={authDisabled} />
+      <EmailLinkForm authDisabled={authDisabled} returnPath={returnPath} />
 
       <p className={cn("text-center text-xs text-muted-foreground", formStackSpacing.sectionAbove)}>
         <a
