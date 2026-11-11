@@ -4,7 +4,11 @@ import {
   PointAtNotConfiguredError,
   readPointAtError,
 } from "@/shared/services/pointAtFunctionService";
-import type { AgentToken, CreatedAgentToken } from "@/features/agent-tokens/types/agentToken.types";
+import type {
+  AgentToken,
+  CreatedAgentToken,
+  PublicProfile,
+} from "@/features/agent-tokens/types/agentToken.types";
 
 /** Raised when nobody is signed in: the token endpoints act for the signed-in person only. */
 export class SignInRequiredError extends Error {
@@ -47,3 +51,13 @@ export const createAgentToken = (name: string): Promise<CreatedAgentToken> =>
 /** Revoke a token: agents using it are refused from then on. */
 export const revokeAgentToken = (id: string): Promise<AgentToken> =>
   request<AgentToken>(`/api/me/tokens/${encodeURIComponent(id)}`, { method: "DELETE" });
+
+/** The person's public name, and a suggestion from their sign-in provider. */
+export const fetchPublicProfile = (): Promise<PublicProfile> => request<PublicProfile>("/api/me");
+
+/** Choose or change the name shown on everything the person's agents write. */
+export const savePublicName = (displayName: string): Promise<PublicProfile> =>
+  request<PublicProfile>("/api/me", {
+    method: "PUT",
+    body: JSON.stringify({ display_name: displayName }),
+  });
