@@ -1,7 +1,7 @@
 import { McpServer } from "npm:@modelcontextprotocol/sdk@1.32.2/server/mcp.js";
 import { z } from "npm:zod@4.6.7";
 
-import { actorFor } from "./actors.ts";
+import { actorFor } from "./contributors.ts";
 import { PROCESS_DOC } from "./processDoc.ts";
 import { ProcessError, type Store } from "./store.ts";
 
