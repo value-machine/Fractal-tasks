@@ -4,9 +4,11 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { actorFor } from "./actors.ts";
 import {
-  actorFor,
   createAgentToken,
+  getContributor,
+  setDisplayName,
   listAgentTokens,
   resolveAgentToken,
   revokeAgentToken,
@@ -27,14 +29,37 @@ beforeAll(async () => {
 afterAll(async () => db.close());
 beforeEach(async () => {
   await reset();
-  await db.query("insert into auth.users (id) values ($1), ($2) on conflict do nothing", [ALICE, BOB]);
+  await db.query("insert into auth.users (id) values ($1), ($2) on conflict do nothing", [
+    ALICE,
+    BOB,
+  ]);
+  await setDisplayName(db, { userId: ALICE, displayName: "Alice" });
+});
+
+describe("public names", () => {
+  it("should refuse a token when the person has not chosen a public name", async () => {
+    expect(await getContributor(db, BOB)).toBeNull();
+    await expect(createAgentToken(db, { userId: BOB, name: "Laptop" })).rejects.toThrow(
+      /public name/
+    );
+  });
+
+  it("should store and change a chosen name when it is valid", async () => {
+    await setDisplayName(db, { userId: BOB, displayName: "  Bob Smit " });
+    expect((await getContributor(db, BOB))?.display_name).toBe("Bob Smit");
+    await setDisplayName(db, { userId: BOB, displayName: "Bob" });
+    expect((await getContributor(db, BOB))?.display_name).toBe("Bob");
+    await expect(setDisplayName(db, { userId: BOB, displayName: "Alice via Bob" })).rejects.toThrow(
+      /via/
+    );
+    await expect(setDisplayName(db, { userId: BOB, displayName: " " })).rejects.toThrow();
+  });
 });
 
 describe("agent tokens", () => {
   it("should show a token once and store only its hash when it is created", async () => {
     const { token, record } = await createAgentToken(db, {
       userId: ALICE,
-      displayName: "Alice",
       name: "Claude Code laptop",
     });
     expect(token).toMatch(/^pa_[A-Za-z0-9_-]{40,}$/);
@@ -46,7 +71,7 @@ describe("agent tokens", () => {
   });
 
   it("should resolve a token to its owner's display name when it is valid", async () => {
-    const { token } = await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "Laptop" });
+    const { token } = await createAgentToken(db, { userId: ALICE, name: "Laptop" });
     const resolved = await resolveAgentToken(db, token);
     expect(resolved?.displayName).toBe("Alice");
     expect((await listAgentTokens(db, ALICE))[0].last_used_at).not.toBeNull();
@@ -55,41 +80,35 @@ describe("agent tokens", () => {
   });
 
   it("should stop resolving a token when its owner revokes it", async () => {
-    const { token, record } = await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "Laptop" });
+    const { token, record } = await createAgentToken(db, { userId: ALICE, name: "Laptop" });
     await revokeAgentToken(db, { userId: ALICE, tokenId: record.id });
     expect(await resolveAgentToken(db, token)).toBeNull();
     expect((await listAgentTokens(db, ALICE))[0].revoked_at).not.toBeNull();
   });
 
   it("should refuse to revoke a token when it belongs to someone else", async () => {
-    const { token, record } = await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "Laptop" });
-    await expect(revokeAgentToken(db, { userId: BOB, tokenId: record.id })).rejects.toThrow(/No such token/);
+    const { token, record } = await createAgentToken(db, { userId: ALICE, name: "Laptop" });
+    await expect(revokeAgentToken(db, { userId: BOB, tokenId: record.id })).rejects.toThrow(
+      /No such token/
+    );
     expect(await resolveAgentToken(db, token)).not.toBeNull();
     expect(await listAgentTokens(db, BOB)).toEqual([]);
   });
 
   it("should require a token name and cap active tokens when creating", async () => {
-    await expect(
-      createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "  " })
-    ).rejects.toThrow(/name/);
+    await expect(createAgentToken(db, { userId: ALICE, name: "  " })).rejects.toThrow(/name/);
     for (let i = 0; i < 20; i++) {
-      await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: `Agent ${i}` });
+      await createAgentToken(db, { userId: ALICE, name: `Agent ${i}` });
     }
-    await expect(
-      createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "One too many" })
-    ).rejects.toThrow(/20/);
+    await expect(createAgentToken(db, { userId: ALICE, name: "One too many" })).rejects.toThrow(
+      /20/
+    );
   });
 });
 
 describe("actors", () => {
-  it("should name the person and the agent when an agent label is given", () => {
-    expect(actorFor("Alice", "Claude Code")).toBe("Alice via Claude Code");
-    expect(actorFor("Alice", "  ")).toBe("Alice");
-    expect(actorFor("Alice", undefined)).toBe("Alice");
-  });
-
   it("should attribute a write to the token's owner whatever actor the agent claims", async () => {
-    const { token } = await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "Laptop" });
+    const { token } = await createAgentToken(db, { userId: ALICE, name: "Laptop" });
     const resolved = await resolveAgentToken(db, token);
     const actor = actorFor(resolved!.displayName, "Bob");
     const root = await new Store(db).createRoot({ title: "A goal of Alice" }, actor);

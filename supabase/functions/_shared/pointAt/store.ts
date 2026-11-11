@@ -1,3 +1,4 @@
+import { actorPerson } from "./actors.ts";
 import type { Db } from "./db.ts";
 
 /**
@@ -761,7 +762,7 @@ export class Store {
       [id]
     );
     const splitAuthor = author?.actor ?? node.created_by;
-    if (splitAuthor === actor)
+    if (splitAuthor && actorPerson(splitAuthor) === actorPerson(actor))
       throw new ProcessError("A split must be reviewed by someone other than its author.");
     await this.db.query(
       `insert into node_events (node_id, actor, type, body, verdict) values ($1, $2, 'review', $3, $4)`,
