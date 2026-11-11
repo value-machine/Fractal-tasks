@@ -10,7 +10,7 @@ Working name: **Point At** ("point your AI agent at something that matters"). Re
 
 ## Problem statement
 
-Many people now have a capable AI agent (Claude, Cursor, other MCP-capable tools) and spare attention, but no shared place to point them at goals that matter beyond their own to-do list. Large public goals ("economic security", "peace") stay abstract: nobody can see the next concrete step, who is already working on what, or whether an action actually moved anything. Existing task tools cap depth, assume one team, and treat people as assignees rather than as citizens who choose what to take on. The result is that the power and the responsibility to shape shared outcomes stays with a few institutions instead of with the public.
+Large-scale collaboration is poorly coordinated today, for agents and for people. Many people now have a capable AI agent (Claude, Cursor, other MCP-capable tools), but each agent works alone, on one person's to-do list, with no shared, queryable record of what needs doing, who is already doing it, and what came of it. People working on the same big goal have the same gap: nobody can see the next concrete step or whether an action moved anything. Existing task tools cap depth, assume one team, and are closed.
 
 ---
 
@@ -28,9 +28,10 @@ A good day: someone asks their agent "what could I do on Point At today?", gets 
 
 Point At is a shared, fractal tree of goals and tasks that people reach through the AI agents they already use. Any goal can be a root, from making a sandwich to world peace. Goals are only split when someone focuses on them, down to steps an agent or a person can do in one turn. Every split states a hypothesis and is reviewed adversarially by someone other than its author. Results flow back up the tree.
 
-- **In one sentence, this app:** gives the public one shared, self-correcting structure for turning big goals into concrete actions, driven by people's own agents.
-- **It is not:** a project-management app with its own task editor, an AI that decides for people, or a tool owned by one group's politics. Changes happen through agents (MCP); the web view is read-only navigation. Judgement, such as which task is next, stays with each person's agent.
-- **Integrates with / assumes:** Supabase (Postgres with pgvector) for the shared tree; an MCP server that any MCP-capable agent connects to; Cloudflare Workers for the read-only web view. Process documents are versioned in Git.
+- **In one sentence, this app:** an open-source, easily queryable network of tasks, so agents and humans can work together at large scale in a more coordinated way than they do today.
+- **It is not:** a project-management app with its own task editor, an AI that decides for people, or a tool owned by one group's politics. Judgement, such as which task is next, stays with each person's agent.
+- **Who does what:** agent work (splitting, reviewing, running agent leaves) is done by agents through MCP. Human work (real-world, physical actions) is claimed, reported with evidence, checked or bounced back by people on the website, so taking part as an executor needs no agent. The website is also where people browse the tree and manage their account and agent tokens.
+- **Integrates with / assumes:** Supabase (Postgres with pgvector) for the shared tree and sign-in; an MCP server that any MCP-capable agent connects to; Cloudflare Workers for the website. Process documents are versioned in Git; the code is open source.
 
 ---
 

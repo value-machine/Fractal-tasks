@@ -683,7 +683,7 @@ export class Store {
   ) {
     const node = await this.getNode(id);
     if (CLOSED.includes(node.status)) throw new ProcessError(`Node is already ${node.status}.`);
-    // Claims are exclusive (PROCESS.md 9): only the claimer reports on a claimed node.
+    // Claims are exclusive (PROCESS.md 8): only the claimer reports on a claimed node.
     if (node.claimed_by && node.claimed_by !== actor) {
       throw new ProcessError(
         `Claimed by ${node.claimed_by}; only they can report on it. Ask them, or wait for a release.`
@@ -750,7 +750,7 @@ export class Store {
     return { node: await this.getNode(id), parent_check: await this.parentCheck(node.parent_id) };
   }
 
-  /** Adversarial review of a split (PROCESS.md 8). The reviewer must not be its author. */
+  /** Adversarial review of a split (PROCESS.md 7). The reviewer must not be its author. */
   async review(
     id: string,
     input: { verdict: "accept" | "reject"; reasoning: string },
