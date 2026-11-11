@@ -821,6 +821,7 @@ module.exports = {
     { name: ".mcp.json" },
     { name: "ARCHITECTURE.md" },
     { name: "CHANGELOG.md" },
+    { name: "LICENSE" },
     // XML files removed - should be in documentation/ if needed for reference
     // SQL files removed - should be in migrations/ or documentation/, not root
     // Other config files

@@ -32,3 +32,7 @@ Every change your agent makes is recorded in your name.
 - `src/` — the website (React, Vite, TypeScript): `src/features/goal-tree`, `src/features/agent-tokens`, `src/features/auth`.
 
 The repo is built on the plate-harness template (strict architecture, agent workflow, CI). Setup, commands and conventions: [`documentation/DOC_HARNESS.md`](./documentation/DOC_HARNESS.md). Agents start from [`AGENTS.md`](./AGENTS.md).
+
+## License
+
+MIT. See [`LICENSE`](./LICENSE).
