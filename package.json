@@ -22,7 +22,6 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:classify": "node --test scripts/change-classify.test.cjs scripts/check-node-version.test.cjs scripts/test-staged.test.cjs scripts/harness_scan.test.cjs scripts/validate-git-workflow.test.cjs scripts/validate-version-sync.test.cjs scripts/ensure-deps-installed.test.cjs scripts/deny-git-write-on-main.test.cjs scripts/project-structure-validator.test.cjs scripts/modularity-report.test.cjs scripts/validate-skills.test.cjs scripts/sync-agent-config.test.mjs scripts/sync-process-doc.test.mjs",
-    "test:plugin": "node plugins/cursor-migration/test/run-tests.mjs",
     "test:staged": "node scripts/test-staged.cjs --dry-run",
     "test:staged:live": "node scripts/test-staged.cjs",
     "test:ui": "vitest --ui",

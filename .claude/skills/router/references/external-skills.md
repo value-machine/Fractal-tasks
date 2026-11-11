@@ -34,4 +34,3 @@ User-level and plugin skills the loop may hand to. Read by [`../SKILL.md`](../SK
 | Remote MCP server on Workers | `building-mcp-server-on-cloudflare` |
 | Untrusted code execution / sandbox | `sandbox-sdk` |
 | Core Web Vitals / Lighthouse-style audit (Chrome DevTools MCP) | `web-perf` |
-| Migrate Cursor config → Claude Code (rules, skills, MCP) while Cursor keeps working | `/cursor-migration:migrate` — plugin published from this repo (`plugins/cursor-migration/`, marketplace `plate-harness`; install steps in its `README.md`); cloud sessions run `node plugins/cursor-migration/scripts/*.mjs` directly |

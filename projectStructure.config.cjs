@@ -746,57 +746,6 @@ module.exports = {
         { name: "settings.local.json" },
       ],
     },
-    // Claude Code plugin marketplace for this repo (lists plugins/*)
-    {
-      name: ".claude-plugin",
-      children: [{ name: "marketplace.json" }],
-    },
-    // Vendored Claude Code plugins (zero-dependency Node; own node --test suite via pnpm test:plugin)
-    {
-      name: "plugins",
-      children: [
-        {
-          name: "*",
-          children: [
-            { name: "README.md" },
-            { name: "LICENSE" },
-            {
-              name: ".claude-plugin",
-              children: [{ name: "plugin.json" }, { name: "icon.png" }],
-            },
-            {
-              name: "skills",
-              children: [{ name: "*", children: [{ name: "SKILL.md" }] }],
-            },
-            {
-              name: "scripts",
-              children: [{ name: "*.mjs" }, { name: "*", children: [{ name: "*.mjs" }] }],
-            },
-            {
-              name: "templates",
-              children: [{ name: "*.mjs" }],
-            },
-            {
-              name: "test",
-              children: [
-                { name: "*.mjs" },
-                { name: "*", children: [{ name: "*.mjs" }, { name: "*.json" }] },
-              ],
-            },
-            {
-              name: "evals",
-              children: [
-                { name: ".gitignore" },
-                {
-                  name: "*",
-                  children: [{ name: "*.md" }, { name: "graders", children: [{ name: "*.md" }] }],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
     // GitHub workflows (if exists)
     {
       name: ".github",

@@ -10,7 +10,7 @@ Turning on **Google** under Supabase **Authentication → Providers** is necessa
 
 ## Prerequisites
 
-- A Supabase project with **URL** and **publishable key** already in `.env` (see the [README Quick Start](../README.md#step-5-complete-the-setup-wizard)).
+- A Supabase project with **URL** and **publishable key** already in `.env` (see the [harness Quick Start](./DOC_HARNESS.md#step-5-complete-the-setup-wizard)).
 - Access to [Google Cloud Console](https://console.cloud.google.com/) for the project that owns your OAuth client.
 
 ## 1. Supabase: callback URL and provider
