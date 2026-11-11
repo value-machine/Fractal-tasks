@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   getOAuthErrorMessage,
   handleCodeExchange,
@@ -12,11 +12,20 @@ interface AuthCallbackState {
   error: string | null;
 }
 
+/** The page a sign-in link came back to, without the one-time `code`. */
+const withoutCode = (pathname: string, searchParams: URLSearchParams): string => {
+  const rest = new URLSearchParams(searchParams);
+  rest.delete("code");
+  const query = rest.toString();
+  return query ? `${pathname}?${query}` : pathname;
+};
+
 /**
  * Handles PKCE returns (OAuth and email sign-in links) on the app root.
  */
 export const useAuthCallbackHandler = (): AuthCallbackState => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
   const { error, setAuthError } = useAuthContext();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -43,7 +52,11 @@ export const useAuthCallbackHandler = (): AuthCallbackState => {
       }
 
       if (code) {
-        const exchangeError = await handleCodeExchange(code, navigate);
+        const exchangeError = await handleCodeExchange(
+          code,
+          navigate,
+          withoutCode(pathname, searchParams)
+        );
         if (exchangeError) {
           setAuthError(exchangeError);
         }
@@ -52,7 +65,7 @@ export const useAuthCallbackHandler = (): AuthCallbackState => {
     };
 
     void processCallback();
-  }, [navigate, searchParams, setAuthError]);
+  }, [navigate, pathname, searchParams, setAuthError]);
 
   return { isProcessing, error };
 };

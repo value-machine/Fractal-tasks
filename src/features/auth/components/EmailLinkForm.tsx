@@ -9,10 +9,12 @@ import { cn } from "@/shared/utils/cn";
 
 interface EmailLinkFormProps {
   authDisabled?: boolean;
+  /** In-app page the emailed link returns to; the home page when omitted. */
+  returnPath?: string;
 }
 
 /** Passwordless sign-in: asks for an email and sends a one-time sign-in link to it. */
-export const EmailLinkForm = ({ authDisabled = false }: EmailLinkFormProps) => {
+export const EmailLinkForm = ({ authDisabled = false, returnPath }: EmailLinkFormProps) => {
   const { sendEmailSignInLink, clearAuthError } = useAuthContext();
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -24,7 +26,7 @@ export const EmailLinkForm = ({ authDisabled = false }: EmailLinkFormProps) => {
       return;
     }
     setSending(true);
-    const wasSent = await sendEmailSignInLink(email);
+    const wasSent = await sendEmailSignInLink(email, returnPath);
     setSending(false);
     setSent(wasSent);
   };

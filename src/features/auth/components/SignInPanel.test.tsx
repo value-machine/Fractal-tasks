@@ -53,8 +53,27 @@ describe("SignInPanel", () => {
     await user.click(screen.getByRole("button", { name: /continue with github/i }));
     await user.click(screen.getByRole("button", { name: /continue with google/i }));
 
-    expect(auth.signInWithOAuthProvider).toHaveBeenNthCalledWith(1, "github");
-    expect(auth.signInWithOAuthProvider).toHaveBeenNthCalledWith(2, "google");
+    expect(auth.signInWithOAuthProvider).toHaveBeenNthCalledWith(1, "github", undefined);
+    expect(auth.signInWithOAuthProvider).toHaveBeenNthCalledWith(2, "google", undefined);
+  });
+
+  it("should pass the return page to every sign-in method when one is given", async () => {
+    const auth = mockAuthContext();
+    const user = userEvent.setup();
+    render(<SignInPanel returnPath="/oauth/consent?authorization_id=abc" />);
+
+    await user.click(screen.getByRole("button", { name: /continue with github/i }));
+    await user.type(screen.getByLabelText(/email/i), "ada@example.com");
+    await user.click(screen.getByRole("button", { name: /email me a sign-in link/i }));
+
+    expect(auth.signInWithOAuthProvider).toHaveBeenCalledWith(
+      "github",
+      "/oauth/consent?authorization_id=abc"
+    );
+    expect(auth.sendEmailSignInLink).toHaveBeenCalledWith(
+      "ada@example.com",
+      "/oauth/consent?authorization_id=abc"
+    );
   });
 
   it("should show the check-your-inbox message when the sign-in link was sent", async () => {
@@ -65,7 +84,7 @@ describe("SignInPanel", () => {
     await user.type(screen.getByLabelText(/email/i), "ada@example.com");
     await user.click(screen.getByRole("button", { name: /email me a sign-in link/i }));
 
-    expect(auth.sendEmailSignInLink).toHaveBeenCalledWith("ada@example.com");
+    expect(auth.sendEmailSignInLink).toHaveBeenCalledWith("ada@example.com", undefined);
     expect(await screen.findByText("Check your inbox for a sign-in link.")).toBeInTheDocument();
     expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument();
 

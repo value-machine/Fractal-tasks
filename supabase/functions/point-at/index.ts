@@ -17,6 +17,7 @@ const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-methods": "GET, POST, DELETE, OPTIONS",
   "access-control-allow-headers": "apikey, authorization, content-type, x-point-at-actor",
   "access-control-max-age": "86400",
+  "access-control-expose-headers": "www-authenticate, mcp-session-id",
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -180,15 +181,41 @@ function tokensMatch(given: string, expected: string): boolean {
  */
 async function authenticateMcp(req: Request): Promise<{ contributor?: string } | Response> {
   const given = bearer(req);
+  // The header tells MCP clients where to log in (agent login, OAuth via Supabase Auth).
   const unauthorized = () =>
-    json({ error: "Unauthorized" }, 401, { "www-authenticate": "Bearer" });
+    json({ error: "Unauthorized" }, 401, {
+      "www-authenticate": `Bearer resource_metadata="${functionUrl()}/.well-known/oauth-protected-resource"`,
+    });
   if (!given) return unauthorized();
   if (given.startsWith("pa_")) {
     const owner = await resolveAgentToken(getDb(), given);
     return owner ? { contributor: owner.displayName } : unauthorized();
   }
   const shared = Deno.env.get("POINT_AT_MCP_TOKEN");
-  return shared && tokensMatch(given, shared) ? {} : unauthorized();
+  if (shared && tokensMatch(given, shared)) return {};
+  // Agent login: an access token Supabase Auth issued after the person approved the agent tool.
+  const user = await signedInUser(req);
+  return user ? { contributor: user.displayName } : unauthorized();
+}
+
+/** This function's public URL, e.g. https://<ref>.supabase.co/functions/v1/point-at. */
+function functionUrl(): string {
+  return `${(Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "")}/functions/v1/point-at`;
+}
+
+/**
+ * OAuth protected resource metadata (RFC 9728): tells an MCP client that Supabase Auth is the
+ * login server for this MCP endpoint, so it can register, send the person to approve, and get
+ * tokens on its own. The person only pastes the MCP URL.
+ */
+function protectedResourceMetadata(): Response {
+  const supabaseUrl = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
+  return json({
+    resource: `${functionUrl()}/mcp`,
+    authorization_servers: [`${supabaseUrl}/auth/v1`],
+    bearer_methods_supported: ["header"],
+    resource_name: "Point At",
+  });
 }
 
 /** MCP over streamable HTTP, stateless: a fresh server and transport per request. */
@@ -221,6 +248,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
   try {
     if (path === "/mcp") return await handleMcp(req);
+    if (path.startsWith("/.well-known/oauth-protected-resource")) return protectedResourceMetadata();
     if (path.startsWith("/api/me/")) return await handleMyTokens(req, path);
     if (path.startsWith("/api/")) {
       if (req.method !== "GET")

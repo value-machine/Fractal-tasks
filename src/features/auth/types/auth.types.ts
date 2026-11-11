@@ -38,9 +38,10 @@ export interface AuthContextValue {
   loading: boolean;
   error: string | null;
   logout: () => Promise<void>;
-  signInWithOAuthProvider: (provider: OAuthProvider) => Promise<void>;
+  /** `returnPath`: in-app page to come back to after signing in (default the home page). */
+  signInWithOAuthProvider: (provider: OAuthProvider, returnPath?: string) => Promise<void>;
   /** Resolves true when the sign-in link was sent; failures land in `error`. */
-  sendEmailSignInLink: (email: string) => Promise<boolean>;
+  sendEmailSignInLink: (email: string, returnPath?: string) => Promise<boolean>;
   clearAuthError: () => void;
   setAuthError: (message: string | null) => void;
 }
