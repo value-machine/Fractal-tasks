@@ -1,5 +1,5 @@
 // @generated-by cursor-migration: sync-agent-config v0.1.0
-// Vendored copy. Edit plugins/cursor-migration/templates/sync-agent-config.mjs (cursor-migration plugin), not a copy.
+// Vendored copy; upstream is the cursor-migration plugin in value-machine/bronze-plate-harness.
 //
 // Keeps generated agent-config mirrors in sync with their sources, as listed in agent-sync.config.json:
 //   kind "skills":       <source>/**      -> <target>/**       (byte-identical copy, e.g. .agents/skills -> .claude/skills)

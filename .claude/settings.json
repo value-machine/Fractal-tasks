@@ -144,9 +144,6 @@
       }
     }
   },
-  "enabledPlugins": {
-    "cursor-migration@plate-harness": true
-  },
   "outputStyle": "default",
   "plansDirectory": "./documentation/jobs"
 }

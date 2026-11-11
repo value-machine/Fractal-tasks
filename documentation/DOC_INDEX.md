@@ -6,6 +6,7 @@ Central navigation for plate-harness documentation. For authoritative rules and 
 
 | Topic | Document |
 |-------|----------|
+| **Harness overview (setup, commands, conventions)** | [DOC_HARNESS.md](./DOC_HARNESS.md) |
 | **How to contribute safely** | [DOC_CONTRIBUTING.md](./DOC_CONTRIBUTING.md) |
 | **Agent: session context** | [`.agents/skills/spec-load-context/SKILL.md`](../.agents/skills/spec-load-context/SKILL.md) |
 | **Agent: entry point (router)** | [`.agents/skills/router/SKILL.md`](../.agents/skills/router/SKILL.md) — finds the loop stage |

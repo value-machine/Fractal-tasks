@@ -21,7 +21,7 @@
 
 ## Prerequisites
 
-1. **Dependencies installed:** `pnpm install` (see [README Quick Start](../README.md#quick-start-guide)).
+1. **Dependencies installed:** `pnpm install` (see [harness Quick Start](./DOC_HARNESS.md#quick-start-guide)).
 2. **Dev server running** on the PC:
 
    ```bash
