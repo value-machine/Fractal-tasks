@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.45.0](https://github.com/value-machine/Fractal-tasks/compare/v0.44.0...v0.45.0) (2026-11-12)
+
+
+### Features
+
+* add Point At tree schema and point-at Edge Function ([9021ae7](https://github.com/value-machine/Fractal-tasks/commit/9021ae71e3ebf8d35f2be5a097441b07a70004e5))
+* add read-only goal-tree navigation view ([fffe342](https://github.com/value-machine/Fractal-tasks/commit/fffe342096be80e9914e5c3f4af4863447c59b7c))
+* add read-only goal-tree navigation view ([780b2af](https://github.com/value-machine/Fractal-tasks/commit/780b2afc5510fd174a16bab2ca8879f856fec62a))
+* adopt existing roots under a bigger goal ([#18](https://github.com/value-machine/Fractal-tasks/issues/18)) ([f3ded59](https://github.com/value-machine/Fractal-tasks/commit/f3ded59a389e488d6cf1fbb9258e80aaff040118))
+* agent login (OAuth) for MCP clients ([#29](https://github.com/value-machine/Fractal-tasks/issues/29)) ([e7be2a0](https://github.com/value-machine/Fractal-tasks/commit/e7be2a03eeeca51342859de33313bf291b8d4c0b))
+* connect Claude Code sessions in this repo to the Point At MCP server ([#6](https://github.com/value-machine/Fractal-tasks/issues/6)) ([7f0c6f4](https://github.com/value-machine/Fractal-tasks/commit/7f0c6f4ba784883e3027cde3d5b79117a1d0409f))
+* keep every split's hypothesis and release claims on unmark ([#19](https://github.com/value-machine/Fractal-tasks/issues/19)) ([1b722d2](https://github.com/value-machine/Fractal-tasks/commit/1b722d2e94c8d1fe30698026900785be95bc0d98))
+* let a node record what it needs done first ([#14](https://github.com/value-machine/Fractal-tasks/issues/14)) ([751caf3](https://github.com/value-machine/Fractal-tasks/commit/751caf38c8bd7ffddc75e6a841b2585370830358))
+* login-only agent access and a one-link connect page ([#30](https://github.com/value-machine/Fractal-tasks/issues/30)) ([814d51d](https://github.com/value-machine/Fractal-tasks/commit/814d51dbf9915d88594f401a6b0492b8a68bbd6e))
+* measure review timing from the event log ([#12](https://github.com/value-machine/Fractal-tasks/issues/12)) ([747a374](https://github.com/value-machine/Fractal-tasks/commit/747a374cc1ca1be6bee4112a0f9dee3a9371ef69))
+* personal agent tokens and passwordless sign-in ([#22](https://github.com/value-machine/Fractal-tasks/issues/22)) ([6e92717](https://github.com/value-machine/Fractal-tasks/commit/6e927173a2840264e9518ccaeeccf3f54891486c))
+* Point At logo, app icons and link-preview card ([#21](https://github.com/value-machine/Fractal-tasks/issues/21)) ([8702555](https://github.com/value-machine/Fractal-tasks/commit/87025551ba032bce216a6bfe15db214c78501954))
+* rename the app to Point At and remove the template home ([#4](https://github.com/value-machine/Fractal-tasks/issues/4)) ([da024d0](https://github.com/value-machine/Fractal-tasks/commit/da024d05a7ca0f0d84be45c48e7d98ad6d1d8b30))
+* require a shared token for the point-at MCP endpoint ([#5](https://github.com/value-machine/Fractal-tasks/issues/5)) ([1e4678a](https://github.com/value-machine/Fractal-tasks/commit/1e4678a3d6c8f15b3a2de16608672d30a130da4d))
+* show agents where a node sits and what review it needs ([#11](https://github.com/value-machine/Fractal-tasks/issues/11)) ([0466217](https://github.com/value-machine/Fractal-tasks/commit/046621765a5f8df4a562df36003bf267b4c0f128))
+
+
+### Bug Fixes
+
+* keep long goal titles inside their cards ([#20](https://github.com/value-machine/Fractal-tasks/issues/20)) ([51e8591](https://github.com/value-machine/Fractal-tasks/commit/51e8591eb6a60b81d410809b51d2e1bef3bdff0d))
+* lint-skip Edge Functions and isolate hook tests from the repo ([d89357a](https://github.com/value-machine/Fractal-tasks/commit/d89357ad792205b0d1da583d68d75b37544719b4))
+* one person cannot review their own split; names are chosen, not taken from email ([#23](https://github.com/value-machine/Fractal-tasks/issues/23)) ([f8c4059](https://github.com/value-machine/Fractal-tasks/commit/f8c405906200da55558dbe8e611816f7fdd44298))
+* stop creating anonymous Supabase sessions ([#8](https://github.com/value-machine/Fractal-tasks/issues/8)) ([bf8d4b0](https://github.com/value-machine/Fractal-tasks/commit/bf8d4b0bc7b29b3ae54da0c1cbf05ebc80c8779c))
+* tighten Point At process enforcement after the first tests ([#9](https://github.com/value-machine/Fractal-tasks/issues/9)) ([727d909](https://github.com/value-machine/Fractal-tasks/commit/727d90938c387dcd1c6d3f556197f6ead11759ae))
+
+
+### Performance Improvements
+
+* load the goal tree from the database region in fewer round trips ([#16](https://github.com/value-machine/Fractal-tasks/issues/16)) ([5384529](https://github.com/value-machine/Fractal-tasks/commit/53845290475c155de4cb1e7d50758f64143801e6))
+
+
+### Reverts
+
+* roll back the self-review and public-name fixes ([#25](https://github.com/value-machine/Fractal-tasks/issues/25)) ([91d5e7f](https://github.com/value-machine/Fractal-tasks/commit/91d5e7f574356e990e637193144513b6a7e783eb))
+
 ## [0.44.0](https://github.com/value-machine/bronze-plate-harness/compare/v0.43.0...v0.44.0) (2026-10-26)
 
 
