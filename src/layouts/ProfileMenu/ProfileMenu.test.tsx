@@ -88,7 +88,7 @@ describe("ProfileMenu", () => {
       await waitFor(() => {
         expect(screen.getByText(/^sign in$/i)).toBeInTheDocument();
       });
-      expect(screen.queryByText(/your agents/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/connect your agent/i)).not.toBeInTheDocument();
     });
 
     it("should show profile info and sign-out when menu is opened and user is logged in", async () => {
@@ -111,7 +111,7 @@ describe("ProfileMenu", () => {
       });
     });
 
-    it("should go to the agents page when Your agents is clicked by a signed-in user", async () => {
+    it("should go to the agents page when Connect your agent is clicked by a signed-in user", async () => {
       vi.mocked(useAuthContext).mockReturnValue({
         ...defaultAuthContext,
         user: { id: "123", email: "test@example.com" } as User,
@@ -120,7 +120,7 @@ describe("ProfileMenu", () => {
       renderMenu();
 
       await user.click(screen.getByRole("button"));
-      await user.click(await screen.findByText(/your agents/i));
+      await user.click(await screen.findByText(/connect your agent/i));
 
       expect(mockNavigate).toHaveBeenCalledWith("/agents");
     });

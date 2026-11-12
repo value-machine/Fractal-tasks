@@ -12,7 +12,7 @@ Flow: the MCP endpoint answers 401 with where to log in (`/.well-known/oauth-pro
 | ---------- | ----------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Services   | `services/agentApprovalService.ts`  | `supabase.auth.oauth`: read the request, approve or deny                                         |
 | Hooks      | `hooks/useAgentApproval.ts`         | Query for the request (single use, no retries); mutation that hands the browser back to the tool |
-| Components | `components/AgentApprovalPanel.tsx` | "Connect <tool>?" with Allow and Cancel                                                          |
+| Components | `components/AgentApprovalPanel.tsx`, `components/ConnectAgentGuide.tsx` | "Connect <tool>?" with Allow and Cancel; the one link to paste into an agent tool, with a line per tool (on `/agents`; the home page hint links there) |
 
 Page (thin): `src/pages/AgentApprovalPage.tsx` at `/oauth/consent`; signed out it shows the sign-in panel with `returnPath` set to itself (`src/features/auth/README.md` § Return page after sign-in).
 

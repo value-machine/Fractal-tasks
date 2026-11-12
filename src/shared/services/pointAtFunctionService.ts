@@ -39,6 +39,15 @@ export const getPointAtRequest = (
 /** URL agents connect their MCP client to, or null when Supabase is not configured. */
 export const getPointAtMcpUrl = (): string | null => getPointAtRequest("/mcp")?.url ?? null;
 
+/**
+ * The URL people add as a connector in their agent tool for agent login. Plain (no region pin)
+ * because it must equal the resource the login server issues tokens for.
+ */
+export const getPointAtConnectorUrl = (): string | null => {
+  const config = getEdgeFunctionConfig(POINT_AT_FUNCTION);
+  return config ? `${config.baseUrl}/mcp` : null;
+};
+
 /** The function's `{ error }` message, or a generic one with the status. */
 export const readPointAtError = async (response: Response): Promise<string> => {
   const body: unknown = await response.json().catch(() => null);

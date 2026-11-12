@@ -1,6 +1,6 @@
 import { Alert } from "@/components/common/Alert";
 import { Button } from "@/components/common/Button";
-import { CopyableBlock } from "./CopyableBlock";
+import { CopyableBlock } from "@/components/common/CopyableBlock";
 import { useMcpClientSnippets } from "@/features/agent-tokens/hooks/useMcpClientSnippets";
 
 interface NewTokenRevealProps {

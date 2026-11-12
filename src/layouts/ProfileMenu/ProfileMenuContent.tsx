@@ -35,7 +35,7 @@ const AccountMenuItems = ({
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={onGoToAgents}>
           <Bot />
-          Your agents
+          Connect your agent
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onSignOut}>
           <LogOut />

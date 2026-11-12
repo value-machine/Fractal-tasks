@@ -29,10 +29,10 @@ Base URL: `https://<ref>.supabase.co/functions/v1/point-at`. Browser calls send 
 
 ## MCP tools
 
-Who acts depends on the bearer token:
+Every write is attributed to the person the agent logged in as, recorded as `<name> via <agent label>`. The label is the tool's `actor` argument, else the `x-point-at-actor` header; an agent cannot write as someone else. Two ways to log in:
 
-- **Personal agent token** (`pa_…`, created on the site at `/agents`): every write is attributed to the token's owner, as `<display name> via <agent label>`. The label is the tool's `actor` argument, else the `x-point-at-actor` header; an agent cannot write as someone else. Revoked tokens get 401. Logic and tests: `supabase/functions/_shared/pointAt/contributors.ts`.
-- **Shared token** `POINT_AT_MCP_TOKEN` (being phased out): the actor is whatever the agent sends (`actor` argument, else the header, else `anonymous agent`).
+- **Agent login** (OAuth, recommended): the access token Supabase Auth issues after the person approves the agent tool on `/oauth/consent`.
+- **Personal agent token** (`pa_…`, created on the site at `/agents`), for tools that cannot log in. Revoked tokens get 401. Logic and tests: `supabase/functions/_shared/pointAt/contributors.ts`.
 
 - Read: `read_process`, `list_roots`, `focus_node` (node, root, depth, ancestors with their split hypotheses, siblings, its own split author and review state, children, grandchildren, links, events; empty fields left out), `next_tasks` (role `donor` or `executor`; donor rows carry a `kind`: `review`, `replan`, `split`, `run`, `refine`, and the same `kind` filters the view), `search_nodes`, `review_stats` (also at `GET /api/stats/reviews?label=`). Resource: `pointat://process`.
 - Write: `create_root`, `split_node`, `adopt_roots` (place existing roots under a node as a reviewed split; only roots move, loops are refused), `mark_leaf`, `update_node`, `claim_node`, `release_node`, `report`, `mark_overtaken`, `review_split`, `link_nodes`, `add_dependency` (a node needs another closed first; a leaf with an open dependency is left out of `next_tasks` and the Actions view; loops are refused).
@@ -48,7 +48,7 @@ supabase functions deploy point-at --project-ref kyzhhofupypwmfjpbyfc --no-verif
 `--no-verify-jwt` is required for two reasons: the browser calls with a publishable key, which is not a user JWT, and agents call `/mcp` with no Supabase session at all. The function does its own check instead:
 
 - `/api/*` (read-only) is public.
-- `/mcp` (reads and writes) requires `Authorization: Bearer <POINT_AT_MCP_TOKEN>`, a shared secret set as an Edge Function secret (`supabase secrets set POINT_AT_MCP_TOKEN=<long random value>`). Without the secret set, `/mcp` answers 503, so a fresh deploy is closed by default. Rotate it by setting a new value; every agent then needs the new token.
+- `/mcp` (reads and writes) requires `Authorization: Bearer <token>`: an agent-login access token or a personal agent token. Anything else gets 401 with a `WWW-Authenticate` header that points agent tools to the login server.
 
 An Edge Function has no staging: a deploy affects production and every preview at once (`.claude/rules/testing.md` § Edge Functions testing). Apply the migration first, then deploy. Test with the procedure below, ideally against a scratch project, before deploying to the shared one.
 
@@ -58,7 +58,7 @@ An Edge Function has no staging: a deploy affects production and every preview a
 
 ## Manual test procedure
 
-Set `BASE=https://<ref>.supabase.co/functions/v1/point-at`, `KEY=<publishable key>` and `TOKEN=<POINT_AT_MCP_TOKEN>`. The seed (`_shared/pointAt/seed.ts`) is not wired to a route, so an empty database returns `[]` from `/api/roots`; create a root through MCP first (step 9).
+Set `BASE=https://<ref>.supabase.co/functions/v1/point-at`, `KEY=<publishable key>` and `TOKEN=<a personal agent token from /agents>`. The seed (`_shared/pointAt/seed.ts`) is not wired to a route, so an empty database returns `[]` from `/api/roots`; create a root through MCP first (step 9).
 
 1. `curl -s -H "apikey: $KEY" "$BASE/api/roots"` returns a JSON array (200).
 2. Take an `id` from step 1: `curl -s -H "apikey: $KEY" "$BASE/api/nodes/<id>"` returns `node`, `ancestors`, `children`, `events`, `links`.
@@ -89,17 +89,12 @@ Set `BASE=https://<ref>.supabase.co/functions/v1/point-at`, `KEY=<publishable ke
 MCP URL: `https://<ref>.supabase.co/functions/v1/point-at/mcp?forceFunctionRegion=eu-west-1`. The query parameter runs the function next to the database (eu-west-1); without it every query crosses from the region nearest the caller, measured 2026-11-08 at about 4x slower per page. The web view pins its `/api` calls the same way.
 
 - **Process text:** `read_process` and `/api/process` serve a generated copy of `documentation/DOC_POINT_AT_PROCESS.md`. After editing that document, run `pnpm sync:process-doc` and redeploy.
-- **Agent login (recommended, once the Supabase OAuth server is on):** add the MCP URL `https://<ref>.supabase.co/functions/v1/point-at/mcp` as a connector or MCP server in your agent tool. It finds the login server through `/.well-known/oauth-protected-resource` (linked from the 401 `WWW-Authenticate` header), opens a browser, you approve on Point At's `/oauth/consent` page, and every write is then in your name. The function accepts the Supabase access token it gets.
-- **Your own token:** sign in at https://fractal-tasks.tom-fab.workers.dev/agents, create a token, and copy the Claude Code command or JSON settings shown there. Writes are then in your name.
-- **Claude Code in this repo (shared token, being phased out):** `.mcp.json` already lists `point-at`. Set the environment variable `POINT_AT_MCP_TOKEN` (and optionally `POINT_AT_ACTOR`, your name as it appears in the tree) and start a new session; Claude Code fills them into the headers. In Claude Code cloud sessions, save the token instead as a network secret for host `kyzhhofupypwmfjpbyfc.supabase.co` (Authorization: Bearer) in the environment's settings; the proxy injects it and the `proxy-injected` default in `.mcp.json` is overwritten. Never put the token in a chat.
-- **Claude Code elsewhere:** `claude mcp add --transport http point-at https://<ref>.supabase.co/functions/v1/point-at/mcp --header "Authorization: Bearer <token>" --header "x-point-at-actor: Your Name via Claude Code"`
-- **Cursor / Claude Desktop:** an HTTP MCP server entry with that URL and the same two headers (Claude Desktop through a local bridge such as `mcp-remote` with `--header`).
-- **claude.ai web connectors:** not yet. They authenticate with OAuth and cannot send the token, so they wait for contributor sign-in.
+- **Any agent tool (recommended):** add the MCP URL `https://<ref>.supabase.co/functions/v1/point-at/mcp` as a connector or MCP server (claude.ai: Settings → Connectors → Add custom connector; Claude Code: `claude mcp add --transport http point-at <url>`; Cursor: an HTTP MCP server entry). The tool finds the login server through `/.well-known/oauth-protected-resource` (linked from the 401 `WWW-Authenticate` header), opens a browser, you approve on Point At's `/oauth/consent` page, and every write is then in your name. Verified with a claude.ai connector on 2026-11-12. `.mcp.json` in this repo lists the same URL.
+- **Tools that cannot log in:** create a personal token at https://fractal-tasks.tom-fab.workers.dev/agents and send it as `Authorization: Bearer <token>`.
 
 ## Known gaps
 
-- **The shared token still works.** Personal agent tokens attribute writes to a person, but the shared `POINT_AT_MCP_TOKEN` still lets an agent write under any typed-in name until it is removed (follow-up task). The tree lives in the shared Inventhor website project (ref `kyzhhofupypwmfjpbyfc`), so that token guards that database too.
 - **Embeddings are unfilled.** `nodes.embedding` exists and is indexed, but nothing writes or queries it; search is full-text plus `ilike`.
-- **No rate limiting.** `.claude/rules/project-specific.md` asks for it on public and write endpoints. Personal tokens now give a stable key per contributor, so it can be added (backlog task).
+- **No rate limiting.** `.claude/rules/project-specific.md` asks for it on public and write endpoints. Every write now carries a logged-in person, which gives a stable key, so it can be added (backlog task).
 - **Tool callbacks are untyped.** `deno check` reports implicit-any parameters in `mcpServer.ts` tool callbacks (the MCP SDK does not infer zod 4 shapes there). Inputs are still validated by zod at runtime; the rules themselves are tested in `store.test.ts` and `contributors.test.ts`.
 - The process document is an embedded copy (`_shared/pointAt/processDoc.ts`); regenerate it when `documentation/DOC_POINT_AT_PROCESS.md` changes.
