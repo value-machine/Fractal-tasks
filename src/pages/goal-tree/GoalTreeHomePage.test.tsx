@@ -18,7 +18,7 @@ vi.mock("@/shared/services/pointAtFunctionService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/shared/services/pointAtFunctionService")>();
   return {
     ...actual,
-    getPointAtMcpUrl: () => "https://proj.supabase.co/functions/v1/point-at/mcp",
+    getPointAtConnectorUrl: () => "https://proj.supabase.co/functions/v1/point-at/mcp",
   };
 });
 

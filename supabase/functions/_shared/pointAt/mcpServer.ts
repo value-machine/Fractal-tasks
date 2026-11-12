@@ -18,7 +18,7 @@ const actorField = z
   .string()
   .optional()
   .describe(
-    'Who is acting. With a personal agent token the write is always attributed to its owner, and this only names the agent (e.g. "Claude Code"); with the shared token it is the whole actor, e.g. "Tom via Claude". Defaults to the x-point-at-actor header.'
+    'Which agent is acting, e.g. "Claude Code". The write is always attributed to the person your agent logged in as; this only names the agent. Defaults to the x-point-at-actor header.'
   );
 
 const newNode = z.object({
@@ -32,9 +32,9 @@ const newNode = z.object({
 });
 
 /**
- * Who is calling. With a personal agent token, `contributor` is the signed-in person and every
- * write is theirs; the agent's own label (tool `actor` or `defaultActor`) only adds "via ...".
- * With the shared token, the typed-in actor is all there is.
+ * Who is calling. `contributor` is the person the agent logged in as (agent login or a personal
+ * agent token) and every write is theirs; the agent's own label (tool `actor` or `defaultActor`)
+ * only adds "via ...".
  */
 export interface McpIdentity {
   contributor?: string;

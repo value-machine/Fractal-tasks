@@ -166,18 +166,9 @@ async function myTokens(req: Request, path: string): Promise<Response> {
   return json({ error: "Method not allowed" }, 405);
 }
 
-/** Constant-time comparison, so response timing does not reveal how much of a token matched. */
-function tokensMatch(given: string, expected: string): boolean {
-  const a = new TextEncoder().encode(given);
-  const b = new TextEncoder().encode(expected);
-  let diff = a.length ^ b.length;
-  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
-  return diff === 0;
-}
-
 /**
- * Writes go through MCP, so MCP needs a bearer token: a personal agent token (the write is
- * attributed to its owner), or the shared secret POINT_AT_MCP_TOKEN while agents switch over.
+ * Writes go through MCP, so every MCP call must say whose agent it is: an access token from agent
+ * login (OAuth via Supabase Auth), or a personal agent token for tools that cannot log in.
  */
 async function authenticateMcp(req: Request): Promise<{ contributor?: string } | Response> {
   const given = bearer(req);
@@ -191,8 +182,6 @@ async function authenticateMcp(req: Request): Promise<{ contributor?: string } |
     const owner = await resolveAgentToken(getDb(), given);
     return owner ? { contributor: owner.displayName } : unauthorized();
   }
-  const shared = Deno.env.get("POINT_AT_MCP_TOKEN");
-  if (shared && tokensMatch(given, shared)) return {};
   // Agent login: an access token Supabase Auth issued after the person approved the agent tool.
   const user = await signedInUser(req);
   return user ? { contributor: user.displayName } : unauthorized();

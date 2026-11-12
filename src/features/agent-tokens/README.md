@@ -6,15 +6,15 @@ Personal agent tokens: a signed-in person creates a named token for each agent (
 
 ## Structure
 
-| Layer      | Path                                                                         | Purpose                                                                                  |
-| ---------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Types      | `types/agentToken.types.ts`                                                  | `AgentToken` (listing, no secret) and `CreatedAgentToken` (secret, shown once)           |
-| Services   | `services/agentTokenApiService.ts`                                           | `/api/me/tokens` client; sends the person's Supabase session token, not the public key   |
-| Services   | `services/mcpClientConfig.ts`                                                | Claude Code command and `mcpServers` JSON for a token                                    |
-| Hooks      | `hooks/useAgentTokens.ts`, `hooks/useMcpClientSnippets.ts`                   | TanStack Query list + create/revoke (server record merged with `setQueryData`); snippets |
-| Components | `components/AgentTokensPanel.tsx`, `NewTokenReveal.tsx`, `CopyableBlock.tsx` | Create form, one-time reveal with copy buttons, token list with revoke                   |
+| Layer      | Path                                                       | Purpose                                                                                          |
+| ---------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Types      | `types/agentToken.types.ts`                                | `AgentToken` (listing, no secret) and `CreatedAgentToken` (secret, shown once)                   |
+| Services   | `services/agentTokenApiService.ts`                         | `/api/me/tokens` client; sends the person's Supabase session token, not the public key           |
+| Services   | `services/mcpClientConfig.ts`                              | Claude Code command and `mcpServers` JSON for a token                                            |
+| Hooks      | `hooks/useAgentTokens.ts`, `hooks/useMcpClientSnippets.ts` | TanStack Query list + create/revoke (server record merged with `setQueryData`); snippets         |
+| Components | `components/AgentTokensPanel.tsx`, `NewTokenReveal.tsx`    | Create form, one-time reveal (copy boxes from the kit's `CopyableBlock`), token list with revoke |
 
-Page (thin): `src/pages/agents/AgentTokensPage.tsx` at `/agents`, linked from the profile menu; signed-out visitors see the sign-in panel.
+Page (thin): `src/pages/agents/AgentTokensPage.tsx` at `/agents` ("Connect your agent"), linked from the profile menu. Agent login is the main way in (`src/features/agent-login/`); personal tokens sit in a fold-out for tools that cannot log in.
 
 ## Dependencies
 

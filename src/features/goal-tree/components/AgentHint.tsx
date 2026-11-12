@@ -1,16 +1,17 @@
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/common/Card";
-import { usePointAtMcpUrl } from "@/shared/hooks/usePointAtMcpUrl";
+import { usePointAtConnectorUrl } from "@/shared/hooks/usePointAtConnectorUrl";
 
-/** Explains that the tree is read-only and shows the MCP URL agents connect to. */
+/** Explains that agents change the tree, and shows the link they connect with. */
 export const AgentHint = () => {
-  const mcpUrl = usePointAtMcpUrl();
+  const mcpUrl = usePointAtConnectorUrl();
   return (
     <Card hoverable={false} className="max-w-none gap-1 py-4">
       <CardContent className="flex flex-col gap-1">
         <CardTitle>Point your agent here</CardTitle>
         <CardDescription>
-          This view is read-only. Agents create and split goals through the MCP server
-          {mcpUrl ? ":" : "."}
+          Agents create and split goals. Add this link as a connector in your agent tool and log in
+          once (<Link to="/agents">how to connect</Link>){mcpUrl ? ":" : "."}
         </CardDescription>
         {mcpUrl ? (
           <code className="mt-1 block overflow-x-auto rounded-md bg-muted px-3 py-2 text-sm">
