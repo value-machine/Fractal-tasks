@@ -298,6 +298,105 @@ describe("relations", () => {
   });
 });
 
+describe("planning rules", () => {
+  it("should refuse to split a task when it is blocked by an open task", async () => {
+    const { children } = await rootWithChildren("Pick a municipality", "Find a councillor");
+    const [pick, councillor] = children.map((n) => n.id);
+    await store.relate({ fromId: councillor, toId: pick, type: "blocked_by" }, AUTHOR);
+    const split = { hypothesis: "Steps for the councillor", children: [{ title: "Call them" }] };
+    await expect(store.split(councillor, split, AUTHOR)).rejects.toThrow(/blocked by/);
+    await store.overtake(pick, "Picked by the owner", AUTHOR);
+    const { children: after } = await store.split(councillor, split, AUTHOR);
+    expect(after.map((c) => c.title)).toEqual(["Call them"]);
+  });
+
+  it("should remind the agent not to split when a blocked task is focused", async () => {
+    const { children } = await rootWithChildren("Pick", "Follow up");
+    await store.relate(
+      { fromId: children[1].id, toId: children[0].id, type: "blocked_by" },
+      AUTHOR
+    );
+    const { hints } = await store.focus(children[1].id);
+    expect(hints[0]).toMatch(/do not split this yet/);
+  });
+});
+
+describe("overtakes", () => {
+  it("should close the overtaken task and its open subtasks when the overtaking task is done", async () => {
+    const park = await store.createRoot({ title: "Care for the plants on plot 3" }, AUTHOR);
+    const { children: care } = await store.split(
+      park.id,
+      { hypothesis: "h", children: [{ title: "Water" }, { title: "Prune" }] },
+      AUTHOR
+    );
+    await store.report(care[1].id, { outcome: "done" }, AUTHOR);
+    const house = await store.createRoot({ title: "Build a house on plot 3" }, OTHER);
+    await store.relate({ fromId: house.id, toId: park.id, type: "overtakes" }, OTHER);
+
+    await store.claim(house.id, OTHER);
+    expect((await store.getNode(park.id)).status).not.toBe("overtaken");
+
+    const result = await store.report(house.id, { outcome: "done" }, OTHER);
+    expect(result.overtaken?.map((n) => n.title).sort()).toEqual([
+      "Care for the plants on plot 3",
+      "Water",
+    ]);
+    expect((await store.getNode(park.id)).overtaken_note).toMatch(/Build a house on plot 3/);
+    // A subtask that was already done stays done.
+    expect((await store.getNode(care[1].id)).status).toBe("done");
+  });
+
+  it("should refuse an overtakes relation when one task is inside the other's subtree", async () => {
+    const { root, children } = await rootWithChildren("Child");
+    await expect(
+      store.relate({ fromId: children[0].id, toId: root.id, type: "overtakes" }, AUTHOR)
+    ).rejects.toThrow(/ancestor or descendant/);
+  });
+
+  it("should list open tasks that share a label when a new task is created", async () => {
+    const care = await store.createRoot(
+      { title: "Water the plants", labels: ["plot 3"] },
+      AUTHOR
+    );
+    await store.createRoot({ title: "Unrelated", labels: ["elsewhere"] }, AUTHOR);
+    const house = await store.createRoot(
+      { title: "Build a house", labels: ["plot 3"] },
+      OTHER
+    );
+    expect(house.check_overlap.map((c) => [c.id, c.shared_labels])).toEqual([
+      [care.id, ["plot 3"]],
+    ]);
+  });
+});
+
+describe("links", () => {
+  it("should keep a task's links in order when they are saved", async () => {
+    const node = await store.createRoot(
+      {
+        title: "Write the proposal",
+        links: [
+          { url: "https://example.org/draft", title: "Draft" },
+          { url: "http://example.org/budget", title: "Budget" },
+        ],
+      },
+      AUTHOR
+    );
+    expect(node.links).toEqual([
+      { url: "https://example.org/draft", title: "Draft" },
+      { url: "http://example.org/budget", title: "Budget" },
+    ]);
+  });
+
+  it("should refuse a link when it is not a web address", async () => {
+    await expect(
+      store.createRoot(
+        { title: "T", links: [{ url: "file:///etc/passwd", title: "File" }] },
+        AUTHOR
+      )
+    ).rejects.toThrow(/https:\/\//);
+  });
+});
+
 describe("graph", () => {
   it("should return the subtree and only the relations among its tasks when a graph is read", async () => {
     const { root, children } = await rootWithChildren("A", "B");

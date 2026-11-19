@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { formatRelativeTime } from "@/shared/utils/formatRelativeTime";
-import type { GoalEvent, GoalRelation } from "@/features/goal-tree/types/goalTree.types";
+import type { GoalEvent, GoalLink, GoalRelation } from "@/features/goal-tree/types/goalTree.types";
 import {
   describeGoalEvent,
   describeGoalRelation,
@@ -59,6 +59,31 @@ export const GoalRelationList = ({ relations }: { relations: GoalRelation[] }) =
             {relation.note && (
               <small className="block text-muted-foreground">{relation.note}</small>
             )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+};
+
+/** The context a task needs, as outside links; nothing when there are none. */
+export const GoalLinkList = ({ links }: { links: GoalLink[] }) => {
+  if (links.length === 0) return null;
+  return (
+    <section className={panelClassName}>
+      <h2 className={panelTitleClassName}>Links</h2>
+      <ul className="m-0 grid list-none gap-2 p-0 text-sm">
+        {links.map((link) => (
+          <li key={link.url}>
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary no-underline hover:underline"
+            >
+              {link.title}
+            </a>
+            <small className="block truncate text-muted-foreground">{link.url}</small>
           </li>
         ))}
       </ul>

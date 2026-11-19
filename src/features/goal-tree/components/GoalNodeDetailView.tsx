@@ -4,7 +4,11 @@ import { isGoalClosed } from "@/features/goal-tree/types/goalTreeLabels";
 import { Link } from "react-router-dom";
 import type { GoalAncestor } from "@/features/goal-tree/types/goalTree.types";
 import { GoalNodeFrame } from "@/features/goal-tree/components/GoalNodeFrame";
-import { GoalEventLog, GoalRelationList } from "@/features/goal-tree/components/GoalSidePanels";
+import {
+  GoalEventLog,
+  GoalLinkList,
+  GoalRelationList,
+} from "@/features/goal-tree/components/GoalSidePanels";
 import { GoalTile } from "@/features/goal-tree/components/GoalTile";
 
 const crumbClassName =
@@ -91,6 +95,7 @@ export const GoalNodeDetailView = ({ detail }: { detail: GoalNodeDetail }) => (
         <SubtaskSection detail={detail} />
       </div>
       <aside className="grid gap-4">
+        <GoalLinkList links={detail.node.links} />
         <GoalRelationList relations={detail.relations} />
         <GoalEventLog events={detail.events} />
       </aside>

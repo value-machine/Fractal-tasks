@@ -6,11 +6,14 @@ import {
   type ClaimEndReason,
 } from "./assignments.ts";
 import type { Db } from "./db.ts";
+import { HYPERLINKS_COLUMN, saveHyperlinks, type Hyperlink } from "./hyperlinks.ts";
+import { overlapCandidates, type OverlapCandidate } from "./overlapCandidates.ts";
 import { ProcessError } from "./processError.ts";
 import {
   addRelation,
   blockedSql,
   edgesAmong,
+  openOvertakenBy,
   type RelationEdge,
   relationsOf,
   removeRelation,
@@ -63,6 +66,8 @@ export interface Node {
   /** Estimated time, as the upper bound of its bucket (taskDetails.ts DURATIONS). */
   duration_minutes: number | null;
   requirements: Requirement[];
+  /** Context the task needs, as links only (hyperlinks.ts). */
+  links: Hyperlink[];
   verification_level: number | null;
   overtaken_note: string | null;
   unclear_reason: string | null;
@@ -92,7 +97,7 @@ const NODE_COLUMNS = `
   n.id, n.parent_id, n.title, n.done_check, n.next_action, n.status, n.leaf_type,
   n.leaf_who, n.leaf_what, n.leaf_how, n.split_hypothesis, n.split_prediction,
   n.split_assumptions, n.split_at, n.labels, claim.claimed_by, claim.claimed_at,
-  n.duration_minutes, ${REQUIREMENTS_COLUMN}, n.verification_level, n.overtaken_note, n.unclear_reason, n.created_by,
+  n.duration_minutes, ${REQUIREMENTS_COLUMN}, ${HYPERLINKS_COLUMN}, n.verification_level, n.overtaken_note, n.unclear_reason, n.created_by,
   n.created_at, n.updated_at`;
 
 const summarySelect = (extraColumns = "") => `
@@ -114,6 +119,8 @@ const UNMARK_LEAF = `, leaf_type = null, leaf_who = null, leaf_what = null, leaf
 
 export interface NewNodeInput extends TaskDetailsInput {
   title: string;
+  /** Replaces the task's links when given. */
+  links?: Hyperlink[];
   done_check?: string | null;
   next_action?: string | null;
   labels?: string[];
@@ -469,6 +476,7 @@ export class Store {
       relations,
       estimate,
       claims,
+      hints: focusHints(node, relations),
       children: children.map((c) => ({
         ...c,
         children: grandchildren.filter((g) => g.parent_id === c.id),
@@ -542,7 +550,10 @@ export class Store {
 
   // ---------------------------------------------------------------- writing
 
-  async createRoot(input: NewNodeInput, actor: string): Promise<NodeSummary> {
+  async createRoot(
+    input: NewNodeInput,
+    actor: string
+  ): Promise<NodeSummary & { check_overlap: OverlapCandidate[] }> {
     return this.db.transaction(async (tx) => {
       const [row] = await tx.query<{ id: string }>(
         `insert into nodes (title, done_check, next_action, labels, created_by)
@@ -555,9 +566,10 @@ export class Store {
           actor,
         ]
       );
-      await saveTaskDetails(tx, row.id, input);
+      await saveNodeDetails(tx, { nodeId: row.id, input, actor });
       await logEvent(tx, row.id, actor, "created", "Root created");
-      return new Store(tx).getNode(row.id);
+      const node = await new Store(tx).getNode(row.id);
+      return { ...node, check_overlap: await overlapCandidates(tx, [node]) };
     });
   }
 
@@ -581,7 +593,7 @@ export class Store {
           ]
         );
         ids.push(row.id);
-        await saveTaskDetails(tx, row.id, child);
+        await saveNodeDetails(tx, { nodeId: row.id, input: child, actor });
         await logEvent(tx, row.id, actor, "created", `Split from "${parent.title}"`);
       }
       await recordSplit(tx, {
@@ -598,9 +610,14 @@ export class Store {
         "split",
         `${ids.length} children. Hypothesis: ${input.hypothesis}`
       );
+      const children = await new Store(tx).children(parentId);
       return {
         parent: await new Store(tx).getNode(parentId),
-        children: await new Store(tx).children(parentId),
+        children,
+        check_overlap: await overlapCandidates(
+          tx,
+          children.filter((c) => ids.includes(c.id))
+        ),
       };
     });
   }
@@ -664,6 +681,19 @@ export class Store {
         "Node is marked as a leaf. Unmark it with update_node (leaf_type: null) before splitting."
       );
     }
+    const [blocker] = await this.db.query<{ title: string }>(
+      `select bn.title from node_relations br join nodes bn on bn.id = br.to_id
+       where br.from_id = $1 and br.type = 'blocked_by' and bn.status not in ('done','overtaken')
+       limit 1`,
+      [parentId]
+    );
+    if (blocker) {
+      throw new ProcessError(
+        `Not yet: this task is blocked by "${blocker.title}", which is still open. ` +
+          "How to split it depends on what that task finds, so splitting now would plan past an open decision (PROCESS.md 4.4). " +
+          "Refine its title or done check instead, and split it once the blocker is done."
+      );
+    }
     await this.db.query(
       `update nodes set split_hypothesis = $2, split_prediction = $3, split_assumptions = $4,
          split_at = now(), status = 'proposed' where id = $1`,
@@ -681,6 +711,7 @@ export class Store {
       who?: string;
       what?: string;
       how?: string;
+      links?: Hyperlink[];
     } & TaskDetailsInput,
     actor: string
   ) {
@@ -697,7 +728,7 @@ export class Store {
          unclear_reason = null where id = $1`,
       [id, input.type, doneCheck, input.who ?? null, input.what ?? null, input.how ?? null]
     );
-    await saveTaskDetails(this.db, id, input);
+    await saveNodeDetails(this.db, { nodeId: id, input, actor });
     await logEvent(this.db, id, actor, "note", `Marked as ${input.type} leaf`);
     return this.getNode(id);
   }
@@ -706,6 +737,7 @@ export class Store {
     id: string,
     patch: Partial<Pick<Node, "title" | "done_check" | "next_action" | "labels">> & {
       leaf_type?: null;
+      links?: Hyperlink[];
     } & TaskDetailsInput,
     actor: string
   ) {
@@ -731,7 +763,7 @@ export class Store {
     );
     // A claimer was going to do the leaf, not split it (PROCESS.md 0.5), so unmarking ends the claim.
     if (unmark) await endClaim(this.db, id, "unmarked");
-    await saveTaskDetails(this.db, id, patch);
+    await saveNodeDetails(this.db, { nodeId: id, input: patch, actor });
     await logEvent(this.db, id, actor, "note", `Updated: ${Object.keys(patch).join(", ")}`);
     return this.getNode(id);
   }
@@ -819,9 +851,35 @@ export class Store {
       level,
     ]);
     await endClaim(this.db, id, "done");
+    const overtaken = await this.closeOvertakenBy(node, actor);
     await logEvent(this.db, id, actor, "report", input.note ?? "Done", input.evidence, level);
 
-    return { node: await this.getNode(id), parent_check: await this.parentCheck(node.parent_id) };
+    return {
+      node: await this.getNode(id),
+      parent_check: await this.parentCheck(node.parent_id),
+      ...(overtaken.length ? { overtaken } : {}),
+    };
+  }
+
+  /**
+   * A done task closes the tasks it overtakes, and everything open below them, as overtaken
+   * (PROCESS.md 2.4; owner decision 2026-11-20). Returns what it closed.
+   */
+  private async closeOvertakenBy(
+    done: NodeSummary,
+    actor: string
+  ): Promise<{ id: string; title: string }[]> {
+    const hits = await openOvertakenBy(this.db, done.id);
+    const note = `Overtaken by "${done.title}", which is done.`;
+    for (const hit of hits) {
+      await this.db.query(
+        `update nodes set status = 'overtaken', overtaken_note = $2 where id = $1`,
+        [hit.id, note]
+      );
+      await endClaim(this.db, hit.id, "overtaken");
+      await logEvent(this.db, hit.id, actor, "overtaken", note);
+    }
+    return hits;
   }
 
   /**
@@ -904,6 +962,46 @@ export class Store {
     }
     await logEvent(this.db, input.fromId, actor, "link", `Removed ${input.type}: ${to.title}`);
     return this.relations(input.fromId);
+  }
+}
+
+/**
+ * Planning reminders shown when an agent focuses a task: the rules agents most often need at
+ * that moment, so they meet them even without rereading the process document.
+ */
+function focusHints(
+  node: NodeSummary,
+  relations: Awaited<ReturnType<typeof relationsOf>>
+): string[] {
+  const hints: string[] = [];
+  const openBlockers = relations.filter(
+    (r) =>
+      r.type === "blocked_by" &&
+      r.direction === "out" &&
+      r.status !== "done" &&
+      r.status !== "overtaken"
+  );
+  if (openBlockers.length && !node.leaf_type && node.child_count === 0) {
+    hints.push(
+      `Blocked by "${openBlockers[0].title}": do not split this yet. Its subtasks depend on what that task finds (PROCESS.md 4.4).`
+    );
+  }
+  if (node.child_count === 0 && !node.leaf_type && !openBlockers.length) {
+    hints.push(
+      "Before splitting: does a later step depend on the outcome of an earlier one? Split only up to that decision, and record the later steps as blocked by it (PROCESS.md 4.4)."
+    );
+  }
+  return hints;
+}
+
+/** Duration, requirements and links, for whichever of them the input carries. */
+async function saveNodeDetails(
+  db: Db,
+  input: { nodeId: string; input: TaskDetailsInput & { links?: Hyperlink[] }; actor: string }
+): Promise<void> {
+  await saveTaskDetails(db, input.nodeId, input.input);
+  if (input.input.links !== undefined) {
+    await saveHyperlinks(db, { nodeId: input.nodeId, links: input.input.links, actor: input.actor });
   }
 }
 

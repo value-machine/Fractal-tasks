@@ -16,8 +16,8 @@
   },
   {
     "title": "A home for agent results",
-    "description": "Trial run finding (citizens' panel goal, 2026-11-17): an agent leaf's result (a shortlist, a drafted proposal) has nowhere to live except a progress note. Decide where deliverables go (an attached document or link on the node, a results field) so the next task can build on them.",
-    "status": "to-do"
+    "description": "Trial run finding (citizens' panel goal, 2026-11-17): an agent leaf's result (a shortlist, a drafted proposal) has nowhere to live except a progress note. Decide where deliverables go (an attached document or link on the node, a results field) so the next task can build on them. Done (owner decision 2026-11-20): links only, no file hosting. Results live elsewhere and are linked from the task (node_hyperlinks).",
+    "status": "done"
   },
   {
     "title": "Rate limiting on the point-at Edge Function",

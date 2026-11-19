@@ -3,7 +3,7 @@
 // Run `node scripts/sync-process-doc.mjs` whenever that document changes.
 export const PROCESS_DOC = `# The Process
 
-Version: 0.7 (draft)
+Version: 0.8 (draft)
 This is a living document. It is refined through critique passes, and every change is recorded in the change log at the bottom.
 
 This document describes the single recursive unit used at every scale, from "make a sandwich this morning" to "achieve world peace".
@@ -17,6 +17,8 @@ Everything is a node. Every node answers three questions:
 3. **What is the next concrete action a human or agent could take?**
 
 Each node has a **status**: proposed, reviewed, in progress, done, or overtaken. Each node also has a log of what happened when someone acted on it. That real-world feedback keeps the structure honest.
+
+**Context comes as links.** The information a task needs (a document, a web page, a result an agent produced elsewhere) is attached as hyperlinks with a short title. Point At stores no files.
 
 ## 2. Structure
 
@@ -62,6 +64,9 @@ Besides the split-from tree, any two tasks can be related. A relation has a type
 | replaces | A re-plan: this task takes over from the other | |
 | duplicate of | The same task was created twice | Close the duplicate as overtaken |
 | related to | A loose link | None |
+| overtakes | Once this task is done, the other is no longer needed (building a house on a plot overtakes the plant care there) | When this task is done, the other and its open subtasks close as overtaken automatically, with a note saying why. Not for a task's own ancestors or descendants. |
+
+**Check for overlap.** Whenever a task is created or split, the system lists open tasks that share a label (a place, a topic) or title words with each new task. The agent decides, for each, whether the new task overtakes it, duplicates it, or is unrelated, and records the relation. Spotting the overlap is left to judgement; finding candidates and closing overtaken tasks is automatic.
 
 Relations never change the split-from tree, so they cannot break its stopping and hypothesis rules. Each type can be shown as its own kind of line between tasks.
 
@@ -137,7 +142,13 @@ The only shared requirement: a node that is no longer needed is closed with stat
 
 To make this check possible, each split records the assumptions it relied on and when it was made.
 
-### 4.4 No separate escalation guard
+### 4.4 Do not plan past an open decision
+
+Split only up to the next decision whose outcome changes what follows. Steps after it (which councillor to approach once a town is chosen, what to send once a reply arrives) stay as single unsplit nodes, marked **blocked by** the decision. They are split when the decision is made, with what it revealed. Planning further ahead produces detail that reality will not match when you get there.
+
+This one is enforced: a node that is blocked by an open node cannot be split. It can be refined (title, done check) in the meantime.
+
+### 4.5 No separate escalation guard
 
 No separate mechanism is needed against endless vague splitting. The leaf rule already forces each split toward something workable in one turn, and capable models make splits concrete on their own: when forced to name who, where and what, a vague chain such as "build bridges between communities" bottoms out in a few steps. Revisit only if real runs show splits that merely rephrase.
 
@@ -181,6 +192,12 @@ What this project adds: no depth cap, decomposition on focus, lenses, human leav
 ---
 
 ## Change log
+
+### 0.8: planning horizon, overtakes, links (2026-11-20)
+- Do not plan past an open decision (4.4): later steps stay unsplit and blocked by it; splitting a blocked node is refused. Prompted by the first trial run, where steps were split before the municipality was chosen.
+- New relation "overtakes" (2.4): when the overtaking task is done, the overtaken one and its open subtasks close automatically (owner decision 2026-11-20).
+- Overlap check (2.4): on create and split, open tasks sharing a label or title words are listed for the agent to judge.
+- Context is attached as links only; no files are stored (1).
 
 ### 0.7: relations, duration and requirements (2026-11-19)
 - Typed relations between tasks (2.4): blocked by, also serves, alternative to, replaces, duplicate of, related to. "Also serves" links and "needs first" dependencies became two of these types.

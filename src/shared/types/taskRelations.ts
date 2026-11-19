@@ -8,7 +8,8 @@ export type TaskRelationType =
   | "alternative_to"
   | "replaces"
   | "duplicate_of"
-  | "related_to";
+  | "related_to"
+  | "overtakes";
 
 /** Every relation type, in the order the graph legend shows them. */
 export const TASK_RELATION_TYPES: TaskRelationType[] = [
@@ -18,6 +19,7 @@ export const TASK_RELATION_TYPES: TaskRelationType[] = [
   "replaces",
   "duplicate_of",
   "related_to",
+  "overtakes",
 ];
 
 /**
@@ -34,4 +36,5 @@ export const TASK_RELATION_WORDING: Record<
   replaces: { name: "Replaces", out: "Replaces", in: "Replaced by" },
   duplicate_of: { name: "Duplicate", out: "Duplicate of", in: "Has duplicate" },
   related_to: { name: "Related", out: "Related to", in: "Related to" },
+  overtakes: { name: "Overtakes", out: "Overtakes", in: "Overtaken by" },
 };

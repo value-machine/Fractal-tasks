@@ -12,6 +12,7 @@ export const RELATION_TYPES = [
   "replaces",
   "duplicate_of",
   "related_to",
+  "overtakes",
 ] as const;
 export type RelationType = (typeof RELATION_TYPES)[number];
 
@@ -43,6 +44,13 @@ export const RELATION_MEANING: Record<RelationType, { out: string; in: string; r
     rule: "The same task created twice; mark the duplicate overtaken and keep the other.",
   },
   related_to: { out: "is related to", in: "is related to", rule: "A loose link without rules." },
+  overtakes: {
+    out: "overtakes",
+    in: "is overtaken by",
+    rule:
+      "Once this task is done, the other is no longer needed: it and its open subtasks close as overtaken automatically. " +
+      "Not for a task's own ancestors or descendants; the tree already covers those.",
+  },
 };
 
 /** Types where "A to B" means the same as "B to A". */
@@ -106,6 +114,46 @@ async function wouldBlockLoop(db: Db, fromId: string, toId: string): Promise<boo
   return Boolean(row?.found);
 }
 
+/** Whether one task is an ancestor of the other in the split tree. */
+async function inSameLine(db: Db, a: string, b: string): Promise<boolean> {
+  const [row] = await db.query<{ found: boolean }>(
+    `with recursive a_up as (
+       select id, parent_id from nodes where id = $1
+       union
+       select n.id, n.parent_id from nodes n join a_up on n.id = a_up.parent_id
+     ),
+     b_up as (
+       select id, parent_id from nodes where id = $2
+       union
+       select n.id, n.parent_id from nodes n join b_up on n.id = b_up.parent_id
+     )
+     select exists (select 1 from a_up where id = $2)
+         or exists (select 1 from b_up where id = $1) as found`,
+    [a, b]
+  );
+  return Boolean(row?.found);
+}
+
+/**
+ * Tasks that `nodeId` overtakes and that are still open, with every open task below them.
+ * Called when `nodeId` is done; the caller closes them.
+ */
+export function openOvertakenBy(
+  db: Db,
+  nodeId: string
+): Promise<{ id: string; title: string }[]> {
+  return db.query<{ id: string; title: string }>(
+    `with recursive hit as (
+       select r.to_id as id from node_relations r where r.from_id = $1 and r.type = 'overtakes'
+       union
+       select c.id from nodes c join hit h on c.parent_id = h.id
+     )
+     select n.id, n.title from hit h join nodes n on n.id = h.id
+     where n.status not in ('done','overtaken')`,
+    [nodeId]
+  );
+}
+
 async function existingSymmetric(db: Db, input: RelationInput): Promise<boolean> {
   if (!SYMMETRIC.has(input.type)) return false;
   const [row] = await db.query<{ found: boolean }>(
@@ -134,6 +182,11 @@ export async function addRelation(db: Db, input: RelationInput, actor: string): 
   if (input.type === "blocked_by" && (await wouldBlockLoop(db, input.fromId, input.toId))) {
     throw new ProcessError(
       "The other task is already (indirectly) blocked by this one; this would be a loop."
+    );
+  }
+  if (input.type === "overtakes" && (await inSameLine(db, input.fromId, input.toId))) {
+    throw new ProcessError(
+      "A task cannot overtake its own ancestor or descendant; re-plan the tree instead."
     );
   }
   if (await existingSymmetric(db, input)) return;
