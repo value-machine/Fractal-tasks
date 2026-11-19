@@ -1,6 +1,6 @@
 # Workaround alert template
 
-Use when the layer check clears the severity filter. Summarize the same substance in chat; do not write the workaround code until the user chooses.
+Use only when the layer check clears the severity filter **and** the structural fix would push the lap above size M; a fix that fits is taken without this alert (debt-triggers D4). Summarize the same substance in chat; do not write the workaround code until the user chooses.
 
 ```markdown
 ⚠️ WARNING, WORKAROUND
@@ -20,6 +20,6 @@ Structural alternative: <what would need to change in the design/system to
 support this cleanly, and roughly what that costs now>
 ```
 
-Then **stop and wait** for the user to pick workaround vs structural alternative. Only implement once they've chosen.
+Then **stop and wait** for the owner to pick workaround vs structural alternative (this alert only appears when the structural fix exceeds size M). Only implement once they've chosen.
 
 If presenting multiple options after the block, follow `.claude/rules/agent-behavior.md` § When to ask → How to ask.

@@ -31,7 +31,7 @@ First autonomous stage. When this skill is done, a failing test encodes the brie
 2. **Investigate** what exists before designing:
    - Reuse: existing features, `src/shared/`, `src/components/common/`, `src/lib/`.
    - Feature decomposition: list the domain concepts; more than one, or over the `featureBudgets.config.cjs` budgets → split features in the plan (`architecture` rule § Feature granularity).
-   - Foundation: apply [`references/deepen-modules.md`](references/deepen-modules.md) to the modules on the change's path. Accepted cleanup becomes plan steps and counts toward the size.
+   - Foundation: route the brief's Foundation signals and any you meet now per [`references/debt-signals.md`](references/debt-signals.md), and apply [`references/deepen-modules.md`](references/deepen-modules.md) to the modules on the change's path. Accepted cleanup becomes plan steps and counts toward the size; the rest becomes `Foundation:` tasks at ship. No owner decision.
    - Then follow every `Calls` condition that applies (reuse, API research, precedent, removal, flow, performance).
 3. **Forks.** Before writing any product, scope or architecture-boundary choice into the plan, run [`references/fork-checklist.md`](references/fork-checklist.md). Clear winners are logged; true ties and stop-list items are asked; with the away switch on, ties are agent-picked and stop-list items park the lap.
 4. **Foundation validation.** When the approach rests on an unproven assumption (new API, untested algorithm, novel integration), make the first phase a minimal POC that proves or kills it before anything else is built.

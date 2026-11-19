@@ -14,23 +14,9 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
+const { parseHookInput, readStdin } = require("./hook-input.cjs");
 
 const INSTALL_TIMEOUT_MS = 280_000;
-
-/**
- * Second copy of the hook-input reader — the other is in scripts/deny-git-write-on-main.cjs.
- * A third hook script should extract both into scripts/hook-input.cjs (code-style rule § Naming F2).
- * @param {string} raw
- * @returns {{cwd?: string} | null}
- */
-function parseHookInput(raw) {
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * @param {string[]} args git arguments that print one path
@@ -113,9 +99,7 @@ function run(raw, deps) {
 }
 
 if (require.main === module) {
-  let raw = "";
-  process.stdin.on("data", (chunk) => (raw += chunk));
-  process.stdin.on("end", () => {
+  void readStdin().then((raw) => {
     try {
       run(raw, { projectDir: process.env.CLAUDE_PROJECT_DIR || process.cwd() });
     } catch (err) {
@@ -125,4 +109,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { parseHookInput, resolveTargetTree, needsInstall, run };
+module.exports = { resolveTargetTree, needsInstall, run };

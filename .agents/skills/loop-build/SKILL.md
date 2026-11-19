@@ -4,7 +4,7 @@ description: >-
   Builds the lap's plan phase by phase until the acceptance test passes: runs each phase's
   gate, updates plan progress and notes, folds the lap's decisions into the feature READMEs,
   vision or rules they govern, and executes planned cleanups and removals. Stops for the owner
-  only on the stop list (new dependency, patch-on-top instead of the structural fix, data or
+  only on the stop list (new dependency, a structural fix too big for the lap, data or
   irreversible change, cost) or when the diff touches a feature area outside the brief's edges.
   Use when loop-plan has finished, when a Change verdict needs a fix round, or whenever a written plan
   should be executed — "build it", "implement the plan", "continue the job".
@@ -32,9 +32,9 @@ When this skill is done, every planned phase is executed and gated, the acceptan
 2. **Per phase, in order:**
    1. Execute the steps in the layer and folder the plan names (`architecture` rule). New or copied identifiers follow `.claude/rules/code-style.md` § Naming.
    2. Run the phase gate: the tooling gate list items the gate cites ([`loop-check/references/rule-audit.md`](../loop-check/references/rule-audit.md) § Tooling pass), plus the browser check for UI phases (browser MCP when available), migrations or RLS checks, or Edge Function invocations, as the plan says. Fix until green.
-   3. Update the plan: phase status `Done`, **Notes during development** (debt, obstacles, gaps, and **mistake signals** — user corrections, reverts, repeat failures), **Decisions made** (impl-time choices).
+   3. Update the plan: phase status `Done`, **Notes during development** (debt signals per [`loop-plan/references/debt-signals.md`](../loop-plan/references/debt-signals.md) — `loop-ship` turns the ones outside the lap into `Foundation:` tasks — obstacles, gaps, and **mistake signals** — user corrections, reverts, repeat failures), **Decisions made** (impl-time choices).
 3. **Stay inside the brief.** Before touching a file outside the brief's edges, stop: that's an overrun (skill-loop D51). Either it's absorbed (add the edge and say so in the Stop 2 summary, if it's small and within the size) or it's cut into a backlog task. Only a size change goes to the owner.
-4. **Unplanned obstacles.** Note them. If the way around one is a patch on top instead of the structural fix, that's a stop-list item. Otherwise decide, record it in **Decisions made**, and continue.
+4. **Unplanned obstacles.** Note them. Take the structural fix around one when it fits the lap; only a structural fix that would push the lap above size M is a stop-list item (patch on top, debt-triggers D4). Otherwise decide, record it in **Decisions made**, and continue.
 5. **Staged-test infrastructure.** When adding or renaming `scripts/*staged*`, `scripts/*validator*`, `scripts/change-classify.cjs` or `scripts/test-staged.cjs`, update `TEST_INFRA_EXACT` / `TEST_INFRA_PREFIXES` in the same lap and run `pnpm test:classify`.
 6. **Fold decisions into their homes (skill-loop D48).** For each Closed lap decision that governs future work, write one line into the feature `README.md` it concerns, or into the vision or a rule. Cite the decision, not the lap: `- <decision> (owner, v<version>)`. Update `ARCHITECTURE.md` after structural changes.
 7. **Finish.** The acceptance test passes and every phase is `Done`. Hand to [`loop-check`](../loop-check/SKILL.md).

@@ -1,14 +1,21 @@
 name: CI
 
 on:
+  # Only `develop` (Model A/B staging) is tested on push. Work reaches `main` through a PR that
+  # already passed this workflow, or through promote's fast-forward of a tested `develop`, so a
+  # second run on `main` would bill the full suite again for the same code.
   push:
-    branches: [main, develop]
+    branches: [develop]
   pull_request:
     branches: [main, develop]
     types: [opened, edited, synchronize, reopened]
   # release-please.yml dispatches this on release-PR branches (GITHUB_TOKEN PRs do not
   # trigger pull_request runs); `test` then reports on the release PR's head commit.
   workflow_dispatch:
+  # The full test suite runs here once a week (Monday 03:17 UTC) and on a manual run; PRs and
+  # pushes run only the tests related to the files they changed. Owner decision: ci-cost D6.
+  schedule:
+    - cron: "17 3 * * 1"
 
 permissions:
   contents: read
@@ -26,6 +33,7 @@ jobs:
     # CI comes from the workflow_dispatch above: a skipped required check blocks the merge.
     # Only pull_request runs check a title; release-please writes its own conventional title.
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       pull-requests: read
     steps:
@@ -41,62 +49,118 @@ jobs:
     # re-run the suite: that left `test` pending and blocked the merge. Only the title check needs `edited`.
     if: github.event.action != 'edited'
     runs-on: ubuntu-latest
+    # A hung step otherwise runs to GitHub's 6-hour cap, billed in full on private repos.
+    # The weekly or manual full run gets more room as an app's suite grows.
+    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 90 || 30 }}
+    permissions:
+      contents: read
+      issues: write
+    env:
+      # Release PRs (release-please.yml dispatches CI on them) change only the version,
+      # CHANGELOG.md and the manifest, so they get the version check alone, not the full suite.
+      RELEASE_PR: ${{ github.event_name == 'workflow_dispatch' && startsWith(github.ref_name, 'release-please--') }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The related-tests run diffs against the PR base or the previous push.
+          fetch-depth: 0
+
+      - name: Release PR check (version and changelog only)
+        if: env.RELEASE_PR == 'true'
+        run: node scripts/validate-version-sync.js
 
       - name: Setup pnpm
+        if: env.RELEASE_PR != 'true'
         uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
+        if: env.RELEASE_PR != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "pnpm"
 
       - name: Install dependencies
+        if: env.RELEASE_PR != 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Pre-commit classifier tests
+        if: env.RELEASE_PR != 'true'
         run: pnpm test:classify
 
       - name: Feature README validation (strict)
+        if: env.RELEASE_PR != 'true'
         run: pnpm validate:feature-docs:strict
 
       - name: Type check
+        if: env.RELEASE_PR != 'true'
         run: pnpm type-check
 
       - name: Lint
+        if: env.RELEASE_PR != 'true'
         run: pnpm lint
 
       - name: Format check
+        if: env.RELEASE_PR != 'true'
         run: pnpm format:check
 
       - name: Version/changelog consistency
+        if: env.RELEASE_PR != 'true'
         run: pnpm validate:version-sync
 
       - name: Git workflow mode config
+        if: env.RELEASE_PR != 'true'
         run: pnpm validate:git-workflow
 
       - name: Skill admission check
+        if: env.RELEASE_PR != 'true'
         run: pnpm validate:skills
 
       - name: Structure validation
+        if: env.RELEASE_PR != 'true'
         run: pnpm validate:structure
 
       - name: Agent config mirrors in sync (.claude/skills, .cursor/rules)
+        if: env.RELEASE_PR != 'true'
         run: node scripts/sync-agent-config.mjs --check
 
       - name: Feature size validation
+        if: env.RELEASE_PR != 'true'
         run: pnpm validate:feature-size
 
       - name: Architecture check
+        if: env.RELEASE_PR != 'true'
         run: pnpm arch:check:ci
 
-      - name: Run tests
-        run: pnpm test:run
+      - name: Run tests (related on PRs and pushes, full weekly or manual)
+        if: env.RELEASE_PR != 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.base_ref }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        # Same classifier as pre-commit (scripts/change-classify.cjs): config, lockfile, test
+        # infra or shared-kernel changes and large diffs still run the full suite.
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            node scripts/test-staged.cjs --base "origin/$PR_BASE"
+          elif [ "$EVENT" = "push" ] && [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            node scripts/test-staged.cjs --base "$PUSH_BEFORE"
+          else
+            pnpm test:run
+          fi
 
       - name: Build
+        if: env.RELEASE_PR != 'true'
         run: pnpm build
 
-
+      - name: Open an issue when the weekly full run fails
+        # Nobody watches a scheduled run, and related-only PR runs can't catch what it found.
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create --title "Weekly full test run failed" \
+            --body "The weekly full CI run failed on the default branch: $RUN_URL. PR runs only test changed files, so fix this before the next release."

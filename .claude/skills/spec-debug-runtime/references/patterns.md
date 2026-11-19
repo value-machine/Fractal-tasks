@@ -44,7 +44,7 @@ Add new patterns at the bottom as they prove reusable across incidents.
 - Root cause: The shell is **Windows PowerShell** (Cursor terminal); bash-style `&&` is invalid there. Git Bash (Claude Code Bash tool) accepts `&&` — this pattern does not apply
 - Fix (PowerShell): Chain with `;` and check `$LASTEXITCODE` after each step, or run separate Shell tool calls
 - Example: `pnpm build; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; pnpm validate:structure`
-- SSOT: `.claude/rules/platform.md` § Platform and Commands
+- SSOT: `documentation/DOC_WINDOWS_SHELL.md` § PowerShell
 - Tokens: PowerShell, `&&`, parser, Windows
 
 ---
@@ -182,7 +182,7 @@ Add new patterns at the bottom as they prove reusable across incidents.
 - Symptom: `promote-to-production.yml` fails at "Verify fast-forward preconditions" with `main is not an ancestor of develop`. Local `git diff origin/main origin/develop` may show only small deltas while history is forked.
 - Root cause: Same logical change landed on **`main`** and **`develop`** as **sibling commits** (common in Model B: squash PR merged to `main` while an equivalent commit was pushed to `develop`).
 - Key question: "Does `git log --oneline --graph origin/main origin/develop` show two branches after one parent?"
-- Debug approach: Reconcile on `develop` (`git merge origin/main`, push, green CI), then re-run promote — SSOT `.claude/rules/git-workflow.md` § Promote to production § Ancestor failure. On PowerShell, verify `merge-base --is-ancestor` with `$LASTEXITCODE` alone.
+- Debug approach: Reconcile on `develop` (`git merge origin/main`, push, green CI), then re-run promote — SSOT `.agents/skills/loop-ship/references/push-safety.md` § Ancestor failure. On PowerShell, verify `merge-base --is-ancestor` with `$LASTEXITCODE` alone.
 - Tokens: promote, ancestor, Model B, fast-forward, develop, main
 
 ---

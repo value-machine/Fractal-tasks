@@ -21,7 +21,7 @@ Ask the owner only when the choice can't be derived from the app vision (`docume
 - **Conflict** with a recorded decision — flag it, propose resolutions, and let the owner pick. Spotting these is the agent's job.
 - **True tie** — two or more real options remain after enumerating them, and none dominates.
 - **New dependency** — a package or an external service the project doesn't use yet.
-- **Patch on top** — a workaround instead of the structural fix (`.claude/rules/architecture.md` § Layer consistency).
+- **Patch on top** — only when the structural fix won't fit the lap (it would push it above size M), so the choice is a workaround now or a bigger lap (`.claude/rules/architecture.md` § Layer consistency). A structural fix that fits is the agent's to take without asking (debt-triggers D4).
 - **Data or irreversible change** — schema or migration shape, deleting or transforming stored data, auth or permission models.
 - **Cost or external service** — paid usage, quotas, third-party calls, privacy.
 
@@ -86,8 +86,6 @@ The agent must STOP and ASK the user before modifying any of the following file 
 **Git Hooks:**
 - `.husky/**`
 
-**Pre-commit (local):** Staged-path light path and tiered tests — SSOT [`scripts/change-classify.cjs`](../../scripts/change-classify.cjs), executor [`scripts/test-staged.cjs`](../../scripts/test-staged.cjs), hook [`.husky/pre-commit`](../../.husky/pre-commit). Skips tests, `type-check`, and staged structure/arch on light path; docs-only commits still run `validate:docs`. Full matrix: `documentation/DOC_AGENT_WORKFLOW_LAYERS.md` § Local git. **Merge gate:** CI `test` job — local related green ≠ merge-safe.
-
 **CI/CD:**
 - `.github/workflows/**`
 
@@ -111,23 +109,6 @@ When `.claude/rules/code-style.md` § Naming requires a rename or extraction, up
    - Even inside the autonomous loop stages, ask before modifying protected files
    - "NEVER adjust rules without explicit user request" applies to ALL protected files
 
-4. **Examples of required behavior:**
-   - Pre-commit finds `temp-file.json` → Ask: "Should I add this to .gitignore, or update projectStructure.config.cjs?"
-   - Linting fails on new pattern → Ask: "Should I update eslint.config.js to allow this?"
-   - Architecture check fails → Ask: "Should I update the baseline or fix the violation?"
+4. **Examples:** a stray `temp-file.json` → ask "add to `.gitignore` or update `projectStructure.config.cjs`?"; lint or architecture check fails → ask "update `eslint.config.js` / the baseline, or fix the code?"
 
 **Reductive strategy:** See `.claude/rules/debugging.md` § Reductive Strategy.
-
----
-
-## Related Rules
-
-**When modifying this rule, check these rules for consistency:**
-
-- `.claude/rules/git-workflow.md` — branch protection and when edits are allowed
-- `.claude/rules/debugging.md` — reductive strategy for bugs and features
-
-**Rules that reference this rule:**
-
-- `.claude/rules/architecture.md` — layer-consistency stop and performance-cost asks
-- `loop-build/SKILL.md`, `loop-ship/SKILL.md`, `loop-verdict/SKILL.md` — protected-file gates and chat consent

@@ -19,8 +19,8 @@ When this skill is done, the right loop stage is running, and the owner never ha
 |---|---|
 | In | The owner's message; `git status`, `git branch -a`, open PRs and their CI (`gh pr list`); `src/config/app-tasks.json`; lap folders `documentation/jobs/temp_job_*/` (`BRIEF.md`, `DECISIONS.md`, plan status) |
 | Out | One line `Next: <stage> — <why>`, then that stage runs |
-| Calls | if new chat or unfamiliar repo → [`spec-load-context`](../spec-load-context/SKILL.md) · if a task is requested or nothing is in progress → [`loop-backlog`](../loop-backlog/SKILL.md) · if a task is in progress with no brief → [`loop-refine`](../loop-refine/SKILL.md) · if a brief has no plan → [`loop-plan`](../loop-plan/SKILL.md) · if plan phases are pending → [`loop-build`](../loop-build/SKILL.md) · if phases are done with no PR → [`loop-check`](../loop-check/SKILL.md) · if the PR's CI is red or pending → [`loop-ship`](../loop-ship/SKILL.md) · if the PR is green with a preview and no verdict → [`loop-verdict`](../loop-verdict/SKILL.md) |
-| Called by | Owner |
+| Calls | if new chat or unfamiliar repo → [`spec-load-context`](../spec-load-context/SKILL.md) · if a task is requested or nothing is in progress → [`loop-backlog`](../loop-backlog/SKILL.md) · if the owner asks to run several tasks at once, or an orchestrator run is in flight → [`loop-orchestrate`](../loop-orchestrate/SKILL.md) · if a task is in progress with no brief → [`loop-refine`](../loop-refine/SKILL.md) · if a brief has no plan → [`loop-plan`](../loop-plan/SKILL.md) · if plan phases are pending → [`loop-build`](../loop-build/SKILL.md) · if phases are done with no PR → [`loop-check`](../loop-check/SKILL.md) · if the PR's CI is red or pending → [`loop-ship`](../loop-ship/SKILL.md) · if the PR is green with a preview and no verdict → [`loop-verdict`](../loop-verdict/SKILL.md) |
+| Called by | Owner, [`loop-orchestrate`](../loop-orchestrate/SKILL.md) |
 | Next | The stage it found ([`references/loop-map.md`](references/loop-map.md) § Where a lap stands) |
 | Owner stops | None of its own; a parked lap question is asked per [`loop-refine/references/asking.md`](../loop-refine/references/asking.md) |
 

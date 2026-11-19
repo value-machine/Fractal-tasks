@@ -3,7 +3,7 @@
  * SSOT: documentation/DOC_AGENT_WORKFLOW_LAYERS.md
  */
 
-const {execSync} = require('child_process');
+const {execFileSync, execSync} = require('child_process');
 
 /** @typedef {'full' | 'related' | 'skip-vitest' | 'node-scripts-only'} TestRunMode */
 
@@ -112,6 +112,24 @@ function isMigrationsOnlyFile(filePath) {
 function getStagedFiles() {
   const out = execSync(
     'git diff --cached --name-only --diff-filter=ACDMRT',
+    {encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe']},
+  ).trim();
+  if (!out) {
+    return [];
+  }
+  return out.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+/**
+ * Files a branch changed since it left `baseRef` (`git diff base...HEAD`), so CI can classify a
+ * PR or push with the same rules pre-commit applies to staged files.
+ * @param {string} baseRef
+ * @returns {string[]}
+ */
+function getChangedFilesSince(baseRef) {
+  const out = execFileSync(
+    'git',
+    ['diff', '--name-only', '--diff-filter=ACDMRT', `${baseRef}...HEAD`],
     {encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe']},
   ).trim();
   if (!out) {
@@ -358,6 +376,7 @@ function classifyTestRun(staged) {
 const classifyPrecommitLight = classifyChanges;
 
 module.exports = {
+  getChangedFilesSince,
   APP_SURFACE_PREFIXES,
   FULL_SUITE_EXACT,
   FULL_SUITE_PREFIXES,

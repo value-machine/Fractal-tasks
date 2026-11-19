@@ -12,7 +12,7 @@ Local git test modes (pre-commit / CI): [`DOC_AGENT_WORKFLOW_LAYERS.md`](./DOC_A
 | Command | What it does |
 |---------|----------------|
 | `pnpm test` | Vitest watch mode (app tests under `src/`) |
-| `pnpm test:run` | Full Vitest suite — **CI merge gate** |
+| `pnpm test:run` | Full Vitest suite — runs in CI weekly, on a manual run, or when the change classifier says full; PRs run the related tests (`documentation/DOC_AGENT_WORKFLOW_LAYERS.md` § CI test scope) |
 | `pnpm test:classify` | `scripts/*.test.cjs` (Node test runner) |
 | `pnpm test:staged` | Dry-run pre-commit test mode + paths |
 | `pnpm test:staged:live` | Run pre-commit tests without committing |

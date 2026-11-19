@@ -14,16 +14,7 @@ Cross-link: `.agents/skills/spec-debug-runtime/references/patterns.md` § "Faili
 
 ## Local test authority (commit vs merge)
 
-| Layer | Command | Authority |
-|-------|---------|-----------|
-| Preview | `pnpm test:staged` | Dry-run only — shows mode + paths; does not run tests |
-| Live (no commit) | `pnpm test:staged:live` | Same runner as pre-commit hook |
-| Commit | pre-commit related/full/node-scripts-only | Fast feedback; **not** merge-safe |
-| Merge | CI `test` job (`test:classify` + `test:run` + `type-check`) | **Authoritative** |
-| Local CI parity | `pnpm test:classify && pnpm test:run` | Before validate / large PRs |
-| Force full locally | `PRECOMMIT_TEST_FULL=1` | Escape hatch |
-
-SSOT: `documentation/DOC_AGENT_WORKFLOW_LAYERS.md` § Local git; classifier `scripts/change-classify.cjs`; executor `scripts/test-staged.cjs`.
+Pre-commit and `pnpm test:staged(:live)` are fast feedback, **not** merge-safe; the CI `test` job (`test:classify` + `type-check` + the classifier's Vitest run on the branch's changed files) is the merge gate, and the full `test:run` runs weekly and on a manual run (`documentation/DOC_AGENT_WORKFLOW_LAYERS.md` § CI test scope). Local CI parity: `pnpm test:classify && pnpm test:run`; force full locally: `PRECOMMIT_TEST_FULL=1`. Tier table: `documentation/DOC_AGENT_WORKFLOW_LAYERS.md` § Local git (classifier `scripts/change-classify.cjs`, executor `scripts/test-staged.cjs`).
 
 ## Testing documentation SSOT
 
@@ -65,12 +56,4 @@ Cross-link: `.agents/skills/loop-plan/SKILL.md` § Steps 5 (acceptance test firs
 
 ## Edge Functions testing
 
-Edge Functions have **no staging** in any mode: one `supabase functions deploy <name>` affects production and every preview at once, with no automated tests or rollback. So prefer frontend logic where possible (it gets a preview per § Mode behavior table → **staging** in `.claude/rules/git-workflow.md`), test functions manually before deploying, and document each function's test procedure. Architecture: `.claude/rules/cloud-functions.md`.
-
-### Release validation gate
-
-Before production (§ Mode behavior table → **production**: A/B promote; C merging the PR), verify required CI checks are green, manual happy-path and key error-path tests are done, and any in-scope Edge Function behavior was re-tested against the currently deployed function version.
-
-## Related Rules
-
-When modifying this rule, check `code-style`, `architecture`, `debugging`, and `cloud-functions` (Edge Function testing).
+Edge Functions have no staging and no automated tests: prefer frontend logic, test functions manually before deploying, and re-test in-scope function behavior before production. Policy and release gate: `.claude/rules/cloud-functions.md` § Testing Strategy.

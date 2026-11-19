@@ -20,8 +20,8 @@ First half of **Stop 1**. When this skill is done, `app-tasks.json` is accurate 
 |---|---|
 | In | `src/config/app-tasks.json` + `app-tasks-archive.json` (schema in `src/features/tasks/README.md`), git log and changelog since the oldest active task, open PRs and their previews, `documentation/DOC_APP_VISION.md`, owner request; signal tables when the adapter is on |
 | Out | Reordered `app-tasks.json`; archived landed tasks; top task `in-progress` |
-| Calls | if the app has user-signal tables → [`references/signal-adapter.md`](references/signal-adapter.md) · if the top task is a seeded onboarding task → [`references/onboarding.md`](references/onboarding.md) · when the top task is set → [`loop-refine`](../loop-refine/SKILL.md) |
-| Called by | [`router`](../router/SKILL.md), [`loop-verdict`](../loop-verdict/SKILL.md) |
+| Calls | if the app has user-signal tables → [`references/signal-adapter.md`](references/signal-adapter.md) · if the top task is a seeded onboarding task → [`references/onboarding.md`](references/onboarding.md) · when the top task is set → [`loop-refine`](../loop-refine/SKILL.md) · if the owner accepts a parallel run → [`loop-orchestrate`](../loop-orchestrate/SKILL.md) |
+| Called by | [`router`](../router/SKILL.md), [`loop-verdict`](../loop-verdict/SKILL.md), [`loop-orchestrate`](../loop-orchestrate/SKILL.md) |
 | Next | [`loop-refine`](../loop-refine/SKILL.md) |
 | Owner stops | Confirm the top item when the proposed order changes it (skipped when the owner named the task) |
 
@@ -41,7 +41,8 @@ First half of **Stop 1**. When this skill is done, `app-tasks.json` is accurate 
    1. **Blockers and prerequisites**: untested previews (Stop 2 waiting, skill-loop D45), seeded onboarding tasks a fork still needs (skill-loop D41), and anything that blocks another task.
    2. Then **value per size**: vision fit and the owner's past feedback, divided by a rough size (XS / S / M). With the adapter on, add impact × frequency.
    3. Feedback tasks from Stop 2 (skill-loop D17) and follow-up laps (skill-loop D44) rank like any other task.
-5. **Confirm.** Show the full proposed order with a one-line reason for each moved row, then ask once with the question tool (`agent-behavior` rule § How to ask): the proposed top first, one or two contenders, and "keep the current order". Nothing moves before that answer. If a task is already `in-progress`, the default option is to continue it.
+   4. A `Foundation:` task that has waited through 3 or more landed laps (count archive entries added since the commit that created it) ranks right after the blockers; a younger one ranks by value per size. Debt is otherwise only paid when a lap passes through its area ([`loop-plan/references/debt-signals.md`](../loop-plan/references/debt-signals.md), debt-triggers D2).
+5. **Confirm.** Show the full proposed order with a one-line reason for each moved row, then ask once with the question tool (`agent-behavior` rule § How to ask): the proposed top first, one or two contenders, and "keep the current order". Nothing moves before that answer. If a task is already `in-progress`, the default option is to continue it. When two or more ready tasks touch different feature areas, one option is to run them in parallel; a yes hands the backlog to [`loop-orchestrate`](../loop-orchestrate/SKILL.md), which owns task state from then on (orchestrator-parallel-laps D2, D3).
 6. **Start.** Write the JSON (keep `schemaVersion`; disk wins over a pending `/tasks` UI edit). Set the top task `in-progress` and run [`loop-refine`](../loop-refine/SKILL.md). For a seeded onboarding task, run its gate from [`references/onboarding.md`](references/onboarding.md) instead, and archive it when its check passes.
 
 ## Examples

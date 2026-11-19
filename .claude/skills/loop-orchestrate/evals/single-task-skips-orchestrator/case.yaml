@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: single-task-skips-orchestrator
+expected_outcome: |
+  With a single ready task the agent runs the plain loop (loop-backlog then loop-refine) and does not load loop-orchestrate or start any thread.
+context:
+  scaffold_script: place-files.sh

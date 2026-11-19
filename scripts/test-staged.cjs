@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * Staged-path pre-commit test executor.
+ * Change-based test executor: staged files before a commit, or with `--base <ref>` the files a
+ * branch changed since `<ref>` (CI on PRs and pushes; the weekly CI run is the full suite).
  * SSOT: scripts/change-classify.cjs; documentation/DOC_AGENT_WORKFLOW_LAYERS.md
  */
 
 const {spawnSync} = require('child_process');
 const fs = require('fs');
 const {
+  getChangedFilesSince,
   getStagedFiles,
   classifyChanges,
   classifyTestRun,
@@ -44,11 +46,13 @@ function resolveRunPlan(plan) {
 }
 
 /**
+ * `vitest related --run <paths>`: in `vitest run related <paths>`, Vitest 4 reads `related` as a
+ * file-name filter, finds no tests and the caller falls back to the full suite every time.
  * @param {string[]} vitestPaths
  * @returns {string[]}
  */
 function buildVitestArgv(vitestPaths) {
-  return ['exec', 'vitest', 'run', 'related', ...vitestPaths];
+  return ['exec', 'vitest', 'related', '--run', ...vitestPaths];
 }
 
 /**
@@ -172,8 +176,11 @@ function runFullSuite(overrides = {}) {
 }
 
 /**
+ * `onNoRelatedTests`: what to do when changed files have no tests that import them. Pre-commit
+ * falls back to the full suite (`full`, default); CI passes (`pass`), because the weekly full
+ * run covers it and a full run per untested file is what CI budgets can't absorb.
  * @param {{ mode: string, reason: string, relatedPaths?: string[] }} plan
- * @param {{ dryRun: boolean, runners?: TestRunners }} options
+ * @param {{ dryRun: boolean, runners?: TestRunners, onNoRelatedTests?: 'full' | 'pass' }} options
  * @returns {number}
  */
 function executePlan(plan, options) {
@@ -199,6 +206,10 @@ function executePlan(plan, options) {
     const related = runners.runVitestRelated(plan.relatedPaths);
     // Vitest 4 exits 1 when no related tests exist, so check this before the status.
     if (NO_TEST_FILES_RE.test(related.output)) {
+      if (options.onNoRelatedTests === 'pass') {
+        logMode('test mode: no related tests found — nothing to run');
+        return 0;
+      }
       logMode('pre-commit: no related tests found — falling back to full suite');
       return runners.runFullSuite();
     }
@@ -208,12 +219,23 @@ function executePlan(plan, options) {
 }
 
 /**
- * @param {{ dryRun?: boolean, staged?: string[] }} [options]
+ * @param {string[]} argv
+ * @returns {string | undefined}
+ */
+function readBaseArg(argv) {
+  const index = argv.indexOf('--base');
+  return index === -1 ? undefined : argv[index + 1];
+}
+
+/**
+ * @param {{ dryRun?: boolean, staged?: string[], base?: string }} [options]
  * @returns {number}
  */
 function runStagedTests(options = {}) {
   const dryRun = options.dryRun ?? process.argv.includes('--dry-run');
-  const staged = options.staged ?? getStagedFiles();
+  const base = options.base ?? readBaseArg(process.argv);
+  const staged =
+    options.staged ?? (base ? getChangedFilesSince(base) : getStagedFiles());
   const light = classifyChanges(staged);
   if (light.light && light.kind) {
     logMode(
@@ -224,7 +246,7 @@ function runStagedTests(options = {}) {
 
   const initial = classifyTestRun(staged);
   const plan = resolveRunPlan(initial);
-  return executePlan(plan, {dryRun});
+  return executePlan(plan, {dryRun, onNoRelatedTests: base ? 'pass' : 'full'});
 }
 
 if (require.main === module) {
@@ -234,6 +256,7 @@ if (require.main === module) {
 
 module.exports = {
   NO_TEST_FILES_RE,
+  readBaseArg,
   filterExistingPaths,
   resolveRunPlan,
   buildVitestArgv,

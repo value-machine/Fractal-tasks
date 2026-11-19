@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: two-independent-tasks-run-in-parallel
+expected_outcome: |
+  The agent sees two ready tasks with non-overlapping edges, proposes running both in parallel threads under loop-orchestrate, and asks the owner to confirm before starting any thread or setting tasks in-progress.
+context:
+  scaffold_script: place-files.sh

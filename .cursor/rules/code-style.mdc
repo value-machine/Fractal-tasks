@@ -5,10 +5,7 @@ alwaysApply: true
 
 ## Enforced by tooling (don't hand-check — run the command)
 
-- **Formatting** — Prettier (`.prettierrc.json`: double quotes, `(x) => x` arrow parens, LF line endings, width 100). `pnpm format`.
-- **Lint** — `eslint.config.js` (flat config, extends GTS; SSOT): `===`, no `var`, `prefer-const`; feature components can't import feature services, feature hooks can't import feature components, and `components/common` can't import features (error); `react-hooks/rules-of-hooks` (error), `react-hooks/exhaustive-deps` (warn); hardcoded colors in class strings and `style` props (warn); `@tanstack/query/exhaustive-deps` (warn); complexity (warn, below). `pnpm lint` / `pnpm lint:fix`.
-- **Types** — TypeScript `strict` plus `noUnusedLocals` / `noUnusedParameters` (prefix intentionally unused params with `_`). `pnpm type-check`.
-- **Layers, cycles, `@/` alias** — dependency-cruiser (`pnpm arch:check`) and `.claude/rules/architecture.md`.
+`pnpm format` (Prettier, `.prettierrc.json`) · `pnpm lint` / `pnpm lint:fix` (`eslint.config.js`, extends GTS — SSOT for hooks rules, feature import bans, hardcoded colors, query deps, complexity) · `pnpm type-check` (`strict` + `noUnusedLocals` / `noUnusedParameters`; prefix intentionally unused params with `_`) · `pnpm arch:check` (layers, cycles, `@/` alias; `.claude/rules/architecture.md`).
 
 Pre-commit runs these on staged files; CI runs them in full. Fix errors; warnings are acceptable but don't add new ones.
 
@@ -67,19 +64,4 @@ Pick the scope of a styling change yourself — global tokens by default, since 
 
 ## Complexity
 
-Thresholds (SSOT `eslint.config.js`, warnings in `pnpm lint`):
-
-| Metric | Limit |
-|--------|-------|
-| Cyclomatic complexity | ≤ 10 |
-| Cognitive complexity | ≤ 15 |
-| Nesting depth | ≤ 4 |
-| Function length | ≤ 100 lines (excluding blanks and comments) |
-| Parameters | ≤ 3 (use an options object) |
-| Statements | ≤ 15 |
-
-Reduce with early returns/guard clauses, helper extraction, and options objects; full workflow in `.agents/skills/spec-optimize-performance/SKILL.md`.
-
-## Related Rules
-
-When modifying this rule, check `architecture`, `testing`, `.agents/skills/spec-optimize-performance/SKILL.md`, and `.agents/skills/spec-check-layer/SKILL.md`.
+ESLint warns above: cyclomatic 10, cognitive 15, nesting 4, function 100 lines (excluding blanks and comments), 3 parameters (use an options object), 15 statements (SSOT `eslint.config.js`). Reduce with early returns/guard clauses, helper extraction, and options objects; full workflow in `.agents/skills/spec-optimize-performance/SKILL.md`.

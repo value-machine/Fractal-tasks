@@ -5,13 +5,13 @@ Read by [`spec-check-layer`](../SKILL.md). Ported from `layer-consistency-check`
 
 **Scope:** Catch requests or in-progress code that violate a deeper layer underneath what was literally asked for — physical/mathematical constraints, an existing abstraction or naming hierarchy, or system-architecture assumptions — **before** silently building a workaround on top.
 
-**Feedback first** — surface the mismatch and structural alternative; do not write workaround code until the user chooses.
+**Structural fix by default** — surface the mismatch and take the structural alternative when it fits the lap (size ≤ M); never write workaround code without the owner's pick (debt-triggers D4).
 
 ## Proactive obligation (agents)
 
 Apply **without being asked** during any implementation task when request-side cues or implementation-side shapes appear (see [`references/workaround-shapes.md`](workaround-shapes.md)). Obligation is also stated in `.claude/rules/architecture.md` § Layer consistency (workaround guard).
 
-**Do:** one-beat layer check → **shape #5 first** (read `.claude/rules/code-style.md` § Naming for any new or copied symbol; the one-off skip does not suppress that rule or the second-copy marker) → for every other shape, severity filter (skip a genuinely one-off exception with no recurring cost) → if that shape still clears the bar, post alert from [`references/alert-template.md`](alert-template.md) → **stop** until owner picks workaround vs structural path.
+**Do:** one-beat layer check → **shape #5 first** (read `.claude/rules/code-style.md` § Naming for any new or copied symbol; the one-off skip does not suppress that rule or the second-copy marker) → for every other shape, severity filter (skip a genuinely one-off exception with no recurring cost) → if that shape still clears the bar, post alert from [`references/alert-template.md`](alert-template.md) → **stop** until owner picks workaround vs structural path — only when the structural path would push the lap above size M; otherwise take it (debt-triggers D4).
 
 **Do not:** treat local compliance within the request's phrasing as sufficient without checking the layer beneath.
 
@@ -47,7 +47,7 @@ Per [`documentation/DOC_AGENT_WORKFLOW_LAYERS.md`](../../../../documentation/DOC
 3. **Reactive:** while implementing, stop when the diff matches a workaround shape.
 4. **Naming first (shape #5).** Read `.claude/rules/code-style.md` § Naming and apply it before writing the name. The one-off skip does not apply. If the name or copy count still violates that rule, stop with WARNING.
 5. **Other shapes.** Skip a genuinely one-off exception with no recurring cost.
-6. If a non-naming shape still clears that filter → post **WARNING, WORKAROUND** from [`references/alert-template.md`](alert-template.md) → **stop** until the user chooses.
+6. If a non-naming shape still clears that filter → plan the structural fix. Only when it would push the lap above size M → post **WARNING, WORKAROUND** from [`references/alert-template.md`](alert-template.md) → **stop** until the owner chooses.
 7. If the user picks the **structural alternative**: IF scope is XS/S THEN `loop-plan` (XS/S); IF multi-phase/migration/contracts THEN `loop-plan` (cite `router/references/tiebreaks.md` § `loop-build` vs `loop-plan` (XS/S)). If they pick the workaround → implement as asked.
 8. **When invoked from `router`:** treat the IMPROVE finding text + target name as the proactive cue; run the one-beat check before any code.
 
@@ -93,7 +93,7 @@ Layer consistency: <passed — one-beat check | WARNING, WORKAROUND — see belo
 If WARNING posted:
 
 ```markdown
-Next: owner pick workaround vs structural alternative → then implement / plan / quick-piv
+Next: structural fix into the brief or plan (owner pick only when it exceeds size M) → then implement / plan / quick-piv
 ```
 
 ---
