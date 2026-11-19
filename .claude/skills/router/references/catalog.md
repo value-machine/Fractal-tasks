@@ -16,6 +16,7 @@ Decisions: [`DOC_DECISION_LOG.md`](../../../../documentation/DOC_DECISION_LOG.md
 | `loop-check` | built | `validate`, `review` |
 | `loop-ship` | built | `finish`, `push`, `bundle-ship` |
 | `loop-verdict` | built | `finish` |
+| `loop-orchestrate` | built | — (new, orchestrator-parallel-laps) |
 | `spec-load-context` | built | `prime` |
 | `spec-debug-runtime` | built | `debug`, `hypothesis` |
 | `spec-reuse-package` | built | `dont-reinvent-the-wheel` |

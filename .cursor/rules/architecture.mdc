@@ -33,7 +33,7 @@ Tools: CWV symptoms → `web-perf` plugin skill; structural fix → `.agents/ski
 
 **Proactively** on any request to change existing behavior ("add a color to the gradient", "just add a field/button/flag"), minimizer/exception language, a first-of-a-kind instance without a category, or behavior-by-analogy. **Reactively** when the diff takes a workaround shape (special-case flag, parallel path, symptom tuning, disconnected patch, instance-encoded naming, growing scope, "for now" comment).
 
-Run [`.agents/skills/spec-check-layer/SKILL.md`](../../.agents/skills/spec-check-layer/SKILL.md) (shapes: [`references/workaround-shapes.md`](../../.agents/skills/spec-check-layer/references/workaround-shapes.md)) before writing the workaround. New or copied identifiers always follow `.claude/rules/code-style.md` § Naming — the one-off skip does not suppress it. For other shapes apply the severity filter; when one clears it, post the **WARNING, WORKAROUND** block and **stop** until the owner picks workaround vs structural fix (stop list: patch on top, `agent-behavior` § When to ask). When the precedent review also applies, run this first (`.agents/skills/router/references/tiebreaks.md`).
+Run [`.agents/skills/spec-check-layer/SKILL.md`](../../.agents/skills/spec-check-layer/SKILL.md) (shapes: [`references/workaround-shapes.md`](../../.agents/skills/spec-check-layer/references/workaround-shapes.md)) before writing the workaround. New or copied identifiers always follow `.claude/rules/code-style.md` § Naming — the one-off skip does not suppress it. For other shapes apply the severity filter; when one clears it, put the structural fix into the brief or plan without asking. Post the **WARNING, WORKAROUND** block and stop for the owner only when that fix would push the lap above size M (stop list: patch on top, `agent-behavior` § When to ask; debt-triggers D4). The signals that start this work during ordinary laps: [`loop-plan/references/debt-signals.md`](../../.agents/skills/loop-plan/references/debt-signals.md). When the precedent review also applies, run this first (`.agents/skills/router/references/tiebreaks.md`).
 
 ## Code placement
 
@@ -50,16 +50,12 @@ If code doesn't meet a layer's criteria, move it down a layer.
 
 ## Folder structure
 
-`src/` layout (whitelist: `projectStructure.config.cjs`):
+Find the real layout with `ls src/`. Allowed paths: `projectStructure.config.cjs`; check a new one with `pnpm validate:structure`. Annotated tree for humans: `ARCHITECTURE.md` § Folder Structure. Neither tool says what a folder means:
 
-```
-src/
-├── assets/  components/common/   # presentation-only UI, zero business logic
-├── features/<name>/              # README.md (required), components/ hooks/ services/ types/ context/ store/ docs/
-├── shared/                       # hooks/ services/ utils/ types/ context/ theme/ — reused by 2+ features
-├── layouts/                       # app shell (MainLayout, Topbar, ProfileMenu) — may compose features
-├── pages/  routes/  store/  config/  lib/
-```
+- `components/common/` — presentation-only UI kit, no business logic, no feature imports.
+- `features/<name>/` — one bounded domain concept (§ Feature granularity), `README.md` required.
+- `shared/` — reused by 2+ features.
+- `layouts/` — app shell; may compose features.
 
 Backend: Supabase Edge Functions in `supabase/functions/<name>/index.ts` (shared code in `_shared/`); other runtimes in `cloud-functions/<service>/` (see `.claude/rules/cloud-functions.md`).
 
@@ -85,7 +81,7 @@ Name any new symbol per `.claude/rules/code-style.md` § Naming.
 
 ## Feature granularity / bounded context
 
-**One feature = one bounded domain concept** (one reason to change, one vocabulary). Layer rules alone don't stop a monolithic feature. If you can name two independent domain concepts in one feature (e.g. game *world*, *combat*, *inventory*), split them; move cross-cutting engine code to `src/shared/`.
+**One feature = one bounded domain concept** (one reason to change, one vocabulary). Layer rules alone don't stop a monolithic feature. If you can name two independent domain concepts in one feature (e.g. game _world_, _combat_, _inventory_), split them; move cross-cutting engine code to `src/shared/`.
 
 - **Agent obligation:** before creating files for new work, enumerate the domain concepts and split in the plan when there is more than one or the projected size exceeds budgets — don't wait to be asked.
 - **Budgets (SSOT `featureBudgets.config.cjs`):** `defaults.maxFilesPerLayer`, `defaults.maxFilesPerFeature`, `overrides.<feature>` (non-empty `reason` required), `baseline.<feature>` (grandfathered; regenerate with `pnpm validate:feature-size:baseline`).
@@ -93,9 +89,7 @@ Name any new symbol per `.claude/rules/code-style.md` § Naming.
 
 ## Plain optimistic + server-canonical response (TanStack Query)
 
-Default for mutations that must feel instant: optimistic patch in `onMutate` (snapshot for rollback), restore on error with one non-blocking message, and on success merge the **mutation result** into the cache with `setQueryData`. Do **not** `invalidateQueries`/`refetch` the same keys on the happy path — that extra render causes flashes. Mutations return the canonical projection (e.g. PostgREST `.select()` after `.update()`).
-
-Full playbook, exceptions, and anti-patterns (SSOT): `documentation/DOC_TANSTACK_QUERY.md` § Plain optimistic + server-canonical response. Pattern (not shipped): `documentation/DOC_TANSTACK_QUERY.md` § Example mutation.
+Default for mutations that must feel instant: optimistic `onMutate` with rollback, then `setQueryData` with the mutation's canonical result — no `invalidateQueries`/`refetch` on the happy path (flashes). Playbook, exceptions, example (SSOT): `documentation/DOC_TANSTACK_QUERY.md` § Plain optimistic + server-canonical response.
 
 ## Changing architecture rules and configs
 
@@ -108,7 +102,3 @@ Legitimate cross-layer exception (rare): regenerate the dependency-cruiser basel
 - `ARCHITECTURE.md` and `CHANGELOG.md` live in the repo root.
 - Update `ARCHITECTURE.md` after structural changes; feature docs live in `src/features/*/README.md` (pre-commit requires staging it with feature changes — `documentation/DOC_FEATURE_LOCAL_README.md`).
 - `src/features/*/docs/*.md` only with explicit user approval; temporary plans go in `documentation/jobs/` or `documentation/temp/`.
-
-## Related Rules
-
-When modifying this rule, check: `code-style`, `testing`, `security`, `cloud-functions`, `database`, and `.agents/skills/spec-optimize-performance/SKILL.md` (refactors must respect these placements).

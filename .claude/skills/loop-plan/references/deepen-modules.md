@@ -1,6 +1,6 @@
 # Deepen modules — cleaning the foundation a change builds on
 
-Read when the modules a change touches are shallow, duplicated, badly named, misplaced, or hard to replace (skill-loop D21). The cleanup becomes part of the plan and counts toward the size (skill-loop D12). It is not a separate job and not an owner stop, unless choosing the patch instead of the cleanup is the question (stop list: patch on top).
+Read when the modules a change touches are shallow, duplicated, badly named, misplaced, or hard to replace (skill-loop D21). The cleanup becomes part of the plan and counts toward the size (skill-loop D12). It is not a separate job and not an owner stop, unless the cleanup would push the lap above size M (stop list: patch on top). What triggers it during ordinary laps: [`debt-signals.md`](debt-signals.md).
 
 Sources: TMI-apps/MILA `improve-codebase-architecture` (deep-module lens), `consolidate` and `modularity-review` (v0.42.0). Vocabulary: [`module-language.md`](module-language.md) — use **module, interface, depth, seam, adapter, leverage, locality** exactly. Copy counts and names: `.claude/rules/code-style.md` § Naming (never restate them here).
 

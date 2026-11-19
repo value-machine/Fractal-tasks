@@ -25,7 +25,7 @@ STOP 1  loop-backlog → loop-refine          (owner: pick / confirm the top tas
 STOP 2  loop-verdict on the preview          (owner: Pass / Change / Drop)
 ```
 
-Between the stops the agent asks only per `.claude/rules/agent-behavior.md` § When to ask: a conflict with a recorded decision, a true tie, a new dependency, a patch on top instead of the fix, a data or irreversible change, or cost / an external service. Full map, sizes and how a lap is located: [`loop-map.md`](../.agents/skills/router/references/loop-map.md).
+Between the stops the agent asks only per `.claude/rules/agent-behavior.md` § When to ask: a conflict with a recorded decision, a true tie, a new dependency, a structural fix too big for the lap, a data or irreversible change, or cost / an external service. Full map, sizes and how a lap is located: [`loop-map.md`](../.agents/skills/router/references/loop-map.md).
 
 ## Proactive guards (rule-triggered)
 
@@ -83,7 +83,7 @@ Copy `meta-write-adoption-guide/` to other projects and adjust the skill **Confi
 | Mode | When | Runner |
 |------|------|--------|
 | skip (light) | docs / migrations / no app surface | none |
-| related | 1–25 `src/**` source files, no triggers | `vitest run related <paths>` |
+| related | 1–25 `src/**` source files, no triggers | `vitest related --run <paths>` |
 | full | triggers, `src/shared/**`, test-infra, edge functions, >25 files, `PRECOMMIT_TEST_FULL=1` | `pnpm test:classify && pnpm test:run` |
 | node-scripts-only | `scripts/**` only | `pnpm test:classify` |
 | dry-run | `pnpm test:staged` | log only |
@@ -93,13 +93,17 @@ Copy `meta-write-adoption-guide/` to other projects and adjust the skill **Confi
 
 **Worktree sessions (Model C):** the Claude Code SessionStart hook (`scripts/ensure-deps-installed.cjs`) installs dependencies in a new worktree so these hooks run there too. Archive a finished session in the desktop app (or turn on auto-archive after PR merge) to remove its worktree.
 
+**Edit-time feedback (Claude Code hooks, `.claude/settings.json`):** before pre-commit, two hooks report errors while the agent works. PostToolUse on `Edit|Write|MultiEdit` runs `eslint --fix` on the edited `.ts`/`.tsx` file (Prettier via `prettier/prettier`) and returns the remaining errors ([`scripts/lint-edited-file.cjs`](../scripts/lint-edited-file.cjs), ~2–4 s per edit). Stop runs the `type-check` script when uncommitted TypeScript changed and keeps the turn going while it fails, once per failing tree ([`scripts/type-check-on-stop.cjs`](../scripts/type-check-on-stop.cjs), ~6 s, skipped when the tree is unchanged since the last pass). Tests stay with pre-commit and CI (a lap's acceptance test is red on purpose until the build ends). Files changed through Bash, merges or other tools are not seen by these hooks — `pnpm lint` before push and CI still cover them. Cursor has no equivalent wired up.
+
 **Agent commands:** `pnpm test:staged` (preview after `git add`); `PRECOMMIT_TEST_FULL=1 pnpm test:staged` (force full preview); `pnpm test:classify && pnpm test:run` (CI parity).
 
 **Rollback:** Revert hook commit and restore pre-push `test:run` if related spawn fails in the wild.
 
-PR / push CI runs full `pnpm test:classify`, `pnpm test:run`, and cold `pnpm type-check` in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
-
 See `.claude/rules/git-workflow.md` § Mode-aware branch gate (`src/config/git-workflow.json`) and `.claude/rules/agent-behavior.md` for protected files.
+
+### CI test scope
+
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) (owner decision ci-cost D6): PR and `develop` push runs always run `pnpm test:classify`, cold `pnpm type-check`, lint and build, but Vitest runs through the same classifier as pre-commit, on the files the branch changed (`node scripts/test-staged.cjs --base <ref>`). The table above applies, except that changed files with no related tests pass instead of falling back to the full suite. The full suite (`pnpm test:run`) runs weekly on the default branch, on a manual **Run workflow**, and whenever the classifier says full. A failed weekly run opens an issue. Release PRs run only the version check.
 
 ## Release and versioning
 
@@ -113,6 +117,7 @@ See `.claude/rules/git-workflow.md` § Mode-aware branch gate (`src/config/git-w
 | `src/config/git-workflow.json` / mode docs | `.claude/rules/git-workflow.md`, `loop-ship`, `loop-verdict`, `loop-backlog/references/onboarding.md`, `DOC_CONTRIBUTING`, `DOC_CLOUDFLARE_WORKERS` |
 | `.husky/pre-commit` | `.claude/rules/git-workflow.md`, `.claude/rules/agent-behavior.md`, `loop-ship`, this doc if hook scope changes |
 | `.husky/pre-push` | `.claude/rules/git-workflow.md`, `loop-ship/references/push-safety.md`, this doc if hook scope changes |
+| `.claude/settings.json` `hooks` or a hook script in `scripts/` | this doc § Local git (edit-time feedback); `loop-ship/references/push-safety.md` step 6 when lint coverage changes |
 | A loop stage (add, rename, reorder) | `router/references/loop-map.md`, `router/references/catalog.md`, the neighbor stages' Edges (Calls ⇄ Called by — `pnpm validate:skills`) |
 | Any skill | `meta-write-skill/references/skill-template.md` structure + catalog row; `pnpm validate:skills` |
 | The stop list / when to ask | `.claude/rules/agent-behavior.md` § When to ask; `loop-refine/references/asking.md` for *how* |

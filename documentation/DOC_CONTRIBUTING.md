@@ -41,7 +41,7 @@ This guide points you to the canonical process documents. Follow these links for
 | Architecture | `pnpm arch:check:ci` |
 | Build | `pnpm build` |
 
-CI runs these on every push to `main` or `develop` and every PR targeting `main` or `develop`. The **authoritative gate** is the green CI `test` job where work lands (§ Mode behavior table → **how work lands**: the PR to `main` under C, `develop` under A/B). Under C, the `pr-title` check also gates the PR.
+CI runs these on every push to `develop` and every PR targeting `main` or `develop`; Vitest runs only the tests related to the changed files, and the full suite runs weekly (`documentation/DOC_AGENT_WORKFLOW_LAYERS.md` § CI test scope). The **authoritative gate** is the green CI `test` job where work lands (§ Mode behavior table → **how work lands**: the PR to `main` under C, `develop` under A/B). Under C, the `pr-title` check also gates the PR.
 
 ## How to write tests
 

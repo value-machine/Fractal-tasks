@@ -57,10 +57,34 @@
       "WebFetch(domain:typescriptlang.org)",
       "WebFetch(domain:eslint.org)",
       "WebFetch(domain:prettier.io)",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(pnpm install)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(git switch:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "Bash(git restore:*)",
+      "Bash(mv:*)",
+      "Bash(git fetch)",
+      "Bash(git fetch:*)",
+      "Bash(git pull)",
+      "Bash(git pull:*)",
+      "Bash(git worktree:*)",
+      "Bash(git ls-remote:*)",
+      "Bash(git mv:*)",
+      "Bash(git tag)",
+      "Bash(git tag:*)",
+      "Bash(node:*)",
+      "Bash(pnpm exec:*)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm validate:*)",
+      "Bash(pnpm tokens:build)",
+      "mcp__supabase__*"
     ],
     "ask": [
-      "Bash(pnpm install)",
       "Bash(pnpm install:*)",
       "Bash(pnpm add:*)",
       "Bash(pnpm remove:*)",
@@ -84,26 +108,18 @@
       "Edit(./.agents/skills/**)",
       "Edit(./.husky/**)",
       "Edit(./.github/workflows/**)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(git checkout:*)",
-      "Bash(git switch:*)",
-      "Bash(git merge:*)",
       "Bash(git rebase:*)",
       "Bash(git reset:*)",
-      "Bash(git stash:*)",
-      "Bash(git restore:*)",
       "Bash(git clean:*)",
       "Bash(rm:*)",
       "Bash(rmdir:*)",
-      "Bash(del:*)",
-      "Bash(mv:*)"
+      "Bash(del:*)"
     ],
     "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(./.dev.vars*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/.dev.vars*)",
+      "Read(!**/.env.example)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)"
     ]
@@ -131,6 +147,31 @@
             "shell": "bash",
             "command": "node \"$CLAUDE_PROJECT_DIR/scripts/deny-git-write-on-main.cjs\"",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/lint-edited-file.cjs\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/type-check-on-stop.cjs\"",
+            "timeout": 120
           }
         ]
       }

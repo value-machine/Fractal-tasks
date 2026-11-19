@@ -54,7 +54,7 @@ The pre-commit hook rebuilds both mirrors from staged sources (`agent-sync.confi
 | `.claude/rules/debugging.md` | Logging, API troubleshooting, reductive strategy, and user test instructions (debugging procedure: spec-debug-runtime) |
 | `.claude/rules/security.md` | Security best practices and vulnerability prevention |
 | `.claude/rules/git-workflow.md` | Git branch models (Model A / B / C), PRs, and production promotion |
-| `.claude/rules/platform.md` | Windows shell rules (PowerShell + Git Bash) and local environment configuration |
+| `.claude/rules/platform.md` | Shell trigger (Windows PowerShell / Git Bash → `documentation/DOC_WINDOWS_SHELL.md`) and local environment configuration |
 
 #### Path-scoped (`paths:`)
 
@@ -83,7 +83,7 @@ The pre-commit hook rebuilds both mirrors from staged sources (`agent-sync.confi
 | Frontend hosting (Cloudflare Workers) | `documentation/DOC_CLOUDFLARE_WORKERS.md` + `wrangler.jsonc` |
 | Edge / cloud functions deploys | `.claude/rules/cloud-functions.md` |
 
-Deploy functions yourself when a change requires it, and verify the deploy succeeded (`.claude/rules/cloud-functions.md`). Hand-off checklist before shipping: `.agents/skills/loop-check/SKILL.md` § Steps 5.
+Deploy functions yourself when a change requires it, and verify the deploy succeeded (`.claude/rules/cloud-functions.md`). Hand-off checklist before shipping: `.agents/skills/loop-check/SKILL.md` § Steps 6.
 
 ## Defaults
 

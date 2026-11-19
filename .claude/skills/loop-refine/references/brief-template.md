@@ -13,6 +13,9 @@ Task: <app-tasks.json title> · Lap: temp_job_<slug> · Harness: v<package.json 
 ## Success check
 <one falsifiable sentence; loop-plan turns it into the first failing test>
 
+## Owner test
+<app | none> — <app: what the owner tries in the preview | none: why nothing shows in the app (rules, skills, settings, tooling, docs)>
+
 ## In scope
 - <smallest set of capabilities that counts as done>
 
@@ -26,6 +29,10 @@ Task: <app-tasks.json title> · Lap: temp_job_<slug> · Harness: v<package.json 
 | <feature or shared area> | <trigger → path → outcome, or Not found> | <where this attaches> | ride / new — <why> |
 
 Overrun rule (skill-loop D51): a diff that touches a feature area **not** in this table stops the lap.
+
+## Foundation signals
+- <debt-signals.md id> · <where> · <what> → <in this lap | Foundation task at ship>
+- Absorbed: <open `Foundation:` task titles pulled into this lap, or none>
 
 ## Size
 <XS | S | M> — <edges touched + cleanup a clean implementation needs>.

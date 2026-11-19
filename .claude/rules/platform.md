@@ -1,53 +1,23 @@
 # Platform and Environment
 
-Windows shell rules (PowerShell and Git Bash) and local environment configuration for this repo. The command sections below are **shell-specific**; § Environment Variables and Configuration applies to every shell.
+Shell trigger and local environment configuration for this repo.
 
 ## Platform and Commands
 
-**Environment:** read it from the session's environment info; don't assume it. The owner's local machine is usually Windows: Cursor terminal = PowerShell; Claude Code Bash tool = Git Bash. Cloud sessions (Claude Code on the web) and macOS/Linux machines run plain bash: none of the Windows sections below apply there.
-
-**Command Rules (when the shell is PowerShell):**
-- No Unix-style `&&` chaining
-- No Unix-only flags like `rm -rf`
-- Run commands as separate sequential calls (the agent executes them, not the user)
-
-## Shell/PowerShell Handling
-
-**Applies when the shell is PowerShell** (Cursor terminal). In Git Bash use § Git Bash below.
-
-### Exit Code Handling
-
-PowerShell does not stop when an external command (git, pnpm, node) fails, and `$?` is unreliable for them. Check `$LASTEXITCODE` after each one:
-
-```powershell
-command 2>&1; if ($LASTEXITCODE -ne 0) { exit 1 }
-```
-
-Use `exit $LASTEXITCODE` to keep the original exit code.
-
-## Git Bash
-
-**Applies when the shell is Git Bash** (Claude Code Bash tool on Windows).
-
-- `&&` chaining and heredocs are fine.
-- Fail explicitly: `command || exit 1`; check `$?` for the last exit code (same form as `.agents/skills/spec-debug-runtime/references/patterns.md`).
-- Use forward slashes and POSIX paths (`/c/Users/...`); `/dev/null`, not `NUL`.
+**Environment:** read it from the session's environment info; don't assume it. **Shell is PowerShell or Git Bash (Windows)?** Read `documentation/DOC_WINDOWS_SHELL.md` before the first command (no `&&` in PowerShell, `$LASTEXITCODE` checks, POSIX paths in Git Bash). Plain bash (cloud sessions, macOS, Linux) needs nothing extra.
 
 ## Environment Variables and Configuration
 
 **Environment Variables:**
-- Use `VITE_*` names for all client-side environment variables
-- Access via `import.meta.env.VITE_*`
-- Never commit real `.env` files containing secrets
-  - Use `.env.example` for structure only if needed
-  - Real values live in local environment and CI
+- Use `VITE_*` names for all client-side environment variables; access via `import.meta.env.VITE_*`. What may be a `VITE_*` value and where secrets live: `.claude/rules/security.md` § Secrets.
+- Real values live in the local environment and CI; `.env.example` holds structure only.
 
 **Supabase Environment Variables (Current):**
 - `VITE_SUPABASE_URL` - Your Supabase project URL
 - `VITE_SUPABASE_PUBLISHABLE_KEY` - Your Supabase anonymous/public key (legacy name: `VITE_SUPABASE_ANON_KEY`)
 - Access in code: `import { getSupabase, isSupabaseConfigured } from "@/shared/services/supabaseService"`
 
-**Server-side secrets:** never as `VITE_*` (those are compiled into the browser bundle). Edge Function secrets: Supabase Dashboard → Project Settings → Edge Functions → Secrets.
+**Server-side secrets:** Edge Function secrets: Supabase Dashboard → Project Settings → Edge Functions → Secrets.
 
 **Hidden Files:**
 - Some files are not visible to the AI (for example `.env`)
@@ -61,16 +31,3 @@ Use `exit $LASTEXITCODE` to keep the original exit code.
   - Dependency or tooling changes
   - Vite config, tsconfig, or path alias changes
   - Backend or server configuration changes
-
----
-
-## Related Rules
-
-**When modifying this rule, check these rules for consistency:**
-
-- `.claude/rules/git-workflow.md` — PowerShell patterns for `gh` and git commands
-- `.claude/rules/security.md` — secrets handling
-
-**Rules that reference this rule:**
-
-- `.agents/skills/spec-debug-runtime/references/patterns.md` — platform command SSOT

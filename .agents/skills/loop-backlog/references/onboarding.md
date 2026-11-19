@@ -141,7 +141,7 @@ Write `src/config/git-workflow.json` accordingly (`"mode": "model-c"` | `"model-
 
 - **Model A:** `git switch develop && git pull origin develop`, then `git switch -c feature/<name>`.
 - **Model B:** `git switch develop && git pull origin develop`; do **not** create `feature/*` for daily work. **Ruleset confirmation gate (B — required):** confirm the live `develop` ruleset matches the table (user confirmation or `gh api repos/OWNER/REPO/rules/branches/develop`): `pull_request` **absent**; `required_status_checks` (`test`) present; `non_fast_forward` + `deletion` present. Do not proceed on click-path instructions alone.
-- **First-promotion bootstrap (A/B):** once the promote workflow file exists on `develop`, `main` is fast-forwarded once — **the user runs** the command in `.claude/rules/git-workflow.md` § Promote to production § First promotion bootstrap (agents are blocked from writing to `main`). Use **Promote to production** thereafter.
+- **First-promotion bootstrap (A/B):** once the promote workflow file exists on `develop`, `main` is fast-forwarded once — **the user runs** the command in `.agents/skills/loop-ship/references/push-safety.md` § First promotion bootstrap (agents are blocked from writing to `main`). Use **Promote to production** thereafter.
 
 The settings that table lists (rulesets, squash-only merges, auto-merge, branch deletion) are requirements. The owner applies them in GitHub; the agent verifies with `gh api` where it can and otherwise asks for confirmation. Hand them over as one list with the link to the repo's settings page, not one at a time.
 

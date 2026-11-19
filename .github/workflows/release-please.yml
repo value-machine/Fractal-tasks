@@ -1,14 +1,17 @@
 # Release PRs for Model C (.claude/rules/git-workflow.md § Mode behavior table → version source).
-# - `mode` reads the mode through the single reader (validate-git-workflow.cjs --print-mode).
-# - `bootstrap` (model-c only) creates the baseline GitHub release `v<package.json version>`
-#   once, when the repo has no release yet, so release-please has a starting point and no
-#   person has to tag by hand (D29). It tags the commit that set that version, so later
-#   commits still land in the next release. No-op once any release exists.
-# - `release` runs only under model-c; A/B forks see it skipped.
-# - `dispatch-ci` starts ci.yml on the release branch: PRs opened with GITHUB_TOKEN do not
+# One job, so a merge bills one runner minute instead of one per stage (GitHub rounds each job up).
+# Its steps, in order:
+# - **mode** reads the mode through the single reader (validate-git-workflow.cjs --print-mode).
+#   Every later step runs only under model-c; A/B forks stop here.
+# - **bootstrap** creates the baseline GitHub release `v<package.json version>` once, when the
+#   repo has no release yet, so release-please has a starting point and no person has to tag by
+#   hand (D29). It tags the commit that set that version, so later commits still land in the
+#   next release. No-op once any release exists.
+# - **release** runs release-please.
+# - **dispatch-ci** starts ci.yml on the release branch: PRs opened with GITHUB_TOKEN do not
 #   trigger workflows, but a GITHUB_TOKEN workflow_dispatch does, so the required `test`
-#   check reports on the release PR without a PAT (D21). Fallback if that ever fails: a
-#   GitHub App token (see temp_job_git-workflow-model-c D21).
+#   check reports on the release PR without a PAT (D21). ci.yml runs only the version check
+#   there. Fallback if that ever fails: a GitHub App token (see temp_job_git-workflow-model-c D21).
 name: Release Please
 
 on:
@@ -18,36 +21,28 @@ on:
 permissions: {}
 
 jobs:
-  mode:
+  release:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
-      contents: read
-    outputs:
-      mode: ${{ steps.read.outputs.mode }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Read git workflow mode
-        id: read
-        run: |
-          mode="$(node scripts/validate-git-workflow.cjs --print-mode)"
-          echo "mode=$mode" >> "$GITHUB_OUTPUT"
-
-  bootstrap:
-    needs: mode
-    if: needs.mode.outputs.mode == 'model-c'
-    runs-on: ubuntu-latest
-    permissions:
+      actions: write
       contents: write
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Read git workflow mode
+        id: mode
+        run: |
+          mode="$(node scripts/validate-git-workflow.cjs --print-mode)"
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
       - name: Create baseline release when none exists
+        if: steps.mode.outputs.mode == 'model-c'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -62,35 +57,18 @@ jobs:
           gh release create "v$version" --target "$sha" --title "v$version" \
             --notes "Baseline release for release-please (created by the Model C bootstrap job)."
 
-  release:
-    needs: [mode, bootstrap]
-    if: needs.mode.outputs.mode == 'model-c'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    outputs:
-      prs_created: ${{ steps.release.outputs.prs_created }}
-      pr: ${{ steps.release.outputs.pr }}
-    steps:
       - uses: googleapis/release-please-action@v4
         id: release
+        if: steps.mode.outputs.mode == 'model-c'
         with:
           # Pre-1.0: breaking changes bump minor, not major (bump-minor-pre-major).
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  dispatch-ci:
-    needs: release
-    if: needs.release.outputs.prs_created == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
       - name: Run CI on the release branch
+        if: steps.release.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_BRANCH: ${{ fromJSON(needs.release.outputs.pr).headBranchName }}
+          RELEASE_BRANCH: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
         run: gh workflow run ci.yml --ref "$RELEASE_BRANCH"

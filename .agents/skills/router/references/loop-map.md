@@ -10,13 +10,14 @@ AUTONOMOUS                     ▼
                     ▲               │ blockers                   │
                     └───────────────┘                            ▼
 STOP 2 ──────────────────────────────────────────────── loop-verdict
+     no owner test (brief: none) → merge on green, one "Watch for:" line, no question
      Pass   → loop-ship merges (C) / promotes (A/B) → task archived → loop-backlog
      Change → lessons on the same PR → feedback = top task → loop-backlog → loop-refine
      Drop   → PR closed → lessons as a backlog task → loop-backlog
 ```
 
-- **Owner stops:** Stop 1 (confirm the top task; answer refine questions), Stop 2 (Pass / Change / Drop), and anything on the stop list (`agent-behavior` rule § When to ask) at any stage.
-- **Waiting on owner** is one state (skill-loop D45, D46): a lap at Stop 2, or parked on a stop-list question (an Open row in its `DECISIONS.md`). Waiting laps don't block the next task; only one lap is in the build stages at a time.
+- **Owner stops:** Stop 1 (confirm the top task; answer refine questions), Stop 2 (Pass / Change / Drop; skipped for laps with no owner test, owner-test D1), and anything on the stop list (`agent-behavior` rule § When to ask) at any stage.
+- **Waiting on owner** is one state (skill-loop D45, D46): a lap at Stop 2, or parked on a stop-list question (an Open row in its `DECISIONS.md`). Waiting laps don't block the next task; only one lap is in the build stages at a time, unless [`loop-orchestrate`](../../loop-orchestrate/SKILL.md) runs: then each thread holds one lap, and the orchestrator owns the backlog and talks to the owner (orchestrator-parallel-laps D1–D4).
 - **Sizes:** XS / S / M. Larger work is cut into laps of ≤ M (skill-loop D44).
 - **One lap = one branch** (worktree under Model C): the brief, ledger, plan and code of a lap all live on it (skill-loop D45).
 
@@ -24,6 +25,7 @@ STOP 2 ────────────────────────�
 
 | Evidence | Stage |
 |---|---|
+| An orchestrator run is in flight (active thread sessions tagged with a run, orchestrator as parent) | [`loop-orchestrate`](../../loop-orchestrate/SKILL.md) (new requests join its backlog) |
 | The owner's message names something to do now | `loop-backlog` step 1 (top of the backlog, skill-loop D26; on a fork without hosting, its gates run first) |
 | A fork whose onboarding is still open ([`onboarding.md`](../../loop-backlog/references/onboarding.md) § Still open on a fork), including a bare "initialize", "set up" or "next" | `loop-backlog` → onboarding from the first gate that hasn't passed (onboarding-first-lap D1) |
 | A lap has an Open row in `DECISIONS.md` (parked question) | Ask that question ([`loop-refine/references/asking.md`](../../loop-refine/references/asking.md)), then resume the lap's stage |

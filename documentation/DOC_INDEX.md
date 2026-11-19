@@ -33,6 +33,7 @@ Central navigation for plate-harness documentation. For authoritative rules and 
 | **Supabase: Sign in with Google (dashboard setup)** | [DOC_SUPABASE_GOOGLE_OAUTH.md](./DOC_SUPABASE_GOOGLE_OAUTH.md) |
 | **Mobile local dev (physical device)** | [DOC_MOBILE_LOCAL_DEV.md](./DOC_MOBILE_LOCAL_DEV.md) |
 | **Cloudflare Workers deployment** | [DOC_CLOUDFLARE_WORKERS.md](./DOC_CLOUDFLARE_WORKERS.md) |
+| **Windows shell (PowerShell, Git Bash)** | [DOC_WINDOWS_SHELL.md](./DOC_WINDOWS_SHELL.md) |
 | **Complexity reduction** | See `.claude/rules/architecture.md` complexity section |
 
 ## SSOT Map (Single Source of Truth)

@@ -8,7 +8,7 @@ Deploy this Vite + React SPA to **Cloudflare Workers** with static assets, using
 
 | System | Responsibility |
 |--------|----------------|
-| **GitHub (this repo)** | Source + `wrangler.jsonc`. `ci.yml` runs type-check / lint / tests / build on every PR + push to `main` and `develop`. Rulesets depend on git-workflow mode (`src/config/git-workflow.json`) — see ruleset table below. **No deploy workflow. No `CLOUDFLARE_API_TOKEN` secret.** Production per `.claude/rules/git-workflow.md` § Mode behavior table → **production** (C: merging the PR; A/B: Promote workflow fast-forwards `main` to `develop`). |
+| **GitHub (this repo)** | Source + `wrangler.jsonc`. `ci.yml` runs type-check / lint / related tests / build on every PR and push to `develop`, and the full test suite weekly. Rulesets depend on git-workflow mode (`src/config/git-workflow.json`) — see ruleset table below. **No deploy workflow. No `CLOUDFLARE_API_TOKEN` secret.** Production per `.claude/rules/git-workflow.md` § Mode behavior table → **production** (C: merging the PR; A/B: Promote workflow fast-forwards `main` to `develop`). |
 | **Cloudflare Workers Builds** | Builds and deploys on push. `main` → production; every other branch → its own preview (Model C relies on these per-PR previews; A/B also use `develop` as the stable staging preview). Account, build command, and `VITE_*`/`CLOUDFLARE_ACCOUNT_ID` env live in the dashboard connection. |
 | **Supabase** | One project by default: local dev, previews and production share it, so a preview can read and write live data. Rows carry an `environment` tag (`local`, `staging`, `production`). Isolate staging before real users arrive (§ Staging backend). Auth URLs include every deployed origin. |
 
@@ -18,7 +18,7 @@ Push → Cloudflare builds & deploys. GitHub blocks bad merges. There is no GitH
 
 For coding agents completing the **"Put your app online (Cloudflare hosting)"** task from `src/config/app-tasks.json`. Run it after the user's Supabase env vars exist. Run it as a lap through the loop (`.agents/skills/router/SKILL.md`); onboarding gates: `.agents/skills/loop-backlog/references/onboarding.md`. Branch model: read `src/config/git-workflow.json`; apply `.claude/rules/git-workflow.md` § Mode-aware branch gate. The **user** confirms success — do not claim done without their test.
 
-**Target:** GitHub = CI gate only (`ci.yml` on every PR + push to `main` and `develop`; rulesets per mode table below; **no** deploy workflow; **no** `CLOUDFLARE_API_TOKEN` secret). Cloudflare Workers Builds = sole deploy path (`main` → production; per-branch previews — required for Model C, optional in A; `develop` → stable staging preview in A/B). Same Supabase project for preview and production.
+**Target:** GitHub = CI gate only (`ci.yml` on every PR, push to `develop` and a weekly full run; rulesets per mode table below; **no** deploy workflow; **no** `CLOUDFLARE_API_TOKEN` secret). Cloudflare Workers Builds = sole deploy path (`main` → production; per-branch previews — required for Model C, optional in A; `develop` → stable staging preview in A/B). Same Supabase project for preview and production.
 
 **Discover first (ask the user when unknown):**
 

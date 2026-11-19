@@ -75,7 +75,7 @@ Quick reference guide to all rules and their relationships.
 
 ### Platform (`.claude/rules/platform.md`)
 - Which shell rules apply (read the platform; Windows PowerShell / Git Bash vs plain bash)
-- PowerShell command rules, `$LASTEXITCODE` handling
+- Trigger to read `documentation/DOC_WINDOWS_SHELL.md` (PowerShell command rules, `$LASTEXITCODE` handling, Git Bash)
 - Environment variable catalog (`VITE_*`, Supabase, Edge secrets)
 
 **Related to:** git-workflow, security
@@ -148,28 +148,28 @@ Quick reference guide to all rules and their relationships.
 
 ## Consistency Check Matrix
 
-When modifying a rule, check these related rules:
+When modifying a rule, check these related rules and skills (SSOT — always-on rules carry no Related Rules footer):
 
 | Rule | Check These Rules |
 |------|-------------------|
-| `code-style` | architecture, testing |
-| `architecture` | code-style, testing, security, cloud-functions, database |
-| `testing` | code-style, architecture, debugging |
-| `security` | architecture, code-style, cloud-functions, database, project-specific, api-integration |
+| `code-style` | architecture, testing, spec-optimize-performance + spec-check-layer skills |
+| `architecture` | code-style, testing, security, cloud-functions, database, spec-optimize-performance skill (refactors respect placements) |
+| `testing` | code-style, architecture, debugging, cloud-functions (Edge Function testing) |
+| `security` | architecture, code-style, cloud-functions, database, project-specific, api-integration (MCP-first principle) |
 | `git-workflow` | agent-behavior, platform, cloud-functions, testing |
-| `agent-behavior` | git-workflow, debugging, loop-ship + loop-verdict skills |
-| `platform` | git-workflow, security |
+| `agent-behavior` | git-workflow, debugging, architecture (layer-consistency stop), loop-build + loop-ship + loop-verdict skills |
+| `platform` | git-workflow, security, `DOC_WINDOWS_SHELL.md`, spec-debug-runtime patterns (platform command SSOT) |
 | `cloud-functions` | architecture, security, project-specific |
 | `database` | security, architecture |
 | `api-integration` | security, database, cloud-functions, project-specific |
-| `debugging` | testing, architecture |
+| `debugging` | testing, architecture, agent-behavior, spec-debug-runtime skill |
 | `project-specific` | security, cloud-functions, database |
 | `file-placement` | architecture |
 
 ## Adding a New Rule
 
 1. Create `.claude/rules/<name>.md`. No frontmatter = always on; add `paths:` (list of globs) to load it only for matching files. Prefer a skill in `.agents/skills/<name>/` when the guidance is a procedure, not a constraint.
-2. Add a "Related Rules" section at the bottom.
+2. Add its row to § Consistency Check Matrix (a path-scoped rule may also carry a "Related Rules" footer; always-on rules do not — it would load every session).
 3. Add a row to the `AGENTS.md` catalog (that row is the description SSOT) and a section here.
-4. Update related rules to reference the new rule.
+4. Update the related rules' matrix rows to reference the new rule.
 5. Commit: the pre-commit hook generates `.cursor/rules/<name>.mdc` (or run `node scripts/sync-agent-config.mjs`).

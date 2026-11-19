@@ -53,7 +53,3 @@ When asking the user to test something, give the next step for **both** outcomes
 **Pattern library SSOT:** `.agents/skills/spec-debug-runtime/references/patterns.md` — updated from `loop-ship` (cleanup step) or `meta-learn-lessons` when a reusable bug class is proved.
 
 Do not duplicate the debugging procedure in this rule. This file owns **logging**, **API troubleshooting**, **filtering / pagination**, the **reductive strategy** (an always-on correction, also for features) and **user test instructions** above.
-
-## Related Rules
-
-When modifying this rule, check `agent-behavior`, `testing`, `architecture`, and `.agents/skills/spec-debug-runtime/SKILL.md`.

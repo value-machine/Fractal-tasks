@@ -174,6 +174,7 @@ When considering adding an Edge Function, ask:
 
 **Edge Functions Testing Considerations:**
 
+- Edge Functions have **no staging** in any mode: one `supabase functions deploy <name>` affects production and every preview at once, with no automated tests or rollback. So prefer frontend logic where possible (it gets a preview per table → **staging**), test functions manually before deploying, and document each function's test procedure
 - Test locally first. With isolated staging, deploy to staging and test on the PR preview, and deploy to production only after the PR merges; with one project, deploy once the PR is ready
 - Test locally first with `supabase functions serve`, then deploy via `supabase functions deploy <function-name>`
 - Consider impact before adding new functions
@@ -185,7 +186,7 @@ When considering adding an Edge Function, ask:
 - User testing before production (table → **production**: A/B promote — never a squash merge to `main`; C the user merges the PR after checking its preview)
 - Easy rollback if issues found
 
-**Release Gate Reminder:**
+**Release validation gate:** before production (table → **production**: A/B promote; C merging the PR), verify required CI checks are green, manual happy-path and key error-path tests are done, and any in-scope Edge Function behavior was re-tested against the currently deployed function version.
 - Before production (A/B: **Promote to production**; C: merging the PR — re-check on its preview, which already calls the deployed functions), re-validate critical flows that depend on currently deployed Edge Functions
 
 For complete testing guidelines and patterns, refer to `.claude/rules/testing.md`.

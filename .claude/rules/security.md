@@ -22,7 +22,3 @@ RLS policy syntax and performance (Supabase/Postgres): `.claude/rules/database.m
 - `VITE_*` variables are compiled into the browser bundle: only publishable values (Supabase URL and publishable/anon key). Server secrets live in Supabase Edge Function secrets or Cloudflare settings — catalog: `.claude/rules/platform.md`.
 - Never commit secrets; `.env` is gitignored, `.env.example` holds placeholders only.
 - There may be env files you can't see — respect their restrictions.
-
-## Related Rules
-
-When modifying this rule, check `architecture`, `code-style`, `cloud-functions`, `database`, `project-specific`, and `api-integration` (MCP-first principle).

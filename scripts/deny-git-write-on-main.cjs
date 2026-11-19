@@ -11,6 +11,7 @@
 
 const path = require("path");
 const { spawnSync } = require("child_process");
+const { parseHookInput, readStdin } = require("./hook-input.cjs");
 
 const PROTECTED_BRANCH = "main";
 const SEPARATORS = new Set(["&&", "||", ";", "|", "&", "\n"]);
@@ -18,21 +19,6 @@ const GIT_OPTS_WITH_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--
 const REASON =
   "Blocked: agents never commit or push to `main` (.claude/rules/git-workflow.md § Mode behavior table). " +
   "Work on a branch and open a PR; if this is a bootstrap or emergency step, the user runs the command themselves.";
-
-/**
- * Second copy of the hook-input reader — the other is in scripts/ensure-deps-installed.cjs.
- * A third hook script should extract both into scripts/hook-input.cjs (code-style rule § Naming F2).
- * @param {string} raw
- * @returns {{cwd?: string, tool_input?: {command?: string}} | null}
- */
-function parseHookInput(raw) {
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Shell-ish tokenizer: whitespace split with single/double quotes; separators become tokens.
@@ -179,9 +165,7 @@ function decide(raw, getBranch = defaultGetBranch) {
 }
 
 if (require.main === module) {
-  let raw = "";
-  process.stdin.on("data", (chunk) => (raw += chunk));
-  process.stdin.on("end", () => {
+  void readStdin().then((raw) => {
     const result = decide(raw);
     if (result.block) {
       process.stderr.write(`${result.reason}\n`);

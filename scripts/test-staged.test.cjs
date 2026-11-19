@@ -10,16 +10,17 @@ const {
   runStagedTests,
   runFullSuite,
   NO_TEST_FILES_RE,
+  readBaseArg,
 } = require('./test-staged.cjs');
 
 describe('test-staged executor', () => {
   describe('buildVitestArgv', () => {
-    test('should include related mode and staged paths', () => {
+    test('should use the related command with --run when given staged paths', () => {
       assert.deepEqual(buildVitestArgv(['src/a.ts', 'src/b.ts']), [
         'exec',
         'vitest',
-        'run',
         'related',
+        '--run',
         'src/a.ts',
         'src/b.ts',
       ]);
@@ -90,7 +91,52 @@ describe('test-staged executor', () => {
     });
   });
 
+  describe('readBaseArg', () => {
+    test('should return the ref when --base is given', () => {
+      assert.equal(readBaseArg(['node', 'x', '--base', 'origin/main']), 'origin/main');
+    });
+
+    test('should return undefined when --base is absent', () => {
+      assert.equal(readBaseArg(['node', 'x', '--dry-run']), undefined);
+    });
+  });
+
   describe('executePlan', () => {
+    test('should pass without the full suite when no related tests exist and onNoRelatedTests is pass', () => {
+      const code = executePlan(
+        {mode: 'related', reason: 'staged src files', relatedPaths: ['src/a.ts']},
+        {
+          dryRun: false,
+          onNoRelatedTests: 'pass',
+          runners: {
+            runVitestRelated: () => ({status: 1, output: 'No test files found, exiting with code 1'}),
+            runFullSuite: () => {
+              throw new Error('should not run the full suite');
+            },
+          },
+        },
+      );
+      assert.equal(code, 0);
+    });
+
+    test('should fall back to the full suite when no related tests exist by default', () => {
+      let fullRuns = 0;
+      executePlan(
+        {mode: 'related', reason: 'staged src files', relatedPaths: ['src/a.ts']},
+        {
+          dryRun: false,
+          runners: {
+            runVitestRelated: () => ({status: 1, output: 'No test files found'}),
+            runFullSuite: () => {
+              fullRuns += 1;
+              return 0;
+            },
+          },
+        },
+      );
+      assert.equal(fullRuns, 1);
+    });
+
     test('should not run tests in dry-run mode', () => {
       let pnpmCalls = 0;
       const code = executePlan(
@@ -247,6 +293,15 @@ describe('test-staged executor', () => {
       const code = runStagedTests({
         dryRun: true,
         staged: ['CHANGELOG.md'],
+      });
+      assert.equal(code, 0);
+    });
+
+    test('should classify a branch diff in dry-run when base is given', () => {
+      const code = runStagedTests({
+        dryRun: true,
+        base: 'origin/main',
+        staged: ['src/features/auth/services/authService.ts'],
       });
       assert.equal(code, 0);
     });
