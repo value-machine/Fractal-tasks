@@ -1,8 +1,4 @@
-import {
-  getPointAtRequest,
-  PointAtNotConfiguredError,
-  readPointAtError,
-} from "@/shared/services/pointAtFunctionService";
+import { fetchPointAtJson } from "@/shared/services/pointAtFunctionService";
 import type {
   GoalNodeDetail,
   GoalNodeSummary,
@@ -12,13 +8,7 @@ import type {
   GoalWorkFilters,
 } from "@/features/goal-tree/types/goalTree.types";
 
-const request = async <T>(path: string): Promise<T> => {
-  const target = getPointAtRequest(path);
-  if (!target) throw new PointAtNotConfiguredError();
-  const response = await fetch(target.url, { headers: target.headers });
-  if (!response.ok) throw new Error(await readPointAtError(response));
-  return (await response.json()) as T;
-};
+const request = fetchPointAtJson;
 
 /** Root goals, each with its children (two visible levels). */
 export const fetchGoalRoots = (): Promise<GoalNodeWithChildren[]> =>

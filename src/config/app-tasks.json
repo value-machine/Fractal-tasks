@@ -11,8 +11,8 @@
   },
   {
     "title": "Graph view of task relations",
-    "description": "Lap 2 of the relations work (owner decision 2026-11-19: data first, graph second). A view that draws tasks as nodes and their relations as lines, with a switch per relation type (split tree, blocked by, also serves, alternative to, replaces, duplicate of, related to). Data: node_relations plus nodes.parent_id; needs a read endpoint returning the tasks under a root and the edges among them (relations.ts edgesAmong). Check a maintained graph library first (spec-reuse-package).",
-    "status": "to-do"
+    "description": "Lap 2 of the relations work (owner decision 2026-11-19: data first, graph second). A view that draws tasks as nodes and their relations as lines, with a switch per relation type (split tree, blocked by, also serves, alternative to, replaces, duplicate of, related to). Data: node_relations plus nodes.parent_id; needs a read endpoint returning the tasks under a root and the edges among them (relations.ts edgesAmong). Check a maintained graph library first (spec-reuse-package). Done: /nodes/:id/graph (React Flow + d3-hierarchy, owner choice 2026-11-19).",
+    "status": "done"
   },
   {
     "title": "A home for agent results",

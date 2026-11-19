@@ -1,7 +1,7 @@
+import { TASK_RELATION_WORDING } from "@/shared/types/taskRelations";
 import type {
   GoalDuration,
   GoalRelation,
-  GoalRelationType,
   GoalRequirement,
   GoalRole,
   GoalStatus,
@@ -87,17 +87,8 @@ export const describeGoalRequirement = (req: GoalRequirement): string => {
 };
 
 /** How a relation reads from the focused goal: "Blocked by", "Blocks", ... */
-const RELATION_PHRASES: Record<GoalRelationType, { out: string; in: string }> = {
-  blocked_by: { out: "Blocked by", in: "Blocks" },
-  also_serves: { out: "Also serves", in: "Served by" },
-  alternative_to: { out: "Alternative to", in: "Alternative to" },
-  replaces: { out: "Replaces", in: "Replaced by" },
-  duplicate_of: { out: "Duplicate of", in: "Has duplicate" },
-  related_to: { out: "Related to", in: "Related to" },
-};
-
 export const describeGoalRelation = (relation: GoalRelation): string =>
-  RELATION_PHRASES[relation.type][relation.direction];
+  TASK_RELATION_WORDING[relation.type][relation.direction];
 
 /** Whether a status counts as closed for progress purposes. */
 export const isGoalClosed = (status: GoalStatus): boolean =>

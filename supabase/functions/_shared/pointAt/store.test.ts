@@ -298,6 +298,29 @@ describe("relations", () => {
   });
 });
 
+describe("graph", () => {
+  it("should return the subtree and only the relations among its tasks when a graph is read", async () => {
+    const { root, children } = await rootWithChildren("A", "B");
+    const [a, b] = children.map((n) => n.id);
+    const { children: grand } = await store.split(
+      a,
+      { hypothesis: "h", children: [{ title: "A1" }] },
+      AUTHOR
+    );
+    const outside = await store.createRoot({ title: "Elsewhere" }, AUTHOR);
+    await store.relate({ fromId: b, toId: a, type: "blocked_by" }, AUTHOR);
+    await store.relate({ fromId: a, toId: outside.id, type: "also_serves" }, AUTHOR);
+
+    const graph = await store.graph(root.id);
+    // Levels come out nearest first; order within a level is not part of the contract.
+    expect(graph.nodes.map((n) => n.depth)).toEqual([0, 1, 1, 2]);
+    expect(graph.nodes.map((n) => n.title).sort()).toEqual(["A", "A1", "B", "Root goal"]);
+    expect(graph.nodes.find((n) => n.id === grand[0].id)?.parent_id).toBe(a);
+    expect(graph.edges).toEqual([{ from_id: b, to_id: a, type: "blocked_by", note: null }]);
+    expect(graph.truncated).toBe(false);
+  });
+});
+
 describe("claims as assignments", () => {
   it("should keep each claim in the history when a task is claimed, released and claimed again", async () => {
     const { children } = await rootWithChildren("Leaf");
