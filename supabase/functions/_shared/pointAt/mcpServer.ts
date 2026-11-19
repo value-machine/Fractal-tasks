@@ -14,6 +14,9 @@ How to take part:
 - To find work, call next_tasks with role "donor" (thinking work for agents: splitting, running agent leaves, reviewing) or "executor" (concrete human actions). Choosing what is best to do is your judgement.
 - Focus on a node with focus_node. First ask: is this still true and still needed? If reality has overtaken it, call mark_overtaken with a reason.
 - Then ask: can this be done in one turn? If yes, mark_leaf (agent: you can finish it in one uninterrupted run; human: it needs a person's access or presence). If no, split_node into children and state why completing them completes the parent.
+- Do not plan past an open decision: when later steps depend on the outcome of an earlier one (which town, which partner, what a reply says), split only up to that decision and mark the later steps blocked_by it. A blocked task cannot be split until its blocker is done.
+- After creating or splitting, check the check_overlap list: if your new task makes any of them unnecessary once done, relate it with "overtakes"; if it is the same task, use "duplicate_of".
+- Context goes in as links (a document, a page, a result you wrote elsewhere); Point At stores no files.
 - Claim before you work, and report back afterwards. Reviews of a split must come from someone other than its author.`;
 
 const actorField = z
@@ -56,6 +59,19 @@ const relationType = z.enum(RELATION_TYPES).describe(
     .join(" ")
 );
 
+const links = z
+  .array(
+    z.object({
+      url: z.string().url().describe("An https:// or http:// address."),
+      title: z.string().trim().min(1).max(120).describe("What the link holds, in a few words."),
+    })
+  )
+  .max(20)
+  .optional()
+  .describe(
+    "Context the task needs, as links only (documents, pages, results written elsewhere); no files are stored. Replaces the whole list; [] clears it."
+  );
+
 const newNode = z.object({
   title: z.string().trim().min(3).max(300).describe("What exactly this node tries to achieve."),
   done_check: z.string().optional().describe("Yes/no check that shows it worked."),
@@ -66,6 +82,7 @@ const newNode = z.object({
   labels: z.array(z.string()).optional().describe('Lens labels, e.g. ["health", "Utrecht"].'),
   duration,
   requirements,
+  links,
 });
 
 /**
@@ -246,7 +263,8 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
     {
       title: "Create a root goal",
       description:
-        'Start a new top-level goal. Any size works, from "make a sandwich" to "achieve world peace". Search first to avoid duplicates.',
+        'Start a new top-level goal. Any size works, from "make a sandwich" to "achieve world peace". Search first to avoid duplicates. ' +
+        "The reply lists open tasks it may overlap with (check_overlap); relate them if it overtakes or duplicates any.",
       inputSchema: { ...newNode.shape, actor: actorField },
     },
     ({ actor, ...input }) => run(() => store.createRoot(input, who(actor)))
@@ -257,7 +275,7 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
     {
       title: "Split a node",
       description:
-        "Decompose a node you are focusing on into children, until each is workable. Record the hypothesis (why completing the children completes the parent), " +
+        "Decompose a node you are focusing on into children, until each is workable, but only up to the next open decision: steps that depend on its outcome stay unsplit and blocked_by it (refused while the node itself is blocked). Record the hypothesis (why completing the children completes the parent), " +
         "an observable prediction, and the assumptions it rests on so others can re-check them later. Can be called again to add children when re-planning; every split's hypothesis is kept in the node's split history.",
       inputSchema: {
         id: z.string().uuid().describe("The node to split."),
@@ -312,6 +330,7 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
           .describe("Human leaf: the channel, and the deadline if there is one."),
         duration,
         requirements,
+        links,
         actor: actorField,
       },
     },
@@ -333,6 +352,7 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
         leaf_type: z.null().optional(),
         duration,
         requirements,
+        links,
         actor: actorField,
       },
     },

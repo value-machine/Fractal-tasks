@@ -51,6 +51,11 @@ const LINE_STYLE: Record<TaskGraphLineType, { color: string; dash?: string; labe
     dash: "2 4",
     label: TASK_RELATION_WORDING.related_to.name,
   },
+  overtakes: {
+    color: "var(--color-foreground)",
+    dash: "10 4",
+    label: TASK_RELATION_WORDING.overtakes.name,
+  },
 };
 
 const nodeTypes: NodeTypes = { task: TaskGraphCard };

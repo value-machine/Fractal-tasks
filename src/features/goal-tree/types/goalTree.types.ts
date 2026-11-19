@@ -46,6 +46,8 @@ export interface GoalNode {
   /** Estimated time as the upper bound of its bucket (15, 60, 240, 480 or 2400 minutes). */
   duration_minutes: number | null;
   requirements: GoalRequirement[];
+  /** Context the task needs, as links only (Point At stores no files). */
+  links: GoalLink[];
   verification_level: number | null;
   overtaken_note: string | null;
   unclear_reason: string | null;
@@ -81,6 +83,11 @@ export interface GoalAncestor {
   id: string;
   title: string;
   status: GoalStatus;
+}
+
+export interface GoalLink {
+  url: string;
+  title: string;
 }
 
 /** A typed relation as seen from the focused goal ("out": the focused goal is the subject). */

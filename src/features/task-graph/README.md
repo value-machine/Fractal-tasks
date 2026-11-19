@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Graph view of a goal: the goal and every task split from it as boxes on a canvas, with lines for the split tree and for each typed relation (blocked by, also serves, alternative, replaces, duplicate, related). Each line type has a switch, so people can look at the same tasks along one relationship at a time. Clicking a task opens its page. Read-only, like the goal tree.
+Graph view of a goal: the goal and every task split from it as boxes on a canvas, with lines for the split tree and for each typed relation (blocked by, also serves, alternative, replaces, duplicate, related, overtakes). Each line type has a switch, so people can look at the same tasks along one relationship at a time. Clicking a task opens its page. Read-only, like the goal tree.
 
 ## Structure
 
