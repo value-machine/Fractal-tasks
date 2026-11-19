@@ -10,6 +10,8 @@ import { ProcessError } from "./processError.ts";
 import {
   addRelation,
   blockedSql,
+  edgesAmong,
+  type RelationEdge,
   relationsOf,
   removeRelation,
   type RelationInput,
@@ -116,6 +118,15 @@ export interface NewNodeInput extends TaskDetailsInput {
   next_action?: string | null;
   labels?: string[];
 }
+
+/** One task in the graph view: enough to draw and colour it, and to place it in the tree. */
+export type GraphNode = Pick<
+  Node,
+  "id" | "parent_id" | "title" | "status" | "leaf_type" | "duration_minutes"
+> & { depth: number };
+
+/** Enough to read a branch at a glance; bigger trees are opened from a lower node. */
+export const GRAPH_NODE_LIMIT = 400;
 
 /** Role-view filters: lens label, text, and what the work takes (duration, requirements). */
 export interface ViewOptions extends TaskDetailFilters {
@@ -377,6 +388,37 @@ export class Store {
   /** Typed relations of the task (blocked by, also serves, ...), both directions. */
   relations(id: string) {
     return relationsOf(this.db, id);
+  }
+
+  /**
+   * A task and everything split from it, with the typed relations among them, for the graph
+   * view. Capped at GRAPH_NODE_LIMIT nodes, nearest levels first; `truncated` says so.
+   */
+  async graph(rootId: string): Promise<{
+    root_id: string;
+    nodes: GraphNode[];
+    edges: RelationEdge[];
+    truncated: boolean;
+  }> {
+    await this.getNode(rootId);
+    const rows = await this.db.query<GraphNode>(
+      `with recursive below as (
+         select id, 0 as depth from nodes where id = $1
+         union all
+         select c.id, b.depth + 1 from nodes c join below b on c.parent_id = b.id
+       )
+       select n.id, n.parent_id, n.title, n.status, n.leaf_type, n.duration_minutes, b.depth
+       from below b join nodes n on n.id = b.id
+       order by b.depth, n.created_at, n.id
+       limit $2`,
+      [rootId, GRAPH_NODE_LIMIT + 1]
+    );
+    const nodes = rows.slice(0, GRAPH_NODE_LIMIT);
+    const edges = await edgesAmong(
+      this.db,
+      nodes.map((n) => n.id)
+    );
+    return { root_id: rootId, nodes, edges, truncated: rows.length > GRAPH_NODE_LIMIT };
   }
 
   /** Every split of this node, oldest first; the node's split_* fields hold only the latest. */

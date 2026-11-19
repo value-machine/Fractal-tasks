@@ -56,3 +56,15 @@ export const readPointAtError = async (response: Response): Promise<string> => {
   }
   return `Request failed (${response.status})`;
 };
+
+/**
+ * GET a public read endpoint of the point-at function (no sign-in needed) and parse its JSON.
+ * Throws PointAtNotConfiguredError without Supabase settings, or the function's error message.
+ */
+export const fetchPointAtJson = async <T>(path: string): Promise<T> => {
+  const target = getPointAtRequest(path);
+  if (!target) throw new PointAtNotConfiguredError();
+  const response = await fetch(target.url, { headers: target.headers });
+  if (!response.ok) throw new Error(await readPointAtError(response));
+  return (await response.json()) as T;
+};

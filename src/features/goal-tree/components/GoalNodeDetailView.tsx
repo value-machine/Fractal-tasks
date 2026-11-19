@@ -44,10 +44,16 @@ const SubtaskSection = ({ detail }: { detail: GoalNodeDetail }) => {
   if (children.length > 0) {
     return (
       <>
-        <div className="mt-7 mb-3 flex items-baseline justify-between">
+        <div className="mt-7 mb-3 flex flex-wrap items-baseline justify-between gap-x-4">
           <h2 className="font-heading text-xl font-semibold">Subtasks</h2>
           <span className="text-sm text-muted-foreground">
-            {node.done_child_count} of {node.child_count} closed
+            {node.done_child_count} of {node.child_count} closed ·{" "}
+            <Link
+              to={`/nodes/${encodeURIComponent(node.id)}/graph`}
+              className="text-primary no-underline hover:underline"
+            >
+              Show as graph
+            </Link>
           </span>
         </div>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(17rem,1fr))] gap-4">

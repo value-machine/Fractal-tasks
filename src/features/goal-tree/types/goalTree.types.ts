@@ -1,3 +1,5 @@
+import type { TaskRelationType } from "@/shared/types/taskRelations";
+
 /**
  * Goal tree domain types, mirroring the read API of the `point-at` Edge Function
  * (shapes copied from the prototype's store: Node, NodeSummary, NodeEvent).
@@ -15,13 +17,6 @@ export type GoalRequirementKind =
   | "access";
 /** Duration buckets the agent tools accept; stored as their upper bound in minutes. */
 export type GoalDuration = "15m" | "1h" | "half_day" | "day" | "days";
-export type GoalRelationType =
-  | "blocked_by"
-  | "also_serves"
-  | "alternative_to"
-  | "replaces"
-  | "duplicate_of"
-  | "related_to";
 
 export interface GoalRequirement {
   kind: GoalRequirementKind;
@@ -90,7 +85,7 @@ export interface GoalAncestor {
 
 /** A typed relation as seen from the focused goal ("out": the focused goal is the subject). */
 export interface GoalRelation {
-  type: GoalRelationType;
+  type: TaskRelationType;
   direction: "out" | "in";
   id: string;
   title: string;

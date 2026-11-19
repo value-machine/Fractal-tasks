@@ -18,6 +18,9 @@ const GoalTreeHomePage = lazy(() =>
 const GoalNodePage = lazy(() =>
   import("@/pages/goal-tree/GoalNodePage").then((m) => ({ default: m.GoalNodePage }))
 );
+const GoalGraphPage = lazy(() =>
+  import("@/pages/goal-tree/GoalGraphPage").then((m) => ({ default: m.GoalGraphPage }))
+);
 const GoalRoleViewPage = lazy(() =>
   import("@/pages/goal-tree/GoalRoleViewPage").then((m) => ({ default: m.GoalRoleViewPage }))
 );
@@ -56,6 +59,7 @@ function AppContent() {
               <Route element={<MainLayout />}>
                 <Route path="/" element={<GoalTreeHomePage />} />
                 <Route path="/nodes/:id" element={<GoalNodePage />} />
+                <Route path="/nodes/:id/graph" element={<GoalGraphPage />} />
                 <Route path="/views/:role" element={<GoalRoleViewPage />} />
                 <Route path="/search" element={<GoalSearchPage />} />
                 <Route path="/agents" element={<AgentTokensPage />} />

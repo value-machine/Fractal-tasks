@@ -41,7 +41,7 @@ export interface TaskDetailsInput {
 /** Requirements as JSON on each node read (alias `n`), so lists show them without another query. */
 export const REQUIREMENTS_COLUMN = `coalesce((
     select json_agg(json_build_object('kind', r.kind, 'value', r.value, 'amount', r.amount, 'unit', r.unit)
-                    order by r.created_at, r.id)
+                    order by r.position, r.created_at)
     from node_requirements r where r.node_id = n.id), '[]'::json) as requirements`;
 
 /** Save duration and/or requirements. Requirements, when given, replace the task's whole list. */
@@ -63,10 +63,11 @@ export async function saveTaskDetails(
     if (!req.value?.trim()) throw new ProcessError("A requirement needs a value.");
   }
   await db.query(`delete from node_requirements where node_id = $1`, [nodeId]);
-  for (const req of input.requirements) {
+  for (const [position, req] of input.requirements.entries()) {
     await db.query(
-      `insert into node_requirements (node_id, kind, value, amount, unit) values ($1, $2, $3, $4, $5)`,
-      [nodeId, req.kind, req.value.trim(), req.amount ?? null, req.unit?.trim() || null]
+      `insert into node_requirements (node_id, kind, value, amount, unit, position)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [nodeId, req.kind, req.value.trim(), req.amount ?? null, req.unit?.trim() || null, position]
     );
   }
 }

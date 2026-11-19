@@ -105,6 +105,13 @@ async function handleApi(path: string, url: URL): Promise<Response> {
     return json(await s.focus(id));
   }
 
+  const graphMatch = path.match(/^\/api\/nodes\/([^/]+)\/graph$/);
+  if (graphMatch) {
+    const id = decodeURIComponent(graphMatch[1]);
+    if (!UUID_PATTERN.test(id)) throw new ProcessError(`No node with id ${id}`);
+    return json(await s.graph(id));
+  }
+
   if (path === "/api/stats/reviews") {
     return json(await s.reviewStats({ label: url.searchParams.get("label") || undefined }));
   }
