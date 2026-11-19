@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
 import type { GoalRoleViewItem } from "@/features/goal-tree/types/goalTree.types";
 import { GoalLeafPill, GoalStatusDot } from "@/features/goal-tree/components/GoalPills";
+import {
+  describeGoalDuration,
+  describeGoalRequirement,
+} from "@/features/goal-tree/types/goalTreeLabels";
 
 const rowSubtitle = (item: GoalRoleViewItem): string => {
   if (item.leaf_type === "human" && item.leaf_who) {
@@ -9,9 +13,16 @@ const rowSubtitle = (item: GoalRoleViewItem): string => {
   return item.done_check ?? "";
 };
 
+/** "Up to 15 minutes · Dutch (language)": what the step takes, when known. */
+const rowNeeds = (item: GoalRoleViewItem): string =>
+  [describeGoalDuration(item.duration_minutes), ...item.requirements.map(describeGoalRequirement)]
+    .filter(Boolean)
+    .join(" · ");
+
 /** One line in a role view or search result list. */
 export const GoalRow = ({ item }: { item: GoalRoleViewItem }) => {
   const subtitle = rowSubtitle(item);
+  const needs = rowNeeds(item);
   return (
     <Link
       to={`/nodes/${encodeURIComponent(item.id)}`}
@@ -23,6 +34,7 @@ export const GoalRow = ({ item }: { item: GoalRoleViewItem }) => {
           {item.title}
         </h3>
         {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
+        {needs && <p className="mt-0.5 text-xs text-muted-foreground">{needs}</p>}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
         {item.why && <span className="text-xs font-semibold text-primary">{item.why}</span>}

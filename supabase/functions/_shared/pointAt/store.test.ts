@@ -241,23 +241,176 @@ describe("review", () => {
   });
 });
 
-describe("dependencies", () => {
-  it("should refuse a dependency when it would close a loop", async () => {
+describe("relations", () => {
+  it("should refuse a blocked_by relation when it would close a loop", async () => {
     const { children } = await rootWithChildren("A", "B", "C");
     const [a, b, c] = children.map((n) => n.id);
-    await store.addDependency({ nodeId: a, needsId: b }, AUTHOR);
-    await store.addDependency({ nodeId: b, needsId: c }, AUTHOR);
-    await expect(store.addDependency({ nodeId: c, needsId: a }, AUTHOR)).rejects.toThrow(/loop/);
+    await store.relate({ fromId: a, toId: b, type: "blocked_by" }, AUTHOR);
+    await store.relate({ fromId: b, toId: c, type: "blocked_by" }, AUTHOR);
+    await expect(store.relate({ fromId: c, toId: a, type: "blocked_by" }, AUTHOR)).rejects.toThrow(
+      /loop/
+    );
   });
 
-  it("should keep a human leaf out of the executor view when what it needs is still open", async () => {
+  it("should keep a human leaf out of the executor view when its blocker is still open", async () => {
     const { children } = await rootWithChildren("Draft", "Send");
     const [draft, send] = children.map((n) => n.id);
     await store.markLeaf(send, humanLeaf, AUTHOR);
-    await store.addDependency({ nodeId: send, needsId: draft }, AUTHOR);
+    await store.relate({ fromId: send, toId: draft, type: "blocked_by" }, AUTHOR);
     expect(await store.view("executor")).toEqual([]);
     await store.overtake(draft, "Draft already exists", AUTHOR);
     expect((await store.view("executor")).map((n) => n.id)).toEqual([send]);
+  });
+
+  it("should leave a blocked open node out of the donor view when its blocker is open", async () => {
+    const { children } = await rootWithChildren("Pick a town", "Find a councillor");
+    const [pick, councillor] = children.map((n) => n.id);
+    await store.relate({ fromId: councillor, toId: pick, type: "blocked_by" }, AUTHOR);
+    const split = await store.view("donor", { kind: "split" });
+    expect(split.map((n) => n.id)).toEqual([pick]);
+  });
+
+  it("should show a relation on both tasks when one is focused", async () => {
+    const { children } = await rootWithChildren("Purmerend", "Borger-Odoorn");
+    const [a, b] = children.map((n) => n.id);
+    await store.relate({ fromId: a, toId: b, type: "alternative_to", note: "either town" }, AUTHOR);
+    const fromA = (await store.focus(a)).relations;
+    const fromB = (await store.focus(b)).relations;
+    expect(fromA).toMatchObject([{ type: "alternative_to", direction: "out", id: b }]);
+    expect(fromB).toMatchObject([{ type: "alternative_to", direction: "in", id: a }]);
+  });
+
+  it("should keep one row when a symmetric relation is recorded in both directions", async () => {
+    const { children } = await rootWithChildren("X", "Y");
+    const [x, y] = children.map((n) => n.id);
+    await store.relate({ fromId: x, toId: y, type: "related_to" }, AUTHOR);
+    await store.relate({ fromId: y, toId: x, type: "related_to" }, AUTHOR);
+    expect(await store.relations(x)).toHaveLength(1);
+    await store.unrelate({ fromId: y, toId: x, type: "related_to" }, AUTHOR);
+    expect(await store.relations(x)).toEqual([]);
+  });
+
+  it("should refuse a relation when both ends are the same task", async () => {
+    const { children } = await rootWithChildren("Only");
+    await expect(
+      store.relate({ fromId: children[0].id, toId: children[0].id, type: "related_to" }, AUTHOR)
+    ).rejects.toThrow(ProcessError);
+  });
+});
+
+describe("claims as assignments", () => {
+  it("should keep each claim in the history when a task is claimed, released and claimed again", async () => {
+    const { children } = await rootWithChildren("Leaf");
+    const id = children[0].id;
+    await store.markLeaf(id, { type: "agent", done_check: "Done?" }, AUTHOR);
+    await store.claim(id, AUTHOR);
+    await store.release(id, AUTHOR);
+    const claimed = await store.claim(id, OTHER);
+    expect(claimed.claimed_by).toBe(OTHER);
+    const { claims } = await store.focus(id);
+    expect(claims.map((c) => [c.actor, c.end_reason])).toEqual([
+      [OTHER, null],
+      [AUTHOR, "released"],
+    ]);
+  });
+
+  it("should refuse a second claimer when a task is already claimed", async () => {
+    const { children } = await rootWithChildren("Leaf");
+    await store.claim(children[0].id, AUTHOR);
+    await expect(store.claim(children[0].id, OTHER)).rejects.toThrow(/Already claimed/);
+  });
+
+  it("should end the claim when the task is reported done", async () => {
+    const { children } = await rootWithChildren("Leaf");
+    const id = children[0].id;
+    await store.markLeaf(id, { type: "agent", done_check: "Done?" }, AUTHOR);
+    await store.claim(id, AUTHOR);
+    const { node } = await store.report(id, { outcome: "done" }, AUTHOR);
+    expect(node.claimed_by).toBeNull();
+    expect((await store.focus(id)).claims[0].end_reason).toBe("done");
+  });
+});
+
+describe("duration and requirements", () => {
+  const leaf = (title: string) => ({ title });
+
+  it("should store a leaf's duration and requirements when it is marked as a leaf", async () => {
+    const { children } = await rootWithChildren("Email the clerk");
+    const node = await store.markLeaf(
+      children[0].id,
+      {
+        ...humanLeaf,
+        duration: "15m",
+        requirements: [
+          { kind: "language", value: "Dutch" },
+          { kind: "money", value: "postage", amount: 2, unit: "EUR" },
+        ],
+      },
+      AUTHOR
+    );
+    expect(node.duration_minutes).toBe(15);
+    expect(node.requirements).toEqual([
+      { kind: "language", value: "Dutch", amount: null, unit: null },
+      { kind: "money", value: "postage", amount: 2, unit: "EUR" },
+    ]);
+  });
+
+  it("should replace the requirement list when it is updated", async () => {
+    const { children } = await rootWithChildren("Task");
+    const id = children[0].id;
+    await store.update(id, { requirements: [{ kind: "skill", value: "writing" }] }, AUTHOR);
+    const node = await store.update(id, { requirements: [] }, AUTHOR);
+    expect(node.requirements).toEqual([]);
+  });
+
+  it("should filter the executor view by duration, cost, requirement text and excluded kinds", async () => {
+    const root = await store.createRoot({ title: "Root" }, AUTHOR);
+    const { children } = await store.split(
+      root.id,
+      {
+        hypothesis: "h",
+        children: [leaf("Quick Dutch email"), leaf("Day trip by car"), leaf("Unestimated")],
+      },
+      AUTHOR
+    );
+    const [quick, trip, unknown] = children.map((n) => n.id);
+    await store.markLeaf(
+      quick,
+      { ...humanLeaf, duration: "15m", requirements: [{ kind: "language", value: "Dutch" }] },
+      AUTHOR
+    );
+    await store.markLeaf(
+      trip,
+      {
+        ...humanLeaf,
+        duration: "day",
+        requirements: [
+          { kind: "material", value: "a car" },
+          { kind: "money", value: "fuel", amount: 40, unit: "EUR" },
+        ],
+      },
+      AUTHOR
+    );
+    await store.markLeaf(unknown, humanLeaf, AUTHOR);
+    const ids = async (opts: Parameters<Store["view"]>[1]) =>
+      (await store.view("executor", opts)).map((n) => n.id);
+
+    expect(await ids({ maxDuration: "1h" })).toEqual([quick]);
+    expect(await ids({ maxCost: 10 })).toEqual([quick, unknown]);
+    expect(await ids({ requirement: "dutch" })).toEqual([quick]);
+    expect(await ids({ excludeKinds: ["material"] })).toEqual([quick, unknown]);
+  });
+
+  it("should sum the open leaves' estimates when a parent is focused", async () => {
+    const { root, children } = await rootWithChildren("A", "B", "C");
+    await store.markLeaf(children[0].id, { ...humanLeaf, duration: "1h" }, AUTHOR);
+    await store.markLeaf(children[1].id, { ...humanLeaf, duration: "half_day" }, AUTHOR);
+    await store.markLeaf(children[2].id, humanLeaf, AUTHOR);
+    expect((await store.focus(root.id)).estimate).toEqual({
+      open_leaf_minutes: 300,
+      open_leaves: 3,
+      unestimated_leaves: 1,
+    });
   });
 });
 

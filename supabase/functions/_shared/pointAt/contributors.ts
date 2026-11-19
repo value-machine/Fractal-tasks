@@ -1,5 +1,5 @@
 import type { Db } from "./db.ts";
-import { ProcessError } from "./store.ts";
+import { ProcessError } from "./processError.ts";
 
 /**
  * Contributor identity: personal agent tokens that tie an MCP write to a signed-in person.
@@ -42,7 +42,8 @@ export async function createAgentToken(
   input: { userId: string; displayName: string; name: string }
 ): Promise<{ token: string; record: AgentTokenRecord }> {
   const name = input.name.trim();
-  if (!name) throw new ProcessError("Give the token a name, such as the agent or device it is for.");
+  if (!name)
+    throw new ProcessError("Give the token a name, such as the agent or device it is for.");
   return db.transaction(async (tx) => {
     await tx.query(
       `insert into contributors (user_id, display_name) values ($1, $2)

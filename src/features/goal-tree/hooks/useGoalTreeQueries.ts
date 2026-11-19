@@ -5,7 +5,7 @@ import {
   fetchGoalRoots,
   searchGoals,
 } from "@/features/goal-tree/services/goalTreeApiService";
-import type { GoalRole } from "@/features/goal-tree/types/goalTree.types";
+import type { GoalRole, GoalWorkFilters } from "@/features/goal-tree/types/goalTree.types";
 
 /** Hierarchical query keys: [resource, subResource, ...params]. */
 export const goalTreeKeys = {
@@ -13,7 +13,8 @@ export const goalTreeKeys = {
   roots: () => [...goalTreeKeys.all, "roots"] as const,
   node: (id: string) => [...goalTreeKeys.all, "node", id] as const,
   search: (query: string) => [...goalTreeKeys.all, "search", query] as const,
-  roleView: (role: GoalRole) => [...goalTreeKeys.all, "role-view", role] as const,
+  roleView: (role: GoalRole, filters: GoalWorkFilters = {}) =>
+    [...goalTreeKeys.all, "role-view", role, filters] as const,
 };
 
 /** Read-only data: agents change it elsewhere, so refetch on focus and keep staleness short. */
@@ -42,9 +43,11 @@ export const useGoalSearch = (query: string) =>
     staleTime: GOAL_TREE_STALE_MS,
   });
 
-export const useGoalRoleView = (role: GoalRole) =>
+/** Work for a role, narrowed by what it takes; keeps the last list while a new filter loads. */
+export const useGoalRoleView = (role: GoalRole, filters: GoalWorkFilters = {}) =>
   useQuery({
-    queryKey: goalTreeKeys.roleView(role),
-    queryFn: () => fetchGoalRoleView(role),
+    queryKey: goalTreeKeys.roleView(role, filters),
+    queryFn: () => fetchGoalRoleView(role, filters),
+    placeholderData: keepPreviousData,
     staleTime: GOAL_TREE_STALE_MS,
   });

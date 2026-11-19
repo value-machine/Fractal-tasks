@@ -1,4 +1,11 @@
-import type { GoalRole, GoalStatus } from "@/features/goal-tree/types/goalTree.types";
+import type {
+  GoalDuration,
+  GoalRelation,
+  GoalRelationType,
+  GoalRequirement,
+  GoalRole,
+  GoalStatus,
+} from "@/features/goal-tree/types/goalTree.types";
 
 /** Display names for statuses. */
 export const GOAL_STATUS_LABELS: Record<GoalStatus, string> = {
@@ -49,6 +56,48 @@ export const describeGoalEvent = (type: string, verdict: string | null): string 
   if (type === "review") return verdict === "accept" ? "accepted the split" : "rejected the split";
   return EVENT_LABELS[type] ?? type;
 };
+
+/** Duration buckets for the filter, shortest first, with the minutes they stand for. */
+export const GOAL_DURATION_OPTIONS: { value: GoalDuration; minutes: number; label: string }[] = [
+  { value: "15m", minutes: 15, label: "15 minutes" },
+  { value: "1h", minutes: 60, label: "An hour" },
+  { value: "half_day", minutes: 240, label: "Half a day" },
+  { value: "day", minutes: 480, label: "A day" },
+  { value: "days", minutes: 2400, label: "Several days" },
+];
+
+/** "About an hour" for a stored estimate; null when there is none. */
+export const describeGoalDuration = (minutes: number | null): string | null => {
+  const option = GOAL_DURATION_OPTIONS.find((o) => o.minutes === minutes);
+  if (!option) return null;
+  return option.value === "days" ? "Several days" : `Up to ${option.label.toLowerCase()}`;
+};
+
+/** Rough total for many leaves: minutes under an hour, hours under a working day, else days. */
+export const describeGoalMinutes = (minutes: number): string => {
+  if (minutes < 60) return `${minutes} minutes`;
+  if (minutes < 480) return `${Math.round(minutes / 60)} hours`;
+  return `${Math.round(minutes / 480)} working days`;
+};
+
+/** "Dutch (language)", "fuel: 40 EUR (money)". */
+export const describeGoalRequirement = (req: GoalRequirement): string => {
+  const amount = req.amount === null ? "" : `: ${req.amount}${req.unit ? ` ${req.unit}` : ""}`;
+  return `${req.value}${amount} (${req.kind})`;
+};
+
+/** How a relation reads from the focused goal: "Blocked by", "Blocks", ... */
+const RELATION_PHRASES: Record<GoalRelationType, { out: string; in: string }> = {
+  blocked_by: { out: "Blocked by", in: "Blocks" },
+  also_serves: { out: "Also serves", in: "Served by" },
+  alternative_to: { out: "Alternative to", in: "Alternative to" },
+  replaces: { out: "Replaces", in: "Replaced by" },
+  duplicate_of: { out: "Duplicate of", in: "Has duplicate" },
+  related_to: { out: "Related to", in: "Related to" },
+};
+
+export const describeGoalRelation = (relation: GoalRelation): string =>
+  RELATION_PHRASES[relation.type][relation.direction];
 
 /** Whether a status counts as closed for progress purposes. */
 export const isGoalClosed = (status: GoalStatus): boolean =>

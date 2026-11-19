@@ -22,7 +22,7 @@ Base URL: `https://<ref>.supabase.co/functions/v1/point-at`. Browser calls send 
 | GET    | `/api/process`               | The process document as `text/plain`                                                           |
 | GET    | `/api/me/tokens`             | The signed-in person's agent tokens (no secrets), newest first                                 |
 | POST   | `/api/me/tokens`             | `{ token, record }` for body `{ name }`; the token is shown only here                          |
-| DELETE | `/api/me/tokens/:id`         | The revoked token's record                                                                      |
+| DELETE | `/api/me/tokens/:id`         | The revoked token's record                                                                     |
 | ALL    | `/mcp`                       | MCP streamable HTTP, stateless, JSON responses                                                 |
 
 `NodeSummary` is a `nodes` row plus `child_count` and `done_child_count`. Errors are JSON `{ "error": "..." }`: unknown node (or malformed id) is 404, a bad role is 400, a non-GET on the read API is 405, `/api/me/*` without a valid Supabase session is 401 (the browser sends the person's session token as `authorization` there, checked against Supabase Auth), a refused token request is 400 (no name, 20 active tokens) or 404 (not your token), anything unexpected is 500 with a generic message (details go to the function logs). CORS allows `GET`/`POST`/`DELETE`/`OPTIONS` from any origin with headers `apikey`, `authorization`, `content-type`, `x-point-at-actor`.
@@ -34,8 +34,10 @@ Every write is attributed to the person the agent logged in as, recorded as `<na
 - **Agent login** (OAuth, recommended): the access token Supabase Auth issues after the person approves the agent tool on `/oauth/consent`.
 - **Personal agent token** (`pa_…`, created on the site at `/agents`), for tools that cannot log in. Revoked tokens get 401. Logic and tests: `supabase/functions/_shared/pointAt/contributors.ts`.
 
-- Read: `read_process`, `list_roots`, `focus_node` (node, root, depth, ancestors with their split hypotheses, siblings, its own split author and review state, children, grandchildren, links, events; empty fields left out), `next_tasks` (role `donor` or `executor`; donor rows carry a `kind`: `review`, `replan`, `split`, `run`, `refine`, and the same `kind` filters the view), `search_nodes`, `review_stats` (also at `GET /api/stats/reviews?label=`). Resource: `pointat://process`.
-- Write: `create_root`, `split_node`, `adopt_roots` (place existing roots under a node as a reviewed split; only roots move, loops are refused), `mark_leaf`, `update_node`, `claim_node`, `release_node`, `report`, `mark_overtaken`, `review_split`, `link_nodes`, `add_dependency` (a node needs another closed first; a leaf with an open dependency is left out of `next_tasks` and the Actions view; loops are refused).
+- Read: `read_process`, `list_roots`, `focus_node` (node, root, depth, ancestors with their split hypotheses, siblings, its own split author and review state, typed relations, children, grandchildren, the estimate of open leaves below it, claim history, events; empty fields left out), `next_tasks` (role `donor` or `executor`; donor rows carry a `kind`: `review`, `replan`, `split`, `run`, `refine`, and the same `kind` filters the view; both roles filter on `max_duration`, `max_cost`, `requirement` and `exclude_kinds`), `search_nodes`, `review_stats` (also at `GET /api/stats/reviews?label=`). Resource: `pointat://process`.
+- Write: `create_root`, `split_node`, `adopt_roots` (place existing roots under a node as a reviewed split; only roots move, loops are refused), `mark_leaf`, `update_node` (both also set `duration` and `requirements`), `claim_node`, `release_node`, `report`, `mark_overtaken`, `review_split`, `relate_nodes` / `unrelate_nodes` (typed relations: `blocked_by`, `also_serves`, `alternative_to`, `replaces`, `duplicate_of`, `related_to`; a task blocked by an open task is left out of `next_tasks` and the Actions view; `blocked_by` loops are refused).
+
+Data: relations live in `node_relations` (`relations.ts`), claims and their history in `node_assignments` (`assignments.ts`), duration and requirements in `nodes.duration_minutes` and `node_requirements` (`taskDetails.ts`). The web API's `GET /api/views/:role` takes the same filters as query parameters: `max_duration`, `max_cost`, `requirement`, `exclude` (comma-separated kinds).
 
 ## Deploy
 
@@ -54,7 +56,7 @@ An Edge Function has no staging: a deploy affects production and every preview a
 
 ## Automated rule tests
 
-`supabase/functions/_shared/pointAt/store.test.ts` tests the process rules (roots, leaves and splits, claims and reports, review, dependencies) against an in-process Postgres (PGlite, `pgliteDb.ts`) built from the Point At migrations. The shared Supabase project is never touched. They run in `pnpm test:run`, so CI runs them on every PR. Add a test here for every new rule before building it; `it.todo` entries list known gaps.
+`supabase/functions/_shared/pointAt/store.test.ts` tests the process rules (roots, leaves and splits, claims and their history, reports, review, relations, duration and requirements) against an in-process Postgres (PGlite, `pgliteDb.ts`) built from the Point At migrations. The shared Supabase project is never touched. They run in `pnpm test:run`, so CI runs them on every PR. Add a test here for every new rule before building it; `it.todo` entries list known gaps.
 
 ## Manual test procedure
 

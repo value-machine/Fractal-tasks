@@ -20,7 +20,7 @@ This is a living document. Resolved questions move into DOC_POINT_AT_PROCESS.md 
 ### Structure and lenses
 - **Adversarial traversal:** adversarial agents should continually walk existing goals, subgoals and tasks and debate whether each is actually needed, so the system does not lock in on nodes that would be argued away with real scrutiny. Open: when they run, how a node is challenged, and what it takes to close or keep it.
 - How topic lenses are defined later: free labels, a curated set, or embedding clusters. (Role views are decided: see DOC_POINT_AT_PROCESS.md 2.3.)
-- How "also serves" links are created and validated.
+- How relations ("also serves", "alternative to", ...) are created and validated; only `blocked_by` has a rule (no loops).
 - How assumptions on a split are recorded so they can be checked mechanically.
 - Which actions should stay with humans regardless of capability, if any?
 - Which verification level does each kind of downstream step require?

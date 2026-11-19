@@ -5,7 +5,7 @@ import type {
   GoalNodeSummary,
   GoalNodeWithChildren,
 } from "@/features/goal-tree/types/goalTree.types";
-import { isGoalClosed } from "@/features/goal-tree/types/goalTreeLabels";
+import { describeGoalDuration, isGoalClosed } from "@/features/goal-tree/types/goalTreeLabels";
 import {
   GoalLeafPill,
   GoalProgress,
@@ -73,6 +73,9 @@ export const GoalTile = ({ node }: { node: GoalNodeWithChildren | GoalNodeSummar
           <GoalLeafPill leafType={node.leaf_type} />
           <GoalProgress closed={node.done_child_count} total={node.child_count} />
           {notSplit && <span>Not split yet</span>}
+          {node.duration_minutes !== null && (
+            <span>{describeGoalDuration(node.duration_minutes)}</span>
+          )}
           {node.claimed_by && <span>Claimed by {node.claimed_by}</span>}
         </div>
       </Card>

@@ -56,7 +56,7 @@ export async function createMigratedPglite(): Promise<{ db: Db; reset: () => Pro
   );
   const reset = async () => {
     await pg.exec(
-      "truncate agent_tokens, contributors, node_splits, node_dependencies, node_links, node_events, nodes restart identity cascade"
+      "truncate agent_tokens, contributors, node_requirements, node_assignments, node_relations, node_splits, node_events, nodes restart identity cascade"
     );
   };
   return { db, reset };

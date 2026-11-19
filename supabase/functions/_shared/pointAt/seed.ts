@@ -169,10 +169,13 @@ export async function seed(store: Store): Promise<boolean> {
     },
     tom
   );
-  await store.link(
-    summary.id,
-    ubi.id,
-    "Residents' concerns about income feed the pilot design.",
+  await store.relate(
+    {
+      fromId: summary.id,
+      toId: ubi.id,
+      type: "also_serves",
+      note: "Residents' concerns about income feed the pilot design.",
+    },
     tom
   );
   return true;

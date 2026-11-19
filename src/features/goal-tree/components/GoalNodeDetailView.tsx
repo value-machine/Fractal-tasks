@@ -4,7 +4,7 @@ import { isGoalClosed } from "@/features/goal-tree/types/goalTreeLabels";
 import { Link } from "react-router-dom";
 import type { GoalAncestor } from "@/features/goal-tree/types/goalTree.types";
 import { GoalNodeFrame } from "@/features/goal-tree/components/GoalNodeFrame";
-import { GoalEventLog, GoalLinkList } from "@/features/goal-tree/components/GoalSidePanels";
+import { GoalEventLog, GoalRelationList } from "@/features/goal-tree/components/GoalSidePanels";
 import { GoalTile } from "@/features/goal-tree/components/GoalTile";
 
 const crumbClassName =
@@ -75,17 +75,17 @@ const SubtaskSection = ({ detail }: { detail: GoalNodeDetail }) => {
   );
 };
 
-/** Focus page body: breadcrumbs, the goal, its subtask tiles, links and history. */
+/** Focus page body: breadcrumbs, the goal, its subtask tiles, relations and history. */
 export const GoalNodeDetailView = ({ detail }: { detail: GoalNodeDetail }) => (
   <>
     <GoalBreadcrumbs ancestors={detail.ancestors} />
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div>
-        <GoalNodeFrame node={detail.node} />
+        <GoalNodeFrame node={detail.node} estimate={detail.estimate} />
         <SubtaskSection detail={detail} />
       </div>
       <aside className="grid gap-4">
-        <GoalLinkList links={detail.links} />
+        <GoalRelationList relations={detail.relations} />
         <GoalEventLog events={detail.events} />
       </aside>
     </div>

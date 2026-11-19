@@ -6,6 +6,29 @@
 export type GoalStatus = "proposed" | "reviewed" | "in_progress" | "done" | "overtaken";
 export type GoalLeafType = "agent" | "human";
 export type GoalRole = "donor" | "executor";
+export type GoalRequirementKind =
+  | "skill"
+  | "material"
+  | "money"
+  | "location"
+  | "language"
+  | "access";
+/** Duration buckets the agent tools accept; stored as their upper bound in minutes. */
+export type GoalDuration = "15m" | "1h" | "half_day" | "day" | "days";
+export type GoalRelationType =
+  | "blocked_by"
+  | "also_serves"
+  | "alternative_to"
+  | "replaces"
+  | "duplicate_of"
+  | "related_to";
+
+export interface GoalRequirement {
+  kind: GoalRequirementKind;
+  value: string;
+  amount: number | null;
+  unit: string | null;
+}
 
 export interface GoalNode {
   id: string;
@@ -25,6 +48,9 @@ export interface GoalNode {
   labels: string[];
   claimed_by: string | null;
   claimed_at: string | null;
+  /** Estimated time as the upper bound of its bucket (15, 60, 240, 480 or 2400 minutes). */
+  duration_minutes: number | null;
+  requirements: GoalRequirement[];
   verification_level: number | null;
   overtaken_note: string | null;
   unclear_reason: string | null;
@@ -62,10 +88,21 @@ export interface GoalAncestor {
   status: GoalStatus;
 }
 
-export interface GoalLink {
+/** A typed relation as seen from the focused goal ("out": the focused goal is the subject). */
+export interface GoalRelation {
+  type: GoalRelationType;
+  direction: "out" | "in";
   id: string;
   title: string;
+  status: GoalStatus;
   note: string | null;
+}
+
+/** Total estimated time of the open leaves below a goal. */
+export interface GoalEstimate {
+  open_leaf_minutes: number;
+  open_leaves: number;
+  unestimated_leaves: number;
 }
 
 export interface GoalNodeDetail {
@@ -73,7 +110,16 @@ export interface GoalNodeDetail {
   ancestors: GoalAncestor[];
   children: GoalNodeWithChildren[];
   events: GoalEvent[];
-  links: { also_serves: GoalLink[]; served_by: GoalLink[] };
+  relations: GoalRelation[];
+  estimate: GoalEstimate | null;
+}
+
+/** Filters on what the work takes, for the role views. */
+export interface GoalWorkFilters {
+  maxDuration?: GoalDuration;
+  /** 0 means: only tasks that need no money. */
+  maxCost?: number;
+  requirement?: string;
 }
 
 /** A role-view row: a summary with an optional reason it is waiting for that role. */

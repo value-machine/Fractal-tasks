@@ -17,7 +17,7 @@ Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:rol
 
 ## Dependencies
 
-- Edge Function `point-at` (`supabase/functions/point-at`): `GET /api/roots`, `/api/nodes/:id`, `/api/search?q=`, `/api/views/:role`; MCP at `/mcp`. Called with the publishable key via `getEdgeFunctionConfig` in `src/shared/services/supabaseService.ts`. Every call (and the MCP URL shown in the hint) adds `forceFunctionRegion=eu-west-1`, so the function runs next to its database; unpinned, each query crosses regions and a goal page took about 4x longer (measured 2026-11-08).
+- Edge Function `point-at` (`supabase/functions/point-at`): `GET /api/roots`, `/api/nodes/:id`, `/api/search?q=`, `/api/views/:role` (with `max_duration`, `max_cost`, `requirement` filters); MCP at `/mcp`. Called with the publishable key via `getEdgeFunctionConfig` in `src/shared/services/supabaseService.ts`. Every call (and the MCP URL shown in the hint) adds `forceFunctionRegion=eu-west-1`, so the function runs next to its database; unpinned, each query crosses regions and a goal page took about 4x longer (measured 2026-11-08).
 - Kit components `Card`, `Badge`, `Alert`, `Input`, `PageLoadingState`; `formatRelativeTime` from `src/shared/utils/`; `react-router-dom`, `@tanstack/react-query`.
 - Colors come only from theme tokens (`success`, `warning`, `info`, `primary`, `muted`).
 
@@ -30,3 +30,6 @@ Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:rol
 - Adoptions (`adopt_roots`) need no UI of their own: an adopted root disappears from the roots list and shows under its new parent, and its event reads "placed it under a bigger goal".
 - Long words (titles without spaces, URLs) wrap through the global `overflow-wrap: anywhere` on `body` in `src/index.css`, not per component.
 - Lists (tiles, rows) cut a title off after 3 lines with the full text on hover; the goal's own page shows it in full.
+- Relations show in one "Related goals" panel, each line worded from the focused goal ("Blocked by", "Blocks", "Also serves", ...). The graph view that draws them as lines is the next lap.
+- The role views filter on time (up to half a day; longer tasks stay under "Any time"), "No money needed" and a "Needs…" text that applies on Enter, like the site search. Tasks without a time estimate are left out when filtering on time, and the empty state says so.
+- The filter bar lives in the role-view page (`GoalRoleViewPage.tsx`): it is page-only UI and the components folder is at its file budget.
