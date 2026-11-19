@@ -3,7 +3,7 @@
 // Run `node scripts/sync-process-doc.mjs` whenever that document changes.
 export const PROCESS_DOC = `# The Process
 
-Version: 0.6 (draft)
+Version: 0.7 (draft)
 This is a living document. It is refined through critique passes, and every change is recorded in the change log at the bottom.
 
 This document describes the single recursive unit used at every scale, from "make a sandwich this morning" to "achieve world peace".
@@ -26,7 +26,7 @@ Every node except a root has exactly one **parent it was split from**. Together 
 
 - **Top:** flexible. Any task can be a root, whatever its size, including tasks of unknown size.
 - **Bottom:** fixed by the leaf definition in section 3.
-- **Roots can be adopted.** When investigation shows that a root is part of a bigger goal, the bigger goal's node adopts it as a child. Adopting is a split: it records its own hypothesis and is reviewed like any other split. Only a root can be adopted, because a node that already has a parent never moves. If a node only also contributes to another goal, use an "also serves" link instead (2.3).
+- **Roots can be adopted.** When investigation shows that a root is part of a bigger goal, the bigger goal's node adopts it as a child. Adopting is a split: it records its own hypothesis and is reviewed like any other split. Only a root can be adopted, because a node that already has a parent never moves. If a node only also contributes to another goal, use an "also serves" relation instead (2.4).
 - **No global depth limit.** Depth is unlimited. Only local rules decide when splitting stops (section 4). This is what makes the structure truly fractal, unlike existing tools that cap depth.
 
 ### 2.2 No cycles
@@ -40,7 +40,7 @@ On top of the split-from tree, nodes can be viewed through any number of **lense
 **Role views come first.** The primary lenses are views by role, built into the system as saved database queries on fields every node already carries (status, agent or human leaf, claimed or not):
 
 - **Token donors** see open thinking work: nodes waiting to be split, agent leaves to run, and splits waiting for review.
-- **Executors** see ready, unclaimed human leaves, optionally filtered by language, location or skills.
+- **Executors** see ready, unclaimed human leaves, optionally filtered by how long they take and what they need (3.5): no money, a language, a place, a skill.
 
 Topic lenses such as "health" or "economic security" come later. Examples of other lenses:
 
@@ -48,7 +48,22 @@ Topic lenses such as "health" or "economic security" come later. Examples of oth
 - region, actor type, cost, or urgency
 - clusters found automatically from embeddings of node content
 
-A node can carry many labels. Choosing a lens selects and regroups nodes, so the same tasks form a different graph depending on the dimension you look along. A node can also carry **"also serves"** links to nodes in other branches. These give credit across goals but never drive splitting, so they cannot create cycles.
+A node can carry many labels. Choosing a lens selects and regroups nodes, so the same tasks form a different graph depending on the dimension you look along.
+
+### 2.4 Relations
+
+Besides the split-from tree, any two tasks can be related. A relation has a type and reads "this task *type* that task":
+
+| Type | Meaning | Rule |
+|---|---|---|
+| blocked by | This task cannot start before the other is done or overtaken | Blocked tasks are left out of the role views until then. Loops are refused. |
+| also serves | This task also contributes to another goal | Credit across goals; never drives splitting |
+| alternative to | Either task reaches the same result | Once one is done, the other can be closed as overtaken |
+| replaces | A re-plan: this task takes over from the other | |
+| duplicate of | The same task was created twice | Close the duplicate as overtaken |
+| related to | A loose link | None |
+
+Relations never change the split-from tree, so they cannot break its stopping and hypothesis rules. Each type can be shown as its own kind of line between tasks.
 
 ## 3. The leaf
 
@@ -60,6 +75,10 @@ A node is a **leaf** when the actor who would execute it, either an agent or the
 - **Human leaf:** the agent has done all the thinking but lacks the capability to act, for example because the step needs an email account, a sign-in, or a real-world presence. The agent hands the human a precise instruction. The human acts and reports back into the system.
 
 Agents do the complex knowledge work (analysis, drafting, structuring). Human leaves are concrete actions such as "send this message to this person".
+
+### 3.5 Duration and requirements
+
+A leaf can say how long it takes, as a rough bucket (15 minutes, an hour, half a day, a day, several days), and what it needs: a skill, material, money, a location, a language or access. Both let people find work they can actually do. A higher node shows the total estimate of the open leaves below it instead of its own guess.
 
 ### 3.2 Where the handoff line sits
 
@@ -162,6 +181,12 @@ What this project adds: no depth cap, decomposition on focus, lenses, human leav
 ---
 
 ## Change log
+
+### 0.7: relations, duration and requirements (2026-11-19)
+- Typed relations between tasks (2.4): blocked by, also serves, alternative to, replaces, duplicate of, related to. "Also serves" links and "needs first" dependencies became two of these types.
+- Leaves can carry a duration bucket and requirements (3.5); executors can filter on them.
+- A claim is kept as history (who held a task, from when to when, and why it ended) instead of only the current claimer.
+- Blocked tasks are also left out of the donor view, not only blocked leaves: how to split them usually depends on what the blocking task finds (first trial run, citizens' panel goal).
 
 ### 0.6: hard limits removed (2026-11-11)
 - Removed the fixed list of hard limits that every split had to name and reviewers checked first. It came in with the first concept draft and was never an owner decision.

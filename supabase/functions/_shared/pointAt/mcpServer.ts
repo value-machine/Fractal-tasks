@@ -3,7 +3,9 @@ import { z } from "npm:zod@4.6.7";
 
 import { actorFor } from "./contributors.ts";
 import { PROCESS_DOC } from "./processDoc.ts";
+import { RELATION_MEANING, RELATION_TYPES } from "./relations.ts";
 import { ProcessError, type Store } from "./store.ts";
+import { DURATION_NAMES, REQUIREMENT_KINDS } from "./taskDetails.ts";
 
 const INSTRUCTIONS = `Point At is a shared tree of tasks, from huge goals (world peace, universal basic income) down to concrete actions a person or agent can do in one turn.
 
@@ -21,6 +23,39 @@ const actorField = z
     'Which agent is acting, e.g. "Claude Code". The write is always attributed to the person your agent logged in as; this only names the agent. Defaults to the x-point-at-actor header.'
   );
 
+const duration = z
+  .enum(DURATION_NAMES)
+  .nullable()
+  .optional()
+  .describe(
+    'Estimated time for whoever does it: "15m", "1h", "half_day", "day" or "days". Set it on leaves; null clears it.'
+  );
+
+const requirements = z
+  .array(
+    z.object({
+      kind: z.enum(REQUIREMENT_KINDS),
+      value: z
+        .string()
+        .trim()
+        .min(1)
+        .max(200)
+        .describe('What exactly, e.g. "Dutch", "a car", "Utrecht", "council meeting access".'),
+      amount: z.number().min(0).optional().describe("For money and materials: how much."),
+      unit: z.string().optional().describe('For money and materials: e.g. "EUR", "kg".'),
+    })
+  )
+  .optional()
+  .describe(
+    "What the task needs: skills, materials, money, a location, a language or access. Replaces the whole list; [] clears it."
+  );
+
+const relationType = z.enum(RELATION_TYPES).describe(
+  Object.entries(RELATION_MEANING)
+    .map(([type, m]) => `"${type}": from ${m.out} to. ${m.rule}`)
+    .join(" ")
+);
+
 const newNode = z.object({
   title: z.string().trim().min(3).max(300).describe("What exactly this node tries to achieve."),
   done_check: z.string().optional().describe("Yes/no check that shows it worked."),
@@ -29,6 +64,8 @@ const newNode = z.object({
     .optional()
     .describe("The next concrete action a human or agent could take."),
   labels: z.array(z.string()).optional().describe('Lens labels, e.g. ["health", "Utrecht"].'),
+  duration,
+  requirements,
 });
 
 /**
@@ -38,6 +75,8 @@ const newNode = z.object({
  */
 export interface McpIdentity {
   contributor?: string;
+  /** The contributor's account, so claims point at the person, not only at a name. */
+  userId?: string;
   defaultActor?: string;
 }
 
@@ -114,7 +153,8 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
       title: "Focus on a node",
       description:
         "Returns a node with its root and depth, its ancestors with each split's hypothesis (why every level exists), " +
-        'its siblings, the review state of its own split, the hypothesis of every earlier split, what it needs first and what waits for it, children and grandchildren, "also serves" links and recent events. ' +
+        "its siblings, the review state of its own split, the hypothesis of every earlier split, its typed relations (blocked by, also serves, alternatives, ...), " +
+        "children and grandchildren, the total estimated time of its open leaves, who claimed it over time and recent events. " +
         "Empty fields are left out. " +
         "Before acting, check it is still true and still needed.",
       inputSchema: { id: z.string().uuid() },
@@ -134,6 +174,25 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
         role: z.enum(["donor", "executor"]),
         label: z.string().optional().describe("Only nodes with this lens label."),
         query: z.string().optional().describe("Only nodes matching this text."),
+        max_duration: z
+          .enum(DURATION_NAMES)
+          .optional()
+          .describe(
+            "Only tasks estimated at or under this; tasks without an estimate are left out."
+          ),
+        max_cost: z
+          .number()
+          .min(0)
+          .optional()
+          .describe("Only tasks whose money requirements add up to at most this amount."),
+        requirement: z
+          .string()
+          .optional()
+          .describe('Only tasks with a requirement mentioning this, e.g. "Utrecht" or "Dutch".'),
+        exclude_kinds: z
+          .array(z.enum(REQUIREMENT_KINDS))
+          .optional()
+          .describe('Leave out tasks needing any of these, e.g. ["money", "material"].'),
         limit: z.number().int().min(1).max(100).optional(),
         kind: z
           .enum(["refine", "run", "replan", "review", "split"])
@@ -144,8 +203,17 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
       },
       annotations: { readOnlyHint: true },
     },
-    ({ role, label, query, limit, kind }) =>
-      run(async () => withoutNulls(await store.view(role, { label, query, limit, kind })))
+    ({ role, max_duration, max_cost, exclude_kinds, ...opts }) =>
+      run(async () =>
+        withoutNulls(
+          await store.view(role, {
+            ...opts,
+            maxDuration: max_duration,
+            maxCost: max_cost,
+            excludeKinds: exclude_kinds,
+          })
+        )
+      )
   );
 
   server.registerTool(
@@ -211,7 +279,7 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
         "When investigation shows existing root goals are part of a bigger goal, make them children of that node. " +
         "Recorded as a split with its own hypothesis (why completing the adopted goals, with any other children, completes this node), " +
         "so it goes to adversarial review like any split. Only roots can be adopted; a node that already has a parent never moves, and loops are refused. " +
-        "To give credit across goals without changing the tree, use link_nodes instead.",
+        "To give credit across goals without changing the tree, use relate_nodes with also_serves instead.",
       inputSchema: {
         id: z.string().uuid().describe("The node that adopts the roots."),
         root_ids: z.array(z.string().uuid()).min(1).describe("The roots to place under it."),
@@ -242,6 +310,8 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
           .string()
           .optional()
           .describe("Human leaf: the channel, and the deadline if there is one."),
+        duration,
+        requirements,
         actor: actorField,
       },
     },
@@ -253,7 +323,7 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
     {
       title: "Update a node",
       description:
-        "Re-plan a node whose facts changed: edit its title, done check, next action or labels. Pass leaf_type: null to unmark a leaf so it can be split; this also releases any claim on it.",
+        "Re-plan a node whose facts changed: edit its title, done check, next action, labels, duration or requirements. Pass leaf_type: null to unmark a leaf so it can be split; this also releases any claim on it.",
       inputSchema: {
         id: z.string().uuid(),
         title: z.string().trim().min(3).max(300).optional(),
@@ -261,6 +331,8 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
         next_action: z.string().nullable().optional(),
         labels: z.array(z.string()).optional(),
         leaf_type: z.null().optional(),
+        duration,
+        requirements,
         actor: actorField,
       },
     },
@@ -274,7 +346,7 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
       description: "Claim a node before working on it so nobody duplicates the work.",
       inputSchema: { id: z.string().uuid(), actor: actorField },
     },
-    ({ id, actor }) => run(() => store.claim(id, who(actor)))
+    ({ id, actor }) => run(() => store.claim(id, who(actor), identity.userId))
   );
 
   server.registerTool(
@@ -336,37 +408,38 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
   );
 
   server.registerTool(
-    "link_nodes",
+    "relate_nodes",
     {
-      title: "Link related nodes",
+      title: "Relate two tasks",
       description:
-        "Record that one node also serves another goal in a different branch. Links give credit across goals but never drive splitting.",
+        'Record a typed relation between two tasks, read as "from <type> to", beside the split tree. ' +
+        'Use "blocked_by" when from cannot start before to is closed; blocked tasks are left out of next_tasks until then.',
       inputSchema: {
         from_id: z.string().uuid(),
         to_id: z.string().uuid(),
-        note: z.string().optional(),
+        type: relationType,
+        note: z.string().optional().describe("Why they are related."),
         actor: actorField,
       },
     },
-    ({ from_id, to_id, note, actor }) => run(() => store.link(from_id, to_id, note, who(actor)))
+    ({ from_id, to_id, type, note, actor }) =>
+      run(() => store.relate({ fromId: from_id, toId: to_id, type, note }, who(actor)))
   );
 
   server.registerTool(
-    "add_dependency",
+    "unrelate_nodes",
     {
-      title: "Record that a node needs another first",
-      description:
-        "Record that node id cannot start until needs_id is closed (done or overtaken), e.g. an outreach leaf that needs its proposal drafted. " +
-        "A leaf with an open dependency is left out of next_tasks until it is ready. Loops are refused.",
+      title: "Remove a relation",
+      description: "Remove a typed relation that turned out wrong or no longer holds.",
       inputSchema: {
-        id: z.string().uuid(),
-        needs_id: z.string().uuid(),
-        note: z.string().optional(),
+        from_id: z.string().uuid(),
+        to_id: z.string().uuid(),
+        type: z.enum(RELATION_TYPES),
         actor: actorField,
       },
     },
-    ({ id, needs_id, note, actor }) =>
-      run(() => store.addDependency({ nodeId: id, needsId: needs_id, note }, who(actor)))
+    ({ from_id, to_id, type, actor }) =>
+      run(() => store.unrelate({ fromId: from_id, toId: to_id, type }, who(actor)))
   );
 
   return server;

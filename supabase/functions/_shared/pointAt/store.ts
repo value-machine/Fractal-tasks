@@ -1,4 +1,30 @@
+import {
+  assignmentHistory,
+  endClaim,
+  OPEN_CLAIM_JOIN,
+  openClaim,
+  type ClaimEndReason,
+} from "./assignments.ts";
 import type { Db } from "./db.ts";
+import { ProcessError } from "./processError.ts";
+import {
+  addRelation,
+  blockedSql,
+  relationsOf,
+  removeRelation,
+  type RelationInput,
+} from "./relations.ts";
+import {
+  estimateBelow,
+  REQUIREMENTS_COLUMN,
+  saveTaskDetails,
+  taskDetailConditions,
+  type Requirement,
+  type TaskDetailFilters,
+  type TaskDetailsInput,
+} from "./taskDetails.ts";
+
+export { ProcessError };
 
 /**
  * Domain operations shared by the MCP server and the web API.
@@ -29,8 +55,12 @@ export interface Node {
   split_assumptions: string | null;
   split_at: string | null;
   labels: string[];
+  /** The open claim (node_assignments), read into the node. */
   claimed_by: string | null;
   claimed_at: string | null;
+  /** Estimated time, as the upper bound of its bucket (taskDetails.ts DURATIONS). */
+  duration_minutes: number | null;
+  requirements: Requirement[];
   verification_level: number | null;
   overtaken_note: string | null;
   unclear_reason: string | null;
@@ -56,13 +86,11 @@ export interface NodeEvent {
   created_at: string;
 }
 
-export class ProcessError extends Error {}
-
 const NODE_COLUMNS = `
   n.id, n.parent_id, n.title, n.done_check, n.next_action, n.status, n.leaf_type,
   n.leaf_who, n.leaf_what, n.leaf_how, n.split_hypothesis, n.split_prediction,
-  n.split_assumptions, n.split_at, n.labels, n.claimed_by, n.claimed_at,
-  n.verification_level, n.overtaken_note, n.unclear_reason, n.created_by,
+  n.split_assumptions, n.split_at, n.labels, claim.claimed_by, claim.claimed_at,
+  n.duration_minutes, ${REQUIREMENTS_COLUMN}, n.verification_level, n.overtaken_note, n.unclear_reason, n.created_by,
   n.created_at, n.updated_at`;
 
 const summarySelect = (extraColumns = "") => `
@@ -70,7 +98,7 @@ const summarySelect = (extraColumns = "") => `
     (select count(*)::int from nodes c where c.parent_id = n.id) as child_count,
     (select count(*)::int from nodes c where c.parent_id = n.id and c.status in ('done','overtaken')) as done_child_count
     ${extraColumns}
-  from nodes n`;
+  from nodes n ${OPEN_CLAIM_JOIN}`;
 const SUMMARY_SELECT = summarySelect();
 
 const CLOSED: Status[] = ["done", "overtaken"];
@@ -80,14 +108,21 @@ const CLOSED: Status[] = ["done", "overtaken"];
  * not split it, so the claim is released with it.
  */
 const UNMARK_LEAF = `, leaf_type = null, leaf_who = null, leaf_what = null, leaf_how = null,
-  claimed_by = null, claimed_at = null,
   status = case when status = 'in_progress' then 'proposed' else status end`;
 
-export interface NewNodeInput {
+export interface NewNodeInput extends TaskDetailsInput {
   title: string;
   done_check?: string | null;
   next_action?: string | null;
   labels?: string[];
+}
+
+/** Role-view filters: lens label, text, and what the work takes (duration, requirements). */
+export interface ViewOptions extends TaskDetailFilters {
+  label?: string;
+  query?: string;
+  limit?: number;
+  kind?: DonorKind;
 }
 
 /** What a split records on its parent (PROCESS.md 6). */
@@ -106,6 +141,54 @@ export interface SplitHistoryEntry {
   child_ids: string[];
   created_by: string | null;
   created_at: string;
+}
+
+/** The latest review of the node's current split rejected it. */
+const REJECTED = `(
+  select e.verdict from node_events e
+  where e.node_id = n.id and e.type = 'review' and e.created_at > n.split_at
+  order by e.created_at desc, e.id desc limit 1
+) = 'reject'`;
+
+/** Donor-view kinds, first match wins; anything else open is "split". */
+const DONOR_CASES: [string, DonorKind, string][] = [
+  [
+    "n.leaf_type = 'human' and n.unclear_reason is not null",
+    "refine",
+    "Bounced back by a human: refine the instruction",
+  ],
+  ["n.leaf_type = 'agent'", "run", "Agent leaf ready to run"],
+  [
+    `n.status = 'proposed' and n.split_at is not null and ${REJECTED}`,
+    "replan",
+    "Split rejected in review: re-plan it",
+  ],
+  [
+    "n.status = 'proposed' and n.split_at is not null",
+    "review",
+    "Split awaiting adversarial review",
+  ],
+];
+const donorCase = (pick: (c: [string, DonorKind, string]) => string, fallback: string) =>
+  `case ${DONOR_CASES.map((c) => `when ${c[0]} then '${pick(c)}'`).join(" ")} else '${fallback}' end`;
+const DONOR_KIND = donorCase((c) => c[1], "split");
+const DONOR_WHY = donorCase((c) => c[2], "Open: confirm as a leaf or split it");
+
+/** Label, text and task-detail filters shared by both role views. */
+function viewConditions(opts: ViewOptions, params: unknown[]): string[] {
+  const conditions = taskDetailConditions(opts, params);
+  if (opts.label) {
+    params.push(opts.label);
+    conditions.push(`$${params.length} = any(n.labels)`);
+  }
+  if (opts.query) {
+    params.push(opts.query);
+    const p = `$${params.length}`;
+    conditions.push(
+      `(n.search @@ websearch_to_tsquery('simple', ${p}) or n.title ilike '%' || ${p} || '%')`
+    );
+  }
+  return conditions;
 }
 
 export class Store {
@@ -291,19 +374,11 @@ export class Store {
     };
   }
 
-  async links(id: string) {
-    const serves = await this.db.query<{ id: string; title: string; note: string | null }>(
-      `select n.id, n.title, l.note from node_links l join nodes n on n.id = l.to_id where l.from_id = $1`,
-      [id]
-    );
-    const servedBy = await this.db.query<{ id: string; title: string; note: string | null }>(
-      `select n.id, n.title, l.note from node_links l join nodes n on n.id = l.from_id where l.to_id = $1`,
-      [id]
-    );
-    return { also_serves: serves, served_by: servedBy };
+  /** Typed relations of the task (blocked by, also serves, ...), both directions. */
+  relations(id: string) {
+    return relationsOf(this.db, id);
   }
 
-  /** Everything needed to focus on a node: the node, where it sits, its children and history. */
   /** Every split of this node, oldest first; the node's split_* fields hold only the latest. */
   async splits(id: string): Promise<SplitHistoryEntry[]> {
     return this.db.query<SplitHistoryEntry>(
@@ -313,15 +388,16 @@ export class Store {
     );
   }
 
+  /** Everything needed to focus on a node: the node, where it sits, its children and history. */
   async focus(id: string) {
-    const [node, ancestors, children, events, links] = await Promise.all([
+    const [node, ancestors, children, events, relations] = await Promise.all([
       this.getNode(id),
       this.ancestors(id),
       this.children(id),
       this.events(id),
-      this.links(id),
+      this.relations(id),
     ]);
-    const [siblings, split, dependencies, splits] = await Promise.all([
+    const [siblings, split, splits, claims, estimate] = await Promise.all([
       node.parent_id
         ? this.db.query<Pick<Node, "id" | "title" | "status" | "leaf_type">>(
             `select id, title, status, leaf_type from nodes
@@ -330,8 +406,9 @@ export class Store {
           )
         : Promise.resolve([]),
       this.splitReview(id, node.split_at),
-      this.dependencies(id),
       this.splits(id),
+      assignmentHistory(this.db, id),
+      node.child_count ? estimateBelow(this.db, id) : Promise.resolve(null),
     ]);
     const grandchildren = children.length
       ? await this.db.query<NodeSummary>(
@@ -347,14 +424,14 @@ export class Store {
       siblings,
       split,
       splits,
-      needs: dependencies.needs,
-      needed_by: dependencies.needed_by,
+      relations,
+      estimate,
+      claims,
       children: children.map((c) => ({
         ...c,
         children: grandchildren.filter((g) => g.parent_id === c.id),
       })),
       events,
-      links,
     };
   }
 
@@ -375,74 +452,42 @@ export class Store {
    */
   async view(
     role: Role,
-    opts: { label?: string; query?: string; limit?: number; kind?: DonorKind } = {}
+    opts: ViewOptions = {}
   ): Promise<(NodeSummary & { why?: string; kind?: DonorKind })[]> {
-    const limit = opts.limit ?? 25;
     const params: unknown[] = [];
-    const filters: string[] = [];
-    if (opts.label) {
-      params.push(opts.label);
-      filters.push(`$${params.length} = any(n.labels)`);
-    }
-    if (opts.query) {
-      params.push(opts.query);
-      filters.push(
-        `(n.search @@ websearch_to_tsquery('simple', $${params.length}) or n.title ilike '%' || $${params.length} || '%')`
-      );
-    }
-    const extra = filters.length ? `and ${filters.join(" and ")}` : "";
+    const extra = viewConditions(opts, params)
+      .map((c) => `and ${c}`)
+      .join(" ");
     let kindFilter = "";
     if (opts.kind && role === "donor") {
       params.push(opts.kind);
       kindFilter = `where v.kind = $${params.length}`;
     }
-    params.push(limit);
+    params.push(opts.limit ?? 25);
     const lim = `$${params.length}`;
 
     if (role === "executor") {
-      const rows = await this.db.query<NodeSummary>(
+      return this.db.query<NodeSummary>(
         `${SUMMARY_SELECT}
          where n.leaf_type = 'human' and n.status not in ('done','overtaken')
-           and n.claimed_by is null and n.unclear_reason is null ${extra}
-           and not exists (
-             select 1 from node_dependencies d join nodes dn on dn.id = d.needs_id
-             where d.node_id = n.id and dn.status not in ('done','overtaken'))
+           and claim.claimed_by is null and n.unclear_reason is null ${extra}
+           and not ${blockedSql("n")}
          order by n.created_at limit ${lim}`,
         params
       );
-      return rows;
     }
 
-    // Token donors: open thinking work.
-    const rejected = `(
-               select e.verdict from node_events e
-               where e.node_id = n.id and e.type = 'review' and e.created_at > n.split_at
-               order by e.created_at desc, e.id desc limit 1
-             ) = 'reject'`;
-    const rows = await this.db.query<NodeSummary & { why: string; kind: DonorKind }>(
+    // Token donors: open thinking work. Blocked tasks are not ready to run or to split yet:
+    // how to split them usually depends on what the blocking task finds.
+    return this.db.query<NodeSummary & { why: string; kind: DonorKind }>(
       `select * from (
-         ${summarySelect(`,
-           case
-             when n.leaf_type = 'human' and n.unclear_reason is not null then 'refine'
-             when n.leaf_type = 'agent' then 'run'
-             when n.status = 'proposed' and n.split_at is not null and ${rejected} then 'replan'
-             when n.status = 'proposed' and n.split_at is not null then 'review'
-             else 'split'
-           end as kind,
-           case
-             when n.leaf_type = 'human' and n.unclear_reason is not null then 'Bounced back by a human: refine the instruction'
-             when n.leaf_type = 'agent' then 'Agent leaf ready to run'
-             when n.status = 'proposed' and n.split_at is not null and ${rejected} then 'Split rejected in review: re-plan it'
-             when n.status = 'proposed' and n.split_at is not null then 'Split awaiting adversarial review'
-             else 'Open: confirm as a leaf or split it'
-           end as why`)}
-         where n.status not in ('done','overtaken') and n.claimed_by is null ${extra}
+         ${summarySelect(`, ${DONOR_KIND} as kind, ${DONOR_WHY} as why`)}
+         where n.status not in ('done','overtaken') and claim.claimed_by is null ${extra}
            and (
              (n.leaf_type = 'human' and n.unclear_reason is not null)
-             or (n.leaf_type = 'agent' and not exists (
-             select 1 from node_dependencies d join nodes dn on dn.id = d.needs_id
-             where d.node_id = n.id and dn.status not in ('done','overtaken')))
-             or (n.leaf_type is null and not exists (select 1 from nodes c where c.parent_id = n.id))
+             or (n.leaf_type = 'agent' and not ${blockedSql("n")})
+             or (n.leaf_type is null and not exists (select 1 from nodes c where c.parent_id = n.id)
+                 and not ${blockedSql("n")})
              or (n.status = 'proposed' and n.split_at is not null)
            )
        ) v
@@ -451,7 +496,6 @@ export class Store {
        limit ${lim}`,
       params
     );
-    return rows;
   }
 
   // ---------------------------------------------------------------- writing
@@ -469,6 +513,7 @@ export class Store {
           actor,
         ]
       );
+      await saveTaskDetails(tx, row.id, input);
       await logEvent(tx, row.id, actor, "created", "Root created");
       return new Store(tx).getNode(row.id);
     });
@@ -494,6 +539,7 @@ export class Store {
           ]
         );
         ids.push(row.id);
+        await saveTaskDetails(tx, row.id, child);
         await logEvent(tx, row.id, actor, "created", `Split from "${parent.title}"`);
       }
       await recordSplit(tx, {
@@ -587,7 +633,13 @@ export class Store {
   /** Confirm a node as a leaf for an agent or a human (PROCESS.md 3). */
   async markLeaf(
     id: string,
-    input: { type: LeafType; done_check?: string; who?: string; what?: string; how?: string },
+    input: {
+      type: LeafType;
+      done_check?: string;
+      who?: string;
+      what?: string;
+      how?: string;
+    } & TaskDetailsInput,
     actor: string
   ) {
     const node = await this.getNode(id);
@@ -603,6 +655,7 @@ export class Store {
          unclear_reason = null where id = $1`,
       [id, input.type, doneCheck, input.who ?? null, input.what ?? null, input.how ?? null]
     );
+    await saveTaskDetails(this.db, id, input);
     await logEvent(this.db, id, actor, "note", `Marked as ${input.type} leaf`);
     return this.getNode(id);
   }
@@ -611,7 +664,7 @@ export class Store {
     id: string,
     patch: Partial<Pick<Node, "title" | "done_check" | "next_action" | "labels">> & {
       leaf_type?: null;
-    },
+    } & TaskDetailsInput,
     actor: string
   ) {
     const node = await this.getNode(id);
@@ -634,35 +687,46 @@ export class Store {
        where id = $1`,
       [id, next.title, next.done_check, next.next_action, next.labels]
     );
+    // A claimer was going to do the leaf, not split it (PROCESS.md 0.5), so unmarking ends the claim.
+    if (unmark) await endClaim(this.db, id, "unmarked");
+    await saveTaskDetails(this.db, id, patch);
     await logEvent(this.db, id, actor, "note", `Updated: ${Object.keys(patch).join(", ")}`);
     return this.getNode(id);
   }
 
-  async claim(id: string, actor: string) {
+  /** Claim a task (PROCESS.md 8). `userId` ties the claim to the signed-in contributor. */
+  async claim(id: string, actor: string, userId?: string | null) {
     const node = await this.getNode(id);
     if (CLOSED.includes(node.status)) throw new ProcessError(`Node is ${node.status}.`);
-    if (node.claimed_by && node.claimed_by !== actor) {
-      throw new ProcessError(`Already claimed by ${node.claimed_by} since ${node.claimed_at}.`);
-    }
-    await this.db.query(
-      `update nodes set claimed_by = $2, claimed_at = now(),
-         status = case when status in ('proposed','reviewed') then 'in_progress' else status end
-       where id = $1`,
-      [id, actor]
-    );
-    await logEvent(this.db, id, actor, "claimed");
-    return this.getNode(id);
+    return this.db.transaction(async (tx) => {
+      await openClaim(tx, { nodeId: id, actor, userId });
+      await tx.query(
+        `update nodes set
+           status = case when status in ('proposed','reviewed') then 'in_progress' else status end
+         where id = $1`,
+        [id]
+      );
+      await logEvent(tx, id, actor, "claimed");
+      return new Store(tx).getNode(id);
+    });
   }
 
   async release(id: string, actor: string, note?: string) {
-    await this.db.query(
-      `update nodes set claimed_by = null, claimed_at = null,
-         status = case when status = 'in_progress' then 'proposed' else status end
+    return this.db.transaction(async (tx) => {
+      await this.closeClaim(tx, id, "released");
+      await logEvent(tx, id, actor, "released", note);
+      return new Store(tx).getNode(id);
+    });
+  }
+
+  /** End the claim and move an in-progress task back to proposed. */
+  private async closeClaim(db: Db, id: string, reason: ClaimEndReason) {
+    await endClaim(db, id, reason);
+    await db.query(
+      `update nodes set status = case when status = 'in_progress' then 'proposed' else status end
        where id = $1`,
       [id]
     );
-    await logEvent(this.db, id, actor, "released", note);
-    return this.getNode(id);
   }
 
   /**
@@ -691,11 +755,8 @@ export class Store {
 
     if (input.outcome === "unclear") {
       if (!input.note) throw new ProcessError("Say what is unclear (note).");
-      await this.db.query(
-        `update nodes set unclear_reason = $2, claimed_by = null, claimed_at = null,
-           status = case when status = 'in_progress' then 'proposed' else status end where id = $1`,
-        [id, input.note]
-      );
+      await this.closeClaim(this.db, id, "unclear");
+      await this.db.query(`update nodes set unclear_reason = $2 where id = $1`, [id, input.note]);
       await logEvent(this.db, id, actor, "unclear", input.note);
       return { node: await this.getNode(id) };
     }
@@ -711,10 +772,11 @@ export class Store {
       );
     }
     const level = input.verification_level ?? (input.evidence ? 2 : 1);
-    await this.db.query(
-      `update nodes set status = 'done', verification_level = $2, claimed_by = null, claimed_at = null where id = $1`,
-      [id, level]
-    );
+    await this.db.query(`update nodes set status = 'done', verification_level = $2 where id = $1`, [
+      id,
+      level,
+    ]);
+    await endClaim(this.db, id, "done");
     await logEvent(this.db, id, actor, "report", input.note ?? "Done", input.evidence, level);
 
     return { node: await this.getNode(id), parent_check: await this.parentCheck(node.parent_id) };
@@ -742,9 +804,10 @@ export class Store {
     const node = await this.getNode(id);
     if (CLOSED.includes(node.status)) throw new ProcessError(`Node is already ${node.status}.`);
     await this.db.query(
-      `update nodes set status = 'overtaken', overtaken_note = $2, claimed_by = null, claimed_at = null where id = $1`,
+      `update nodes set status = 'overtaken', overtaken_note = $2 where id = $1`,
       [id, reason]
     );
+    await endClaim(this.db, id, "overtaken");
     await logEvent(this.db, id, actor, "overtaken", reason);
     return { node: await this.getNode(id), parent_check: await this.parentCheck(node.parent_id) };
   }
@@ -773,79 +836,32 @@ export class Store {
     return this.getNode(id);
   }
 
-  /** What this node needs first, and what waits for it. */
-  async dependencies(id: string) {
-    const needs = await this.db.query<{
-      id: string;
-      title: string;
-      status: Status;
-      note: string | null;
-    }>(
-      `select n.id, n.title, n.status, d.note from node_dependencies d
-       join nodes n on n.id = d.needs_id where d.node_id = $1 order by d.created_at`,
-      [id]
-    );
-    const neededBy = await this.db.query<{
-      id: string;
-      title: string;
-      status: Status;
-      note: string | null;
-    }>(
-      `select n.id, n.title, n.status, d.note from node_dependencies d
-       join nodes n on n.id = d.node_id where d.needs_id = $1 order by d.created_at`,
-      [id]
-    );
-    return { needs, needed_by: neededBy };
-  }
-
   /**
-   * Record that `nodeId` needs `needsId` closed first. Refuses a dependency that would close
-   * a loop (A needs B needs ... needs A), since such leaves could never become ready.
+   * Relate two tasks with a typed relation (relations.ts). blocked_by keeps the task out of the
+   * work lists until the other is closed; a blocked_by loop is refused.
    */
-  async addDependency(input: { nodeId: string; needsId: string; note?: string }, actor: string) {
-    const node = await this.getNode(input.nodeId);
-    const needed = await this.getNode(input.needsId);
-    if (CLOSED.includes(node.status)) throw new ProcessError(`Node is ${node.status}.`);
-    if (node.id === needed.id) throw new ProcessError("A node cannot need itself.");
-    const [loop] = await this.db.query<{ found: boolean }>(
-      `with recursive chain as (
-         select needs_id from node_dependencies where node_id = $1
-         union
-         select d.needs_id from node_dependencies d join chain c on d.node_id = c.needs_id
-       )
-       select exists (select 1 from chain where needs_id = $2) as found`,
-      [input.needsId, input.nodeId]
-    );
-    if (loop?.found) {
-      throw new ProcessError(
-        `"${needed.title}" already (indirectly) needs "${node.title}"; this would be a loop.`
-      );
-    }
-    await this.db.query(
-      `insert into node_dependencies (node_id, needs_id, note, created_by) values ($1, $2, $3, $4)
-       on conflict (node_id, needs_id) do update set note = excluded.note`,
-      [input.nodeId, input.needsId, input.note ?? null, actor]
-    );
+  async relate(input: RelationInput, actor: string) {
+    const from = await this.getNode(input.fromId);
+    const to = await this.getNode(input.toId);
+    await addRelation(this.db, input, actor);
     await logEvent(
       this.db,
-      input.nodeId,
+      from.id,
       actor,
       "link",
-      `Needs first: ${needed.title}${input.note ? ` (${input.note})` : ""}`
+      `${input.type}: ${to.title}${input.note ? ` (${input.note})` : ""}`
     );
-    return this.dependencies(input.nodeId);
+    return this.relations(from.id);
   }
 
-  async link(fromId: string, toId: string, note: string | undefined, actor: string) {
-    await this.getNode(fromId);
-    await this.getNode(toId);
-    await this.db.query(
-      `insert into node_links (from_id, to_id, note, created_by) values ($1, $2, $3, $4)
-       on conflict (from_id, to_id) do update set note = excluded.note`,
-      [fromId, toId, note ?? null, actor]
-    );
-    await logEvent(this.db, fromId, actor, "link", `Also serves ${toId}${note ? `: ${note}` : ""}`);
-    return this.links(fromId);
+  /** Remove a typed relation. */
+  async unrelate(input: Omit<RelationInput, "note">, actor: string) {
+    const to = await this.getNode(input.toId);
+    if (!(await removeRelation(this.db, input))) {
+      throw new ProcessError(`No ${input.type} relation between these tasks.`);
+    }
+    await logEvent(this.db, input.fromId, actor, "link", `Removed ${input.type}: ${to.title}`);
+    return this.relations(input.fromId);
   }
 }
 

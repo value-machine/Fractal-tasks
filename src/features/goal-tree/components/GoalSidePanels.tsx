@@ -1,7 +1,11 @@
 import { Link } from "react-router-dom";
 import { formatRelativeTime } from "@/shared/utils/formatRelativeTime";
-import type { GoalEvent, GoalNodeDetail } from "@/features/goal-tree/types/goalTree.types";
-import { describeGoalEvent } from "@/features/goal-tree/types/goalTreeLabels";
+import type { GoalEvent, GoalRelation } from "@/features/goal-tree/types/goalTree.types";
+import {
+  describeGoalEvent,
+  describeGoalRelation,
+  GOAL_STATUS_LABELS,
+} from "@/features/goal-tree/types/goalTreeLabels";
 
 const panelClassName = "rounded-card border bg-card p-4";
 const panelTitleClassName =
@@ -34,27 +38,27 @@ export const GoalEventLog = ({ events }: { events: GoalEvent[] }) => (
   </section>
 );
 
-/** "Also serves" / "Served by" links to other goals; nothing when there are none. */
-export const GoalLinkList = ({ links }: { links: GoalNodeDetail["links"] }) => {
-  const entries = [
-    ...links.also_serves.map((link) => ({ ...link, direction: "Also serves" })),
-    ...links.served_by.map((link) => ({ ...link, direction: "Served by" })),
-  ];
-  if (entries.length === 0) return null;
+/** Typed relations to other goals (blocked by, also serves, ...); nothing when there are none. */
+export const GoalRelationList = ({ relations }: { relations: GoalRelation[] }) => {
+  if (relations.length === 0) return null;
   return (
     <section className={panelClassName}>
-      <h2 className={panelTitleClassName}>Connected goals</h2>
+      <h2 className={panelTitleClassName}>Related goals</h2>
       <ul className="m-0 grid list-none gap-2 p-0 text-sm">
-        {entries.map((entry) => (
-          <li key={`${entry.direction}-${entry.id}`}>
-            <small className="block text-muted-foreground">{entry.direction}</small>
+        {relations.map((relation) => (
+          <li key={`${relation.type}-${relation.direction}-${relation.id}`}>
+            <small className="block text-muted-foreground">
+              {describeGoalRelation(relation)} · {GOAL_STATUS_LABELS[relation.status]}
+            </small>
             <Link
-              to={`/nodes/${encodeURIComponent(entry.id)}`}
+              to={`/nodes/${encodeURIComponent(relation.id)}`}
               className="font-medium text-primary no-underline hover:underline"
             >
-              {entry.title}
+              {relation.title}
             </Link>
-            {entry.note && <small className="block text-muted-foreground">{entry.note}</small>}
+            {relation.note && (
+              <small className="block text-muted-foreground">{relation.note}</small>
+            )}
           </li>
         ))}
       </ul>

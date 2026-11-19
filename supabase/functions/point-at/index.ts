@@ -10,7 +10,14 @@ import {
 import type { Db } from "../_shared/pointAt/db.ts";
 import { connectPostgres } from "../_shared/pointAt/postgresDb.ts";
 import { PROCESS_DOC } from "../_shared/pointAt/processDoc.ts";
-import { ProcessError, Store, type Role } from "../_shared/pointAt/store.ts";
+import { ProcessError, Store, type Role, type ViewOptions } from "../_shared/pointAt/store.ts";
+import {
+  DURATION_NAMES,
+  DURATIONS,
+  REQUIREMENT_KINDS,
+  type Duration,
+  type RequirementKind,
+} from "../_shared/pointAt/taskDetails.ts";
 
 const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
@@ -52,6 +59,31 @@ function routePath(url: URL): string {
   return path.replace(/\/+$/, "") || "/";
 }
 
+/**
+ * Role-view filters from the query string: label, q, max_duration, max_cost, requirement and
+ * exclude (comma-separated requirement kinds). Unknown values are refused, not ignored.
+ */
+function viewFilters(params: URLSearchParams): ViewOptions {
+  const maxDuration = params.get("max_duration") || undefined;
+  if (maxDuration && !(maxDuration in DURATIONS)) {
+    throw new ProcessError(`max_duration must be one of ${DURATION_NAMES.join(", ")}`);
+  }
+  const cost = params.get("max_cost");
+  const maxCost = cost ? Number(cost) : undefined;
+  if (maxCost !== undefined && !(maxCost >= 0)) throw new ProcessError("max_cost must be a number");
+  const excludeKinds = (params.get("exclude") || "").split(",").filter(Boolean);
+  const unknown = excludeKinds.filter((k) => !(REQUIREMENT_KINDS as readonly string[]).includes(k));
+  if (unknown.length) throw new ProcessError(`Unknown requirement kind: ${unknown.join(", ")}`);
+  return {
+    label: params.get("label") || undefined,
+    query: params.get("q") || undefined,
+    maxDuration: maxDuration as Duration | undefined,
+    maxCost,
+    requirement: params.get("requirement") || undefined,
+    excludeKinds: excludeKinds as RequirementKind[],
+  };
+}
+
 async function handleApi(path: string, url: URL): Promise<Response> {
   const s = getStore();
 
@@ -88,13 +120,7 @@ async function handleApi(path: string, url: URL): Promise<Response> {
     if (role !== "donor" && role !== "executor") {
       return json({ error: "role must be donor or executor" }, 400);
     }
-    return json(
-      await s.view(role as Role, {
-        label: url.searchParams.get("label") || undefined,
-        query: url.searchParams.get("q") || undefined,
-        limit: 50,
-      })
-    );
+    return json(await s.view(role as Role, { ...viewFilters(url.searchParams), limit: 50 }));
   }
 
   return json({ error: "Not found" }, 404);
@@ -170,7 +196,9 @@ async function myTokens(req: Request, path: string): Promise<Response> {
  * Writes go through MCP, so every MCP call must say whose agent it is: an access token from agent
  * login (OAuth via Supabase Auth), or a personal agent token for tools that cannot log in.
  */
-async function authenticateMcp(req: Request): Promise<{ contributor?: string } | Response> {
+async function authenticateMcp(
+  req: Request
+): Promise<{ contributor?: string; userId?: string } | Response> {
   const given = bearer(req);
   // The header tells MCP clients where to log in (agent login, OAuth via Supabase Auth).
   const unauthorized = () =>
@@ -180,11 +208,11 @@ async function authenticateMcp(req: Request): Promise<{ contributor?: string } |
   if (!given) return unauthorized();
   if (given.startsWith("pa_")) {
     const owner = await resolveAgentToken(getDb(), given);
-    return owner ? { contributor: owner.displayName } : unauthorized();
+    return owner ? { contributor: owner.displayName, userId: owner.userId } : unauthorized();
   }
   // Agent login: an access token Supabase Auth issued after the person approved the agent tool.
   const user = await signedInUser(req);
-  return user ? { contributor: user.displayName } : unauthorized();
+  return user ? { contributor: user.displayName, userId: user.id } : unauthorized();
 }
 
 /** This function's public URL, e.g. https://<ref>.supabase.co/functions/v1/point-at. */
@@ -223,6 +251,7 @@ async function handleMcp(req: Request): Promise<Response> {
   });
   const server = createMcpServer(getStore(), {
     contributor: caller.contributor,
+    userId: caller.userId,
     defaultActor: req.headers.get("x-point-at-actor") || undefined,
   });
   await server.connect(transport);
@@ -237,7 +266,8 @@ async function handleRequest(req: Request): Promise<Response> {
 
   try {
     if (path === "/mcp") return await handleMcp(req);
-    if (path.startsWith("/.well-known/oauth-protected-resource")) return protectedResourceMetadata();
+    if (path.startsWith("/.well-known/oauth-protected-resource"))
+      return protectedResourceMetadata();
     if (path.startsWith("/api/me/")) return await handleMyTokens(req, path);
     if (path.startsWith("/api/")) {
       if (req.method !== "GET")

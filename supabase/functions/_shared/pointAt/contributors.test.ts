@@ -27,7 +27,10 @@ beforeAll(async () => {
 afterAll(async () => db.close());
 beforeEach(async () => {
   await reset();
-  await db.query("insert into auth.users (id) values ($1), ($2) on conflict do nothing", [ALICE, BOB]);
+  await db.query("insert into auth.users (id) values ($1), ($2) on conflict do nothing", [
+    ALICE,
+    BOB,
+  ]);
 });
 
 describe("agent tokens", () => {
@@ -46,7 +49,11 @@ describe("agent tokens", () => {
   });
 
   it("should resolve a token to its owner's display name when it is valid", async () => {
-    const { token } = await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "Laptop" });
+    const { token } = await createAgentToken(db, {
+      userId: ALICE,
+      displayName: "Alice",
+      name: "Laptop",
+    });
     const resolved = await resolveAgentToken(db, token);
     expect(resolved?.displayName).toBe("Alice");
     expect((await listAgentTokens(db, ALICE))[0].last_used_at).not.toBeNull();
@@ -55,15 +62,25 @@ describe("agent tokens", () => {
   });
 
   it("should stop resolving a token when its owner revokes it", async () => {
-    const { token, record } = await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "Laptop" });
+    const { token, record } = await createAgentToken(db, {
+      userId: ALICE,
+      displayName: "Alice",
+      name: "Laptop",
+    });
     await revokeAgentToken(db, { userId: ALICE, tokenId: record.id });
     expect(await resolveAgentToken(db, token)).toBeNull();
     expect((await listAgentTokens(db, ALICE))[0].revoked_at).not.toBeNull();
   });
 
   it("should refuse to revoke a token when it belongs to someone else", async () => {
-    const { token, record } = await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "Laptop" });
-    await expect(revokeAgentToken(db, { userId: BOB, tokenId: record.id })).rejects.toThrow(/No such token/);
+    const { token, record } = await createAgentToken(db, {
+      userId: ALICE,
+      displayName: "Alice",
+      name: "Laptop",
+    });
+    await expect(revokeAgentToken(db, { userId: BOB, tokenId: record.id })).rejects.toThrow(
+      /No such token/
+    );
     expect(await resolveAgentToken(db, token)).not.toBeNull();
     expect(await listAgentTokens(db, BOB)).toEqual([]);
   });
@@ -89,10 +106,40 @@ describe("actors", () => {
   });
 
   it("should attribute a write to the token's owner whatever actor the agent claims", async () => {
-    const { token } = await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "Laptop" });
+    const { token } = await createAgentToken(db, {
+      userId: ALICE,
+      displayName: "Alice",
+      name: "Laptop",
+    });
     const resolved = await resolveAgentToken(db, token);
     const actor = actorFor(resolved!.displayName, "Bob");
     const root = await new Store(db).createRoot({ title: "A goal of Alice" }, actor);
     expect(root.created_by).toBe("Alice via Bob");
+  });
+});
+
+describe("claims by contributors", () => {
+  const claimUserId = async (nodeId: string) =>
+    (
+      await db.query<{ user_id: string | null }>(
+        "select user_id from node_assignments where node_id = $1",
+        [nodeId]
+      )
+    )[0]?.user_id;
+
+  it("should tie a claim to the contributor's account when the claimer is a known contributor", async () => {
+    await createAgentToken(db, { userId: ALICE, displayName: "Alice", name: "Laptop" });
+    const store = new Store(db);
+    const root = await store.createRoot({ title: "Task" }, "Alice via Claude");
+    await store.claim(root.id, "Alice via Claude", ALICE);
+    expect(await claimUserId(root.id)).toBe(ALICE);
+  });
+
+  it("should still record the claim when the person has no contributor record yet", async () => {
+    const store = new Store(db);
+    const root = await store.createRoot({ title: "Task" }, "Bob via Claude");
+    await store.claim(root.id, "Bob via Claude", BOB);
+    expect(await claimUserId(root.id)).toBeNull();
+    expect((await store.getNode(root.id)).claimed_by).toBe("Bob via Claude");
   });
 });

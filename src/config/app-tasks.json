@@ -1,12 +1,22 @@
 [
   {
     "title": "Contributor identity for MCP writes",
-    "description": "Actors are free-text names; anyone with the function URL can write. Decide and build how contributors are identified (e.g. Supabase Auth with OAuth for MCP clients, per-person API tokens) before the tree is shared publicly. Auth permission model: needs an owner decision. Context: DOC_POINT_AT_RISKS.md § Process and governance.",
-    "status": "in-progress"
+    "description": "Actors are free-text names; anyone with the function URL can write. Decide and build how contributors are identified (e.g. Supabase Auth with OAuth for MCP clients, per-person API tokens) before the tree is shared publicly. Auth permission model: needs an owner decision. Context: DOC_POINT_AT_RISKS.md § Process and governance. Done: agent login (OAuth) and personal agent tokens; claims point at the contributor's account through node_assignments (v0.7 of the process).",
+    "status": "done"
   },
   {
     "title": "Executors log real-world steps on the website",
     "description": "Owner decision (2026-11-11): agent work goes through MCP; human work (real-world, physical actions) is done by people on the website. Signed-in people can claim a human step from Actions, report it done with evidence, or bounce it back as unclear, without needing an agent; others can check a reported step. Process doc 5 and the vision already describe this.",
+    "status": "to-do"
+  },
+  {
+    "title": "Graph view of task relations",
+    "description": "Lap 2 of the relations work (owner decision 2026-11-19: data first, graph second). A view that draws tasks as nodes and their relations as lines, with a switch per relation type (split tree, blocked by, also serves, alternative to, replaces, duplicate of, related to). Data: node_relations plus nodes.parent_id; needs a read endpoint returning the tasks under a root and the edges among them (relations.ts edgesAmong). Check a maintained graph library first (spec-reuse-package).",
+    "status": "to-do"
+  },
+  {
+    "title": "A home for agent results",
+    "description": "Trial run finding (citizens' panel goal, 2026-11-17): an agent leaf's result (a shortlist, a drafted proposal) has nowhere to live except a progress note. Decide where deliverables go (an attached document or link on the node, a results field) so the next task can build on them.",
     "status": "to-do"
   },
   {

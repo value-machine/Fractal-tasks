@@ -25,6 +25,8 @@ const summary = (overrides: Partial<GoalNodeSummary>): GoalNodeSummary => ({
   labels: [],
   claimed_by: null,
   claimed_at: null,
+  duration_minutes: null,
+  requirements: [],
   verification_level: null,
   overtaken_note: null,
   unclear_reason: null,

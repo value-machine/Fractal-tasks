@@ -1,8 +1,13 @@
 import { Alert } from "@/components/common/Alert";
 import { cn } from "@/shared/utils/cn";
 import { formatRelativeTime } from "@/shared/utils/formatRelativeTime";
-import type { GoalNodeSummary } from "@/features/goal-tree/types/goalTree.types";
-import { GOAL_VERIFICATION_LABELS } from "@/features/goal-tree/types/goalTreeLabels";
+import type { GoalEstimate, GoalNodeSummary } from "@/features/goal-tree/types/goalTree.types";
+import {
+  describeGoalDuration,
+  describeGoalMinutes,
+  describeGoalRequirement,
+  GOAL_VERIFICATION_LABELS,
+} from "@/features/goal-tree/types/goalTreeLabels";
 import {
   GoalLabelPills,
   GoalLeafPill,
@@ -18,10 +23,27 @@ const Fact = ({ term, children }: { term: string; children: string }) => (
   </div>
 );
 
-const factsOf = (node: GoalNodeSummary): [string, string][] => {
+/** "About 5 hours over 4 open steps (1 without an estimate)"; null when nothing is open below. */
+const describeEstimate = (estimate: GoalEstimate | null | undefined): string | null => {
+  if (!estimate?.open_leaves) return null;
+  const known = estimate.open_leaves - estimate.unestimated_leaves;
+  if (known === 0) return `${estimate.open_leaves} open steps, none estimated yet`;
+  const missing = estimate.unestimated_leaves
+    ? ` (${estimate.unestimated_leaves} without an estimate)`
+    : "";
+  return `About ${describeGoalMinutes(estimate.open_leaf_minutes)} over ${estimate.open_leaves} open steps${missing}`;
+};
+
+const factsOf = (node: GoalNodeSummary, estimate?: GoalEstimate | null): [string, string][] => {
   const facts: [string, string | null][] = [
     ["How we know it worked", node.done_check],
     ["Next action", node.next_action],
+    ["Time", describeGoalDuration(node.duration_minutes)],
+    ["Time left below", describeEstimate(estimate)],
+    [
+      "Needs",
+      node.requirements.length ? node.requirements.map(describeGoalRequirement).join(", ") : null,
+    ],
     [
       "Verification",
       node.verification_level ? (GOAL_VERIFICATION_LABELS[node.verification_level] ?? null) : null,
@@ -87,8 +109,14 @@ const HumanInstruction = ({ node }: { node: GoalNodeSummary }) => {
  * The focused goal: status, labels, the three questions (title, done check, next action), the
  * split reasoning and the human instructions when the goal is a human leaf.
  */
-export const GoalNodeFrame = ({ node }: { node: GoalNodeSummary }) => {
-  const facts = factsOf(node);
+export const GoalNodeFrame = ({
+  node,
+  estimate,
+}: {
+  node: GoalNodeSummary;
+  estimate?: GoalEstimate | null;
+}) => {
+  const facts = factsOf(node, estimate);
   return (
     <article className="rounded-card border bg-card p-5 elevation-sm sm:p-7">
       <div className="flex flex-wrap items-center gap-2">

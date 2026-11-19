@@ -9,6 +9,7 @@ import type {
   GoalNodeWithChildren,
   GoalRole,
   GoalRoleViewItem,
+  GoalWorkFilters,
 } from "@/features/goal-tree/types/goalTree.types";
 
 const request = async <T>(path: string): Promise<T> => {
@@ -23,7 +24,7 @@ const request = async <T>(path: string): Promise<T> => {
 export const fetchGoalRoots = (): Promise<GoalNodeWithChildren[]> =>
   request<GoalNodeWithChildren[]>("/api/roots");
 
-/** One goal with ancestors, children, events and links. */
+/** One goal with ancestors, children, events, relations and the estimate below it. */
 export const fetchGoalNode = (id: string): Promise<GoalNodeDetail> =>
   request<GoalNodeDetail>(`/api/nodes/${encodeURIComponent(id)}`);
 
@@ -31,6 +32,20 @@ export const fetchGoalNode = (id: string): Promise<GoalNodeDetail> =>
 export const searchGoals = (query: string): Promise<GoalNodeSummary[]> =>
   request<GoalNodeSummary[]>(`/api/search?q=${encodeURIComponent(query)}`);
 
+/** Query string for the work filters; empty when none is set. */
+export const goalWorkFilterQuery = (filters: GoalWorkFilters): string => {
+  const params = new URLSearchParams();
+  if (filters.maxDuration) params.set("max_duration", filters.maxDuration);
+  if (filters.maxCost !== undefined) params.set("max_cost", String(filters.maxCost));
+  const requirement = filters.requirement?.trim();
+  if (requirement) params.set("requirement", requirement);
+  const query = params.toString();
+  return query ? `?${query}` : "";
+};
+
 /** Work waiting for a role: thinking work (donor) or concrete actions (executor). */
-export const fetchGoalRoleView = (role: GoalRole): Promise<GoalRoleViewItem[]> =>
-  request<GoalRoleViewItem[]>(`/api/views/${role}`);
+export const fetchGoalRoleView = (
+  role: GoalRole,
+  filters: GoalWorkFilters = {}
+): Promise<GoalRoleViewItem[]> =>
+  request<GoalRoleViewItem[]>(`/api/views/${role}${goalWorkFilterQuery(filters)}`);
