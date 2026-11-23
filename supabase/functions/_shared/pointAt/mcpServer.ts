@@ -1,6 +1,7 @@
 import { McpServer } from "npm:@modelcontextprotocol/sdk@1.32.2/server/mcp.js";
 import { z } from "npm:zod@4.6.7";
 
+import { withoutNulls } from "./agentPayload.ts";
 import { actorFor } from "./contributors.ts";
 import { PROCESS_DOC } from "./processDoc.ts";
 import { RELATION_MEANING, RELATION_TYPES } from "./relations.ts";
@@ -119,14 +120,6 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
       return { isError: true, content: [{ type: "text" as const, text: message }] };
     }
   };
-
-  /** Drop null and empty-array fields so agents read less noise (never the top-level value). */
-  const withoutNulls = (value: unknown): unknown =>
-    JSON.parse(
-      JSON.stringify(value, (key, v: unknown) =>
-        key !== "" && (v === null || (Array.isArray(v) && v.length === 0)) ? undefined : v
-      )
-    );
 
   const readProcess = () => Promise.resolve(PROCESS_DOC);
 

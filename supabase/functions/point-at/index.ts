@@ -10,6 +10,7 @@ import {
 import type { Db } from "../_shared/pointAt/db.ts";
 import { connectPostgres } from "../_shared/pointAt/postgresDb.ts";
 import { PROCESS_DOC } from "../_shared/pointAt/processDoc.ts";
+import { withoutNulls } from "../_shared/pointAt/agentPayload.ts";
 import { ProcessError, Store, type Role, type ViewOptions } from "../_shared/pointAt/store.ts";
 import {
   DURATION_NAMES,
@@ -103,6 +104,20 @@ async function handleApi(path: string, url: URL): Promise<Response> {
     // A malformed id would reach Postgres as an invalid uuid and surface as a 500.
     if (!UUID_PATTERN.test(id)) throw new ProcessError(`No node with id ${id}`);
     return json(await s.focus(id));
+  }
+
+  const agentViewMatch = path.match(/^\/api\/nodes\/([^/]+)\/agent-view$/);
+  if (agentViewMatch) {
+    const id = decodeURIComponent(agentViewMatch[1]);
+    if (!UUID_PATTERN.test(id)) throw new ProcessError(`No node with id ${id}`);
+    // Exactly what focus_node returns to an agent for this task.
+    return json(withoutNulls(await s.focus(id)));
+  }
+
+  if (path === "/api/agent-context") {
+    // Loaded on demand: it starts an in-memory MCP server, like /mcp does.
+    const { describeAgentConnect } = await import("../_shared/pointAt/agentContext.ts");
+    return json(await describeAgentConnect(s));
   }
 
   const graphMatch = path.match(/^\/api\/nodes\/([^/]+)\/graph$/);

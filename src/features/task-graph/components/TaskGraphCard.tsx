@@ -6,7 +6,17 @@ import {
   type TaskGraphNode,
 } from "@/features/task-graph/types/taskGraph.types";
 
-export type TaskGraphCardNode = Node<{ task: TaskGraphNode; isRoot: boolean }, "task">;
+export type TaskGraphCardNode = Node<
+  {
+    task: TaskGraphNode;
+    isRoot: boolean;
+    /** Drawn faded: outside the set the caller highlights (e.g. an agent's context). */
+    dimmed?: boolean;
+    /** The task the view is about, drawn with a ring. */
+    isFocus?: boolean;
+  },
+  "task"
+>;
 
 const STATUS_TEXT: Record<TaskGraphNode["status"], string> = {
   proposed: "Proposed",
@@ -32,7 +42,7 @@ const kindOf = (task: TaskGraphNode): string | null => {
 
 /** One task on the canvas: title (three lines at most), status and leaf kind. */
 export const TaskGraphCard = ({ data }: NodeProps<TaskGraphCardNode>) => {
-  const { task, isRoot } = data;
+  const { task, isRoot, dimmed, isFocus } = data;
   const closed = task.status === "done" || task.status === "overtaken";
   const kind = kindOf(task);
   return (
@@ -40,7 +50,9 @@ export const TaskGraphCard = ({ data }: NodeProps<TaskGraphCardNode>) => {
       style={{ width: TASK_GRAPH_NODE_WIDTH, height: TASK_GRAPH_NODE_HEIGHT }}
       className={cn(
         "flex cursor-pointer flex-col overflow-hidden rounded-card border bg-card text-card-foreground elevation-sm transition-colors hover:border-primary",
-        isRoot && "border-primary"
+        isRoot && "border-primary",
+        dimmed && "opacity-35",
+        isFocus && "ring-2 ring-primary ring-offset-2 ring-offset-background"
       )}
     >
       <Handle type="target" position={Position.Top} className="!opacity-0" />

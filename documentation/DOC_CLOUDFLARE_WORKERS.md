@@ -60,7 +60,7 @@ For coding agents completing the **"Put your app online (Cloudflare hosting)"** 
 |--------|-----|
 | Worker config | Root `wrangler.jsonc` — **assets-only SPA** (no `main`, no `ASSETS` binding) |
 | Build output | Plain `vite build` → `dist/` (`assets.directory: "./dist"`) |
-| SPA routing (React Router) | `assets.not_found_handling: "single-page-application"` |
+| SPA routing (React Router) | `assets.not_found_handling: "single-page-application"`  On preview URLs the fallback to `index.html` applies only to browser navigations (`Sec-Fetch-Mode: navigate`); a plain `curl` of a deep link gets 404 there while production answers 200. Check a preview deep link in a browser (or with `-H "Sec-Fetch-Mode: navigate"`), not with bare `curl` (checked 2026-11-23). |
 | Preview URLs | `preview_urls: true`, `workers_dev: true` |
 | Node version | `.node-version` = `22` (wrangler 4 requires Node 22+) |
 | Emergency local deploy | `pnpm deploy` (`pnpm build && wrangler deploy`) |

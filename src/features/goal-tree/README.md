@@ -32,6 +32,7 @@ Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:rol
 - Lists (tiles, rows) cut a title off after 3 lines with the full text on hover; the goal's own page shows it in full.
 - Relations show in one "Related goals" panel, each line worded from the focused goal ("Blocked by", "Blocks", "Also serves", ...); the wording is shared with the graph view (`src/shared/types/taskRelations.ts`). A goal with subtasks links to its graph ("Show as graph", `src/features/task-graph/`).
 - A goal's links (its context: documents, pages, results written elsewhere) show in a "Links" panel and open in a new tab; Point At stores no files.
+- Every task page links to "What an agent sees on this task" (`/nodes/:id/agent-view`, `src/features/agent-context/`).
 - Reads go through the shared `fetchPointAtJson` (`src/shared/services/pointAtFunctionService.ts`), also used by the graph view.
 - The role views filter on time (up to half a day; longer tasks stay under "Any time"), "No money needed" and a "Needs…" text that applies on Enter, like the site search. Tasks without a time estimate are left out when filtering on time, and the empty state says so.
 - The filter bar lives in the role-view page (`GoalRoleViewPage.tsx`): it is page-only UI and the components folder is at its file budget.

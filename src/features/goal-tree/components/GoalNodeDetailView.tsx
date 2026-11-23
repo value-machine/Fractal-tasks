@@ -95,6 +95,12 @@ export const GoalNodeDetailView = ({ detail }: { detail: GoalNodeDetail }) => (
         <SubtaskSection detail={detail} />
       </div>
       <aside className="grid gap-4">
+        <Link
+          to={`/nodes/${encodeURIComponent(detail.node.id)}/agent-view`}
+          className="text-sm text-primary no-underline hover:underline"
+        >
+          What an agent sees on this task
+        </Link>
         <GoalLinkList links={detail.node.links} />
         <GoalRelationList relations={detail.relations} />
         <GoalEventLog events={detail.events} />
