@@ -5,6 +5,12 @@ import { GoalTreeHomePage } from "./GoalTreeHomePage";
 import { fetchGoalRoots } from "@/features/goal-tree/services/goalTreeApiService";
 import { PointAtNotConfiguredError } from "@/shared/services/pointAtFunctionService";
 
+// The nav shows "My tasks" only when signed in; these tests render signed out.
+vi.mock("@/shared/context/AuthContext", async () => {
+  const { createDefaultAuthContextValue } = await import("tests/test-utils");
+  return { useAuthContext: () => createDefaultAuthContextValue() };
+});
+
 vi.mock("@/features/goal-tree/services/goalTreeApiService", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@/features/goal-tree/services/goalTreeApiService")>();

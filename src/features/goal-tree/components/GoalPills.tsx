@@ -84,3 +84,11 @@ export const GoalProgress = ({ closed, total }: { closed: number; total: number 
     </span>
   );
 };
+
+/** Marks a private goal: only its owner and their agents see it. Nothing for public goals. */
+export const GoalPrivatePill = ({ visibility }: { visibility: GoalNode["visibility"] }) =>
+  visibility === "private" ? (
+    <Badge variant="outline" title="Only you and your agents see this goal">
+      Private
+    </Badge>
+  ) : null;

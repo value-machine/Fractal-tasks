@@ -29,9 +29,7 @@ export async function openClaim(
   }
   try {
     await db.query(
-      // A person who only used agent login has no contributors row yet; the claim still counts.
-      `insert into node_assignments (node_id, user_id, actor, role)
-       values ($1, (select user_id from contributors where user_id = $2::uuid), $3, 'claimed')`,
+      `insert into node_assignments (node_id, user_id, actor, role) values ($1, $2, $3, 'claimed')`,
       [input.nodeId, input.userId ?? null, input.actor]
     );
   } catch (error: unknown) {

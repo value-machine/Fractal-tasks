@@ -8,6 +8,7 @@ import type {
 import { describeGoalDuration, isGoalClosed } from "@/features/goal-tree/types/goalTreeLabels";
 import {
   GoalLeafPill,
+  GoalPrivatePill,
   GoalProgress,
   GoalStatusDot,
   GoalStatusPill,
@@ -71,6 +72,7 @@ export const GoalTile = ({ node }: { node: GoalNodeWithChildren | GoalNodeSummar
         <div className="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {node.status !== "proposed" && <GoalStatusPill status={node.status} />}
           <GoalLeafPill leafType={node.leaf_type} />
+          <GoalPrivatePill visibility={node.visibility} />
           <GoalProgress closed={node.done_child_count} total={node.child_count} />
           {notSplit && <span>Not split yet</span>}
           {node.duration_minutes !== null && (

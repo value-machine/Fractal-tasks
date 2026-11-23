@@ -41,6 +41,8 @@ export interface GoalNode {
   split_assumptions: string | null;
   split_at: string | null;
   labels: string[];
+  /** "private": only the goal's owner and their agents see it. */
+  visibility: "public" | "private";
   claimed_by: string | null;
   claimed_at: string | null;
   /** Estimated time as the upper bound of its bucket (15, 60, 240, 480 or 2400 minutes). */
@@ -114,6 +116,14 @@ export interface GoalNodeDetail {
   events: GoalEvent[];
   relations: GoalRelation[];
   estimate: GoalEstimate | null;
+  /** Private steps of other people that also serve this goal: a count, never who or what. */
+  served_privately?: number;
+}
+
+/** The signed-in person's own list (`GET /api/me/tasks`). */
+export interface GoalMyTasks {
+  private_goals: GoalNodeSummary[];
+  claimed: GoalNodeSummary[];
 }
 
 /** Filters on what the work takes, for the role views. */

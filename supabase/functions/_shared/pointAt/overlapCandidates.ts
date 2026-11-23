@@ -46,7 +46,7 @@ export async function overlapCandidates(
        )
        select n.id, n.title,
          array(select unnest(n.labels) intersect select unnest($2::text[])) as shared_labels
-       from nodes n
+       from visible_nodes n
        where n.status not in ('done','overtaken')
          and n.id <> all($3::uuid[])
          and n.id not in (select id from up)

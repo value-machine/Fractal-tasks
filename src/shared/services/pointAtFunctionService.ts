@@ -1,4 +1,4 @@
-import { getEdgeFunctionConfig } from "@/shared/services/supabaseService";
+import { getEdgeFunctionConfig, getSupabase } from "@/shared/services/supabaseService";
 
 /**
  * Shared client details for the point-at Edge Function, used by every feature that calls it
@@ -58,13 +58,27 @@ export const readPointAtError = async (response: Response): Promise<string> => {
 };
 
 /**
- * GET a public read endpoint of the point-at function (no sign-in needed) and parse its JSON.
+ * Send the person's session token instead of the publishable key once they are signed in, so
+ * reads include their private goals (the function checks the token). Reading the session is
+ * local; nothing is fetched.
+ */
+const withSignedInSession = async (
+  headers: Record<string, string>
+): Promise<Record<string, string>> => {
+  const { data } = await getSupabase().auth.getSession();
+  const token = data.session?.access_token;
+  return token ? { ...headers, Authorization: `Bearer ${token}` } : headers;
+};
+
+/**
+ * GET a read endpoint of the point-at function and parse its JSON. Works signed out (public
+ * goals only); signed in it also returns the person's private goals.
  * Throws PointAtNotConfiguredError without Supabase settings, or the function's error message.
  */
 export const fetchPointAtJson = async <T>(path: string): Promise<T> => {
   const target = getPointAtRequest(path);
   if (!target) throw new PointAtNotConfiguredError();
-  const response = await fetch(target.url, { headers: target.headers });
+  const response = await fetch(target.url, { headers: await withSignedInSession(target.headers) });
   if (!response.ok) throw new Error(await readPointAtError(response));
   return (await response.json()) as T;
 };

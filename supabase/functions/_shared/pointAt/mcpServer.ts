@@ -18,6 +18,7 @@ How to take part:
 - Do not plan past an open decision: when later steps depend on the outcome of an earlier one (which town, which partner, what a reply says), split only up to that decision and mark the later steps blocked_by it. A blocked task cannot be split until its blocker is done.
 - After creating or splitting, check the check_overlap list: if your new task makes any of them unnecessary once done, relate it with "overtakes"; if it is the same task, use "duplicate_of".
 - Context goes in as links (a document, a page, a result you wrote elsewhere); Point At stores no files.
+- Goals are public by default. A personal goal ("battle my own loneliness") can be created private: only its owner and their agents see it. A private step can "also_serve" a public goal; the public goal then shows only a count of such steps. my_tasks lists the person's own private goals and claimed tasks.
 - Claim before you work, and report back afterwards. Reviews of a split must come from someone other than its author.`;
 
 const actorField = z
@@ -258,7 +259,16 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
       description:
         'Start a new top-level goal. Any size works, from "make a sandwich" to "achieve world peace". Search first to avoid duplicates. ' +
         "The reply lists open tasks it may overlap with (check_overlap); relate them if it overtakes or duplicates any.",
-      inputSchema: { ...newNode.shape, actor: actorField },
+      inputSchema: {
+        ...newNode.shape,
+        visibility: z
+          .enum(["public", "private"])
+          .optional()
+          .describe(
+            'Default "public". "private" keeps this goal and everything split from it to the signed-in person and their agents, e.g. a personal goal.'
+          ),
+        actor: actorField,
+      },
     },
     ({ actor, ...input }) => run(() => store.createRoot(input, who(actor)))
   );
@@ -418,6 +428,40 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
       },
     },
     ({ id, actor, ...input }) => run(() => store.review(id, input, who(actor)))
+  );
+
+  server.registerTool(
+    "set_visibility",
+    {
+      title: "Make a goal public or private",
+      description:
+        "Change who sees a root goal and everything under it. Only the goal's owner can, and only on roots.",
+      inputSchema: {
+        id: z.string().uuid().describe("The root goal."),
+        visibility: z.enum(["public", "private"]),
+        actor: actorField,
+      },
+    },
+    ({
+      id,
+      visibility,
+      actor,
+    }: {
+      id: string;
+      visibility: "public" | "private";
+      actor?: string;
+    }) => run(() => store.setVisibility(id, visibility, who(actor)))
+  );
+
+  server.registerTool(
+    "my_tasks",
+    {
+      title: "My own tasks",
+      description:
+        "The signed-in person's own list: their private goals and the open tasks they claimed.",
+      annotations: { readOnlyHint: true },
+    },
+    () => run(async () => withoutNulls(await store.myTasks()))
   );
 
   server.registerTool(

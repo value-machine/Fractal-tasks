@@ -1,6 +1,6 @@
 # The Process
 
-Version: 0.8 (draft)
+Version: 0.9 (draft)
 This is a living document. It is refined through critique passes, and every change is recorded in the change log at the bottom.
 
 This document describes the single recursive unit used at every scale, from "make a sandwich this morning" to "achieve world peace".
@@ -66,6 +66,14 @@ Besides the split-from tree, any two tasks can be related. A relation has a type
 **Check for overlap.** Whenever a task is created or split, the system lists open tasks that share a label (a place, a topic) or title words with each new task. The agent decides, for each, whether the new task overtakes it, duplicates it, or is unrelated, and records the relation. Spotting the overlap is left to judgement; finding candidates and closing overtaken tasks is automatic.
 
 Relations never change the split-from tree, so they cannot break its stopping and hypothesis rules. Each type can be shown as its own kind of line between tasks.
+
+### 2.5 Private goals
+
+Goals are public by default. A person can keep a goal private, for example a personal one ("battle my own loneliness" rather than "battle loneliness in Utrecht"). A private goal and everything split from it are visible only to its owner and the owner's own agents. They are left out of everyone else's tree, search, work lists, graphs and overlap checks. The same rules apply inside it: splitting, leaves, relations, review by another agent of the owner.
+
+A private step can **also serve** a public goal. The public goal then shows how many private steps serve it, never who or what. Personal effort becomes visible as shared effort without exposing anyone.
+
+Only the owner (the account that created the goal) can change its visibility, and only on the root; the whole tree follows. Goals created before accounts existed have no owner and stay public.
 
 ## 3. The leaf
 
@@ -189,6 +197,9 @@ What this project adds: no depth cap, decomposition on focus, lenses, human leav
 ---
 
 ## Change log
+
+### 0.9: private goals (2026-11-23)
+- Goals can be private (2.5): visible only to their owner and the owner's agents; public stays the default (owner decision 2026-11-23). A private step can also serve a public goal, which shows only a count.
 
 ### 0.8: planning horizon, overtakes, links (2026-11-20)
 - Do not plan past an open decision (4.4): later steps stay unsplit and blocked by it; splitting a blocked node is refused. Prompted by the first trial run, where steps were split before the municipality was chosen.

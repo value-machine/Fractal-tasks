@@ -11,7 +11,14 @@ import {
 } from "@/shared/services/pointAtFunctionService";
 import { getEdgeFunctionConfig } from "@/shared/services/supabaseService";
 
-vi.mock("@/shared/services/supabaseService", () => ({ getEdgeFunctionConfig: vi.fn() }));
+/** Signed out unless a test sets a session: reads then send the publishable key. */
+const session = vi.hoisted(() => ({ current: null as null | { access_token: string } }));
+vi.mock("@/shared/services/supabaseService", () => ({
+  getEdgeFunctionConfig: vi.fn(),
+  getSupabase: () => ({
+    auth: { getSession: async () => ({ data: { session: session.current } }) },
+  }),
+}));
 
 const CONFIG = {
   baseUrl: "https://proj.supabase.co/functions/v1/point-at",
@@ -30,8 +37,20 @@ describe("goalTreeApiService", () => {
   });
 
   afterEach(() => {
+    session.current = null;
     fetchMock.mockReset();
     vi.unstubAllGlobals();
+  });
+
+  it("should send the session token instead of the publishable key when someone is signed in", async () => {
+    session.current = { access_token: "user-session-token" };
+    fetchMock.mockResolvedValue(jsonResponse([]));
+
+    await fetchGoalRoots();
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.any(String), {
+      headers: { apikey: "key", Authorization: "Bearer user-session-token" },
+    });
   });
 
   it("should call the roots endpoint in the database region with the apikey headers when fetching roots", async () => {

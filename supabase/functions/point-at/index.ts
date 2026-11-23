@@ -31,7 +31,6 @@ const CORS_HEADERS: Record<string, string> = {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 let db: Db | undefined;
-let store: Store | undefined;
 
 /** One connection pool per isolate, created on first use. */
 function getDb(): Db {
@@ -42,9 +41,30 @@ function getDb(): Db {
   return db;
 }
 
-function getStore(): Store {
-  store ??= new Store(getDb());
-  return store;
+/**
+ * Run `fn` with a store that sees public goals plus `viewerId`'s private ones, in one transaction
+ * (Store.as). Every read and write of the tree goes through here.
+ */
+function withStore<T>(viewerId: string | null, fn: (store: Store) => Promise<T>): Promise<T> {
+  return Store.as(getDb(), viewerId, fn);
+}
+
+/**
+ * The signed-in person behind a site request, or null. The site sends the publishable key for
+ * anonymous reads and the person's session token once they sign in; only a token that looks
+ * like a signed-in session is checked with Supabase Auth, so anonymous reads cost no extra call.
+ */
+async function apiViewerId(req: Request): Promise<string | null> {
+  const token = bearer(req);
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const claims = JSON.parse(atob(parts[1].replaceAll("-", "+").replaceAll("_", "/")));
+    if (claims?.role !== "authenticated") return null;
+  } catch {
+    return null;
+  }
+  return (await signedInUser(req))?.id ?? null;
 }
 
 function json(body: unknown, status = 200, extra: Record<string, string> = {}): Response {
@@ -85,9 +105,11 @@ function viewFilters(params: URLSearchParams): ViewOptions {
   };
 }
 
-async function handleApi(path: string, url: URL): Promise<Response> {
-  const s = getStore();
+async function handleApi(req: Request, path: string, url: URL): Promise<Response> {
+  return withStore(await apiViewerId(req), (s) => routeApi(s, path, url));
+}
 
+async function routeApi(s: Store, path: string, url: URL): Promise<Response> {
   if (path === "/api/roots") {
     return json(await s.rootsWithChildren());
   }
@@ -193,6 +215,9 @@ async function handleMyTokens(req: Request, path: string): Promise<Response> {
 async function myTokens(req: Request, path: string): Promise<Response> {
   const user = await signedInUser(req);
   if (!user) return json({ error: "Sign in first" }, 401);
+  if (path === "/api/me/tasks" && req.method === "GET") {
+    return json(await withStore(user.id, (s) => s.myTasks()));
+  }
   if (path === "/api/me/tokens" && req.method === "GET") {
     return json(await listAgentTokens(getDb(), user.id));
   }
@@ -271,13 +296,16 @@ async function handleMcp(req: Request): Promise<Response> {
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
-  const server = createMcpServer(getStore(), {
-    contributor: caller.contributor,
-    userId: caller.userId,
-    defaultActor: req.headers.get("x-point-at-actor") || undefined,
+  // The whole request runs as the caller, so their agent sees their private goals too.
+  return withStore(caller.userId ?? null, async (store) => {
+    const server = createMcpServer(store, {
+      contributor: caller.contributor,
+      userId: caller.userId,
+      defaultActor: req.headers.get("x-point-at-actor") || undefined,
+    });
+    await server.connect(transport);
+    return await transport.handleRequest(req);
   });
-  await server.connect(transport);
-  return transport.handleRequest(req);
 }
 
 async function handleRequest(req: Request): Promise<Response> {
@@ -294,7 +322,7 @@ async function handleRequest(req: Request): Promise<Response> {
     if (path.startsWith("/api/")) {
       if (req.method !== "GET")
         return json({ error: "Method not allowed" }, 405, { allow: "GET, OPTIONS" });
-      return await handleApi(path, url);
+      return await handleApi(req, path, url);
     }
     return json({ error: "Not found" }, 404);
   } catch (err: unknown) {

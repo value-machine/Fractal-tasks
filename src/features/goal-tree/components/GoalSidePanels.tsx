@@ -39,11 +39,24 @@ export const GoalEventLog = ({ events }: { events: GoalEvent[] }) => (
 );
 
 /** Typed relations to other goals (blocked by, also serves, ...); nothing when there are none. */
-export const GoalRelationList = ({ relations }: { relations: GoalRelation[] }) => {
-  if (relations.length === 0) return null;
+export const GoalRelationList = ({
+  relations,
+  servedPrivately = 0,
+}: {
+  relations: GoalRelation[];
+  /** Other people's private steps that also serve this goal: shown as a count only. */
+  servedPrivately?: number;
+}) => {
+  if (relations.length === 0 && servedPrivately === 0) return null;
   return (
     <section className={panelClassName}>
       <h2 className={panelTitleClassName}>Related goals</h2>
+      {servedPrivately > 0 && (
+        <p className="mb-2 text-sm">
+          Also served by {servedPrivately} private {servedPrivately === 1 ? "step" : "steps"} of
+          people working on it personally.
+        </p>
+      )}
       <ul className="m-0 grid list-none gap-2 p-0 text-sm">
         {relations.map((relation) => (
           <li key={`${relation.type}-${relation.direction}-${relation.id}`}>

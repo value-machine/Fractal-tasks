@@ -1,6 +1,6 @@
 import postgres from "npm:postgres@3";
 
-import type { Db } from "./db.ts";
+import { savepointTransaction, type Db } from "./db.ts";
 
 /** Anything postgres.js can run a raw statement on: the pool or a transaction handle. */
 interface RawRunner {
@@ -31,7 +31,7 @@ export function connectPostgres(url: string): Db {
       sql.begin(async (t) => {
         const tx: Db = wrap(
           t as unknown as RawRunner,
-          (f) => f(tx),
+          savepointTransaction(() => tx),
           async () => {}
         );
         return await fn(tx);

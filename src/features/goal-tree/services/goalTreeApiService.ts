@@ -5,6 +5,7 @@ import type {
   GoalNodeWithChildren,
   GoalRole,
   GoalRoleViewItem,
+  GoalMyTasks,
   GoalWorkFilters,
 } from "@/features/goal-tree/types/goalTree.types";
 
@@ -39,3 +40,6 @@ export const fetchGoalRoleView = (
   filters: GoalWorkFilters = {}
 ): Promise<GoalRoleViewItem[]> =>
   request<GoalRoleViewItem[]>(`/api/views/${role}${goalWorkFilterQuery(filters)}`);
+
+/** The signed-in person's private goals and claimed tasks; fails when signed out. */
+export const fetchMyTasks = (): Promise<GoalMyTasks> => request<GoalMyTasks>("/api/me/tasks");
