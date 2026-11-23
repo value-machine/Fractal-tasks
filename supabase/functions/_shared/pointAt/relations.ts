@@ -80,10 +80,10 @@ export interface RelationEdge {
 export function relationsOf(db: Db, id: string): Promise<Relation[]> {
   return db.query<Relation>(
     `select r.type, 'out' as direction, n.id, n.title, n.status, r.note, r.created_by, r.created_at
-       from node_relations r join nodes n on n.id = r.to_id where r.from_id = $1
+       from node_relations r join visible_nodes n on n.id = r.to_id where r.from_id = $1
      union all
      select r.type, 'in' as direction, n.id, n.title, n.status, r.note, r.created_by, r.created_at
-       from node_relations r join nodes n on n.id = r.from_id where r.to_id = $1
+       from node_relations r join visible_nodes n on n.id = r.from_id where r.to_id = $1
      order by created_at`,
     [id]
   );

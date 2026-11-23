@@ -11,6 +11,7 @@ import {
 import {
   GoalLabelPills,
   GoalLeafPill,
+  GoalPrivatePill,
   GoalStatusPill,
 } from "@/features/goal-tree/components/GoalPills";
 
@@ -122,6 +123,7 @@ export const GoalNodeFrame = ({
       <div className="flex flex-wrap items-center gap-2">
         <GoalStatusPill status={node.status} />
         <GoalLeafPill leafType={node.leaf_type} />
+        <GoalPrivatePill visibility={node.visibility} />
         <GoalLabelPills labels={node.labels} />
       </div>
       <h1

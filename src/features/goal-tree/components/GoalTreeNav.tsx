@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Input } from "@/components/common/Input";
+import { useAuthContext } from "@/shared/context/AuthContext";
 import { cn } from "@/shared/utils/cn";
 
 const NAV_ITEMS = [
@@ -20,7 +21,10 @@ const navLinkClassName = ({ isActive }: { isActive: boolean }): string =>
 /** View switcher (tree / thinking work / actions) with a search box that goes to /search?q=. */
 export const GoalTreeNav = ({ initialQuery = "" }: { initialQuery?: string }) => {
   const navigate = useNavigate();
+  const { user } = useAuthContext();
   const [query, setQuery] = useState(initialQuery);
+  // "My tasks" only means something once someone is signed in.
+  const items = user ? [...NAV_ITEMS, { to: "/me", label: "My tasks", end: false }] : NAV_ITEMS;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -31,7 +35,7 @@ export const GoalTreeNav = ({ initialQuery = "" }: { initialQuery?: string }) =>
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
       <nav aria-label="Views" className="flex gap-1 overflow-x-auto">
-        {NAV_ITEMS.map((item) => (
+        {items.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className={navLinkClassName}>
             {item.label}
           </NavLink>

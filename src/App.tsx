@@ -29,6 +29,9 @@ const AgentConnectContextPage = lazy(() =>
     default: m.AgentConnectContextPage,
   }))
 );
+const MyTasksPage = lazy(() =>
+  import("@/pages/goal-tree/MyTasksPage").then((m) => ({ default: m.MyTasksPage }))
+);
 const GoalRoleViewPage = lazy(() =>
   import("@/pages/goal-tree/GoalRoleViewPage").then((m) => ({ default: m.GoalRoleViewPage }))
 );
@@ -72,6 +75,7 @@ function AppContent() {
                 <Route path="/agents/context" element={<AgentConnectContextPage />} />
                 <Route path="/views/:role" element={<GoalRoleViewPage />} />
                 <Route path="/search" element={<GoalSearchPage />} />
+                <Route path="/me" element={<MyTasksPage />} />
                 <Route path="/agents" element={<AgentTokensPage />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />

@@ -102,7 +102,7 @@ export const GoalNodeDetailView = ({ detail }: { detail: GoalNodeDetail }) => (
           What an agent sees on this task
         </Link>
         <GoalLinkList links={detail.node.links} />
-        <GoalRelationList relations={detail.relations} />
+        <GoalRelationList relations={detail.relations} servedPrivately={detail.served_privately} />
         <GoalEventLog events={detail.events} />
       </aside>
     </div>

@@ -9,7 +9,7 @@ import { join } from "node:path";
 import { PGlite, type Transaction } from "@electric-sql/pglite";
 import { vector } from "@electric-sql/pglite/vector";
 
-import type { Db } from "./db.ts";
+import { savepointTransaction, type Db } from "./db.ts";
 
 const MIGRATIONS_DIR = join(import.meta.dirname, "../../../migrations");
 /** Only the Point At migrations: the others need Supabase's auth schema. */
@@ -47,7 +47,7 @@ export async function createMigratedPglite(): Promise<{ db: Db; reset: () => Pro
       pg.transaction(async (t) => {
         const tx: Db = wrap(
           t,
-          (f) => f(tx),
+          savepointTransaction(() => tx),
           async () => {}
         );
         return await fn(tx);

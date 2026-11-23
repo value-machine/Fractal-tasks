@@ -397,6 +397,127 @@ describe("links", () => {
   });
 });
 
+describe("private goals", () => {
+  const ALICE_ID = "00000000-0000-4000-8000-00000000a11c";
+  const BOB_ID = "00000000-0000-4000-8000-0000000000b0";
+  const as = <T,>(viewer: string | null, fn: (s: Store) => Promise<T>) => Store.as(db, viewer, fn);
+
+  beforeEach(async () => {
+    await db.query("insert into auth.users (id) values ($1), ($2) on conflict do nothing", [
+      ALICE_ID,
+      BOB_ID,
+    ]);
+  });
+
+  async function alicesPrivateGoal() {
+    return as(ALICE_ID, async (s) => {
+      const root = await s.createRoot(
+        { title: "Battle my own loneliness", visibility: "private" },
+        "Alice via Claude"
+      );
+      const { children } = await s.split(
+        root.id,
+        { hypothesis: "Regular contact", children: [{ title: "Join the Tuesday choir" }] },
+        "Alice via Claude"
+      );
+      await s.markLeaf(children[0].id, humanLeaf, "Alice via Claude");
+      return { root, step: children[0] };
+    });
+  }
+
+  it("should show a private goal and its subtasks only to their owner", async () => {
+    const { root, step } = await alicesPrivateGoal();
+    expect(step.visibility).toBe("private");
+    await as(ALICE_ID, async (s) => {
+      expect((await s.listRoots()).map((r) => r.id)).toContain(root.id);
+      expect((await s.view("executor")).map((n) => n.id)).toContain(step.id);
+    });
+    for (const viewer of [BOB_ID, null]) {
+      await as(viewer, async (s) => {
+        expect((await s.listRoots()).map((r) => r.id)).not.toContain(root.id);
+        expect(await s.search("loneliness")).toEqual([]);
+        expect(await s.view("executor")).toEqual([]);
+        await expect(s.getNode(step.id)).rejects.toThrow(/No node/);
+      });
+    }
+    // Reads outside Store.as see only public goals: forgetting the viewer fails closed.
+    expect((await store.listRoots()).map((r) => r.id)).not.toContain(root.id);
+  });
+
+  it("should refuse a private goal when nobody is signed in", async () => {
+    await expect(
+      as(null, (s) => s.createRoot({ title: "Secret", visibility: "private" }, "anonymous agent"))
+    ).rejects.toThrow(/Sign in/);
+  });
+
+  it("should let only the owner change a goal's visibility, for its whole tree", async () => {
+    const { root, step } = await alicesPrivateGoal();
+    await expect(
+      as(BOB_ID, (s) => s.setVisibility(root.id, "public", "Bob"))
+    ).rejects.toThrow(/No node/);
+    await as(ALICE_ID, (s) => s.setVisibility(root.id, "public", "Alice"));
+    await as(null, async (s) => expect((await s.getNode(step.id)).visibility).toBe("public"));
+    const legacy = await store.createRoot({ title: "Created without an account" }, AUTHOR);
+    await expect(
+      as(ALICE_ID, (s) => s.setVisibility(legacy.id, "private", "Alice"))
+    ).rejects.toThrow(/owner/);
+  });
+
+  it("should count a private step toward a public goal without showing it", async () => {
+    const { step } = await alicesPrivateGoal();
+    const city = await store.createRoot({ title: "Battle loneliness in Utrecht" }, AUTHOR);
+    await as(ALICE_ID, (s) =>
+      s.relate({ fromId: step.id, toId: city.id, type: "also_serves" }, "Alice")
+    );
+    await as(BOB_ID, async (s) => {
+      const focus = await s.focus(city.id);
+      expect(focus.relations).toEqual([]);
+      expect(focus.served_privately).toBe(1);
+    });
+    await as(ALICE_ID, async (s) => {
+      expect((await s.focus(city.id)).relations.map((r) => r.id)).toEqual([step.id]);
+    });
+  });
+
+  it("should refuse to adopt a private goal under a public one", async () => {
+    const { root } = await alicesPrivateGoal();
+    const big = await as(ALICE_ID, (s) => s.createRoot({ title: "Public goal" }, "Alice"));
+    await expect(
+      as(ALICE_ID, (s) => s.adopt(big.id, { hypothesis: "Part of it", rootIds: [root.id] }, "Alice"))
+    ).rejects.toThrow(/visibility/);
+  });
+
+  it("should list the owner's private goals and claimed tasks in their own list", async () => {
+    const { root } = await alicesPrivateGoal();
+    const publicTask = await store.createRoot({ title: "Public work" }, AUTHOR);
+    await as(ALICE_ID, (s) => s.claim(publicTask.id, "Alice", ALICE_ID));
+    const mine = await as(ALICE_ID, (s) => s.myTasks());
+    expect(mine.private_goals.map((g) => g.id)).toEqual([root.id]);
+    expect(mine.claimed.map((t) => t.id)).toEqual([publicTask.id]);
+  });
+
+  it("should undo a split's partial writes when a child is refused", async () => {
+    const root = await store.createRoot({ title: "Root" }, AUTHOR);
+    await expect(
+      as(null, (s) =>
+        s.split(
+          root.id,
+          {
+            hypothesis: "h",
+            children: [
+              { title: "Fine child" },
+              { title: "Bad link", links: [{ url: "ftp://x", title: "x" }] },
+            ],
+          },
+          AUTHOR
+        )
+      )
+    ).rejects.toThrow(ProcessError);
+    expect(await store.children(root.id)).toEqual([]);
+    expect((await store.getNode(root.id)).split_at).toBeNull();
+  });
+});
+
 describe("graph", () => {
   it("should return the subtree and only the relations among its tasks when a graph is read", async () => {
     const { root, children } = await rootWithChildren("A", "B");

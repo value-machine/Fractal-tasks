@@ -135,11 +135,11 @@ describe("claims by contributors", () => {
     expect(await claimUserId(root.id)).toBe(ALICE);
   });
 
-  it("should still record the claim when the person has no contributor record yet", async () => {
+  it("should tie the claim to the account when the person only used agent login", async () => {
     const store = new Store(db);
     const root = await store.createRoot({ title: "Task" }, "Bob via Claude");
     await store.claim(root.id, "Bob via Claude", BOB);
-    expect(await claimUserId(root.id)).toBeNull();
+    expect(await claimUserId(root.id)).toBe(BOB);
     expect((await store.getNode(root.id)).claimed_by).toBe("Bob via Claude");
   });
 });

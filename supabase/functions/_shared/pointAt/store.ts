@@ -43,6 +43,8 @@ export type LeafType = "agent" | "human";
 /** What kind of thinking work a donor-view row is. */
 export type DonorKind = "refine" | "run" | "replan" | "review" | "split";
 export type Role = "donor" | "executor";
+/** Who can see a goal tree: everyone, or only its owner and the owner's agents. */
+export type Visibility = "public" | "private";
 
 export interface Node {
   id: string;
@@ -60,6 +62,7 @@ export interface Node {
   split_assumptions: string | null;
   split_at: string | null;
   labels: string[];
+  visibility: Visibility;
   /** The open claim (node_assignments), read into the node. */
   claimed_by: string | null;
   claimed_at: string | null;
@@ -96,7 +99,7 @@ export interface NodeEvent {
 const NODE_COLUMNS = `
   n.id, n.parent_id, n.title, n.done_check, n.next_action, n.status, n.leaf_type,
   n.leaf_who, n.leaf_what, n.leaf_how, n.split_hypothesis, n.split_prediction,
-  n.split_assumptions, n.split_at, n.labels, claim.claimed_by, claim.claimed_at,
+  n.split_assumptions, n.split_at, n.labels, n.visibility, claim.claimed_by, claim.claimed_at,
   n.duration_minutes, ${REQUIREMENTS_COLUMN}, ${HYPERLINKS_COLUMN}, n.verification_level, n.overtaken_note, n.unclear_reason, n.created_by,
   n.created_at, n.updated_at`;
 
@@ -105,7 +108,7 @@ const summarySelect = (extraColumns = "") => `
     (select count(*)::int from nodes c where c.parent_id = n.id) as child_count,
     (select count(*)::int from nodes c where c.parent_id = n.id and c.status in ('done','overtaken')) as done_child_count
     ${extraColumns}
-  from nodes n ${OPEN_CLAIM_JOIN}`;
+  from visible_nodes n ${OPEN_CLAIM_JOIN}`;
 const SUMMARY_SELECT = summarySelect();
 
 const CLOSED: Status[] = ["done", "overtaken"];
@@ -119,6 +122,8 @@ const UNMARK_LEAF = `, leaf_type = null, leaf_who = null, leaf_what = null, leaf
 
 export interface NewNodeInput extends TaskDetailsInput {
   title: string;
+  /** Root goals only: "private" keeps the goal and everything under it to its owner. */
+  visibility?: Visibility;
   /** Replaces the task's links when given. */
   links?: Hyperlink[];
   done_check?: string | null;
@@ -210,7 +215,26 @@ function viewConditions(opts: ViewOptions, params: unknown[]): string[] {
 }
 
 export class Store {
-  constructor(private db: Db) {}
+  /**
+   * `viewer` is the signed-in person behind the request (null for anonymous reads). Which private
+   * goals a read can see is set on the database transaction (`Store.as`); the store also needs
+   * the id to record who owns a new goal.
+   */
+  constructor(
+    private db: Db,
+    readonly viewer: string | null = null
+  ) {}
+
+  /**
+   * Run `fn` with a store that sees public goals plus `viewer`'s private ones (visible_nodes).
+   * Everything in `fn` shares one transaction, so the viewer setting holds for all its queries.
+   */
+  static as<T>(db: Db, viewer: string | null, fn: (store: Store) => Promise<T>): Promise<T> {
+    return db.transaction(async (tx) => {
+      await tx.query(`select set_config('point_at.viewer', $1, true)`, [viewer ?? ""]);
+      return fn(new Store(tx, viewer));
+    });
+  }
 
   // ---------------------------------------------------------------- reading
 
@@ -257,10 +281,10 @@ export class Store {
     return this.db.query(
       `with recursive up as (
          select id, parent_id, title, status, split_hypothesis, split_prediction, 0 as up_steps
-         from nodes where id = $1
+         from visible_nodes where id = $1
          union all
          select p.id, p.parent_id, p.title, p.status, p.split_hypothesis, p.split_prediction, up.up_steps + 1
-         from nodes p join up on p.id = up.parent_id
+         from visible_nodes p join up on p.id = up.parent_id
        )
        select id, title, status, split_hypothesis, split_prediction,
          ((select max(up_steps) from up) - up_steps)::int as depth
@@ -325,7 +349,7 @@ export class Store {
       work_events: number;
     }>(
       `with splits as (
-         select n.id, n.title, n.split_at from nodes n
+         select n.id, n.title, n.split_at from visible_nodes n
          where n.split_at is not null ${labelFilter}
        ),
        reviews as (
@@ -392,6 +416,89 @@ export class Store {
     };
   }
 
+  /** Visibility of a new root: public unless the signed-in creator asks for private. */
+  private newGoalVisibility(requested: Visibility | undefined): Visibility {
+    if (requested !== "private") return "public";
+    if (!this.viewer) {
+      throw new ProcessError("Sign in (agent login or a personal token) to keep a goal private.");
+    }
+    return "private";
+  }
+
+  /** Whether two nodes have the same visibility and, when private, the same owner. */
+  async sameTreeOwnership(a: string, b: string): Promise<boolean> {
+    const [row] = await this.db.query<{ same: boolean }>(
+      `select (x.visibility = y.visibility
+               and (x.visibility = 'public' or x.owner_user_id = y.owner_user_id)) as same
+       from nodes x, nodes y where x.id = $1 and y.id = $2`,
+      [a, b]
+    );
+    return Boolean(row?.same);
+  }
+
+  /**
+   * Make a goal and everything under it public or private. Only for roots, and only by the
+   * account that owns the goal (owner decision 2026-11-23: public by default).
+   */
+  async setVisibility(id: string, visibility: Visibility, actor: string): Promise<NodeSummary> {
+    const node = await this.getNode(id);
+    if (node.parent_id) {
+      throw new ProcessError("Only a root goal sets visibility; its whole tree follows it.");
+    }
+    const [owner] = await this.db.query<{ owner_user_id: string | null }>(
+      `select owner_user_id from nodes where id = $1`,
+      [id]
+    );
+    if (!this.viewer || owner?.owner_user_id !== this.viewer) {
+      throw new ProcessError(
+        "Only the goal's owner can change who sees it. Goals created before sign-in existed have no owner and stay public."
+      );
+    }
+    await this.db.query(
+      `with recursive below as (
+         select id from nodes where id = $1
+         union all
+         select c.id from nodes c join below b on c.parent_id = b.id
+       )
+       update nodes set visibility = $2 where id in (select id from below)`,
+      [id, visibility]
+    );
+    await logEvent(this.db, id, actor, "note", `Made ${visibility}`);
+    return this.getNode(id);
+  }
+
+  /** How many private steps of other people "also serve" this task: a count, never who or what. */
+  async privateSupport(id: string): Promise<number> {
+    const [row] = await this.db.query<{ n: number }>(
+      `select count(*)::int as n from node_relations r join nodes f on f.id = r.from_id
+       where r.to_id = $1 and r.type = 'also_serves' and f.visibility = 'private'
+         and not exists (select 1 from visible_nodes v where v.id = f.id)`,
+      [id]
+    );
+    return row?.n ?? 0;
+  }
+
+  /**
+   * The signed-in person's own list: their private goals and the open tasks they claimed
+   * (public or private), newest first.
+   */
+  async myTasks(): Promise<{ private_goals: NodeSummary[]; claimed: NodeSummary[] }> {
+    if (!this.viewer) throw new ProcessError("Sign in to see your own tasks.");
+    const privateGoals = await this.db.query<NodeSummary>(
+      `${SUMMARY_SELECT} where n.parent_id is null and n.visibility = 'private'
+         and n.owner_user_id = $1 order by n.updated_at desc`,
+      [this.viewer]
+    );
+    const claimed = await this.db.query<NodeSummary>(
+      `${SUMMARY_SELECT} where n.status not in ('done','overtaken') and exists (
+         select 1 from node_assignments a where a.node_id = n.id and a.role = 'claimed'
+           and a.ended_at is null and a.user_id = $1)
+       order by n.updated_at desc`,
+      [this.viewer]
+    );
+    return { private_goals: privateGoals, claimed };
+  }
+
   /** Typed relations of the task (blocked by, also serves, ...), both directions. */
   relations(id: string) {
     return relationsOf(this.db, id);
@@ -415,7 +522,7 @@ export class Store {
          select c.id, b.depth + 1 from nodes c join below b on c.parent_id = b.id
        )
        select n.id, n.parent_id, n.title, n.status, n.leaf_type, n.duration_minutes, b.depth
-       from below b join nodes n on n.id = b.id
+       from below b join visible_nodes n on n.id = b.id
        order by b.depth, n.created_at, n.id
        limit $2`,
       [rootId, GRAPH_NODE_LIMIT + 1]
@@ -446,10 +553,10 @@ export class Store {
       this.events(id),
       this.relations(id),
     ]);
-    const [siblings, split, splits, claims, estimate] = await Promise.all([
+    const [siblings, split, splits, claims, estimate, served_privately] = await Promise.all([
       node.parent_id
         ? this.db.query<Pick<Node, "id" | "title" | "status" | "leaf_type">>(
-            `select id, title, status, leaf_type from nodes
+            `select id, title, status, leaf_type from visible_nodes
              where parent_id = $1 and id <> $2 order by created_at`,
             [node.parent_id, id]
           )
@@ -458,6 +565,7 @@ export class Store {
       this.splits(id),
       assignmentHistory(this.db, id),
       node.child_count ? estimateBelow(this.db, id) : Promise.resolve(null),
+      this.privateSupport(id),
     ]);
     const grandchildren = children.length
       ? await this.db.query<NodeSummary>(
@@ -477,6 +585,7 @@ export class Store {
       estimate,
       claims,
       hints: focusHints(node, relations),
+      served_privately,
       children: children.map((c) => ({
         ...c,
         children: grandchildren.filter((g) => g.parent_id === c.id),
@@ -556,19 +665,21 @@ export class Store {
   ): Promise<NodeSummary & { check_overlap: OverlapCandidate[] }> {
     return this.db.transaction(async (tx) => {
       const [row] = await tx.query<{ id: string }>(
-        `insert into nodes (title, done_check, next_action, labels, created_by)
-         values ($1, $2, $3, $4, $5) returning id`,
+        `insert into nodes (title, done_check, next_action, labels, created_by, owner_user_id, visibility)
+         values ($1, $2, $3, $4, $5, $6, $7) returning id`,
         [
           input.title,
           input.done_check ?? null,
           input.next_action ?? null,
           input.labels ?? [],
           actor,
+          this.viewer,
+          this.newGoalVisibility(input.visibility),
         ]
       );
       await saveNodeDetails(tx, { nodeId: row.id, input, actor });
       await logEvent(tx, row.id, actor, "created", "Root created");
-      const node = await new Store(tx).getNode(row.id);
+      const node = await new Store(tx, this.viewer).getNode(row.id);
       return { ...node, check_overlap: await overlapCandidates(tx, [node]) };
     });
   }
@@ -577,12 +688,14 @@ export class Store {
   async split(parentId: string, input: SplitRecord & { children: NewNodeInput[] }, actor: string) {
     if (!input.children.length) throw new ProcessError("A split needs at least one child.");
     return this.db.transaction(async (tx) => {
-      const parent = await new Store(tx).startSplit(parentId, input);
+      const parent = await new Store(tx, this.viewer).startSplit(parentId, input);
       const ids: string[] = [];
       for (const child of input.children) {
         const [row] = await tx.query<{ id: string }>(
-          `insert into nodes (parent_id, title, done_check, next_action, labels, created_by)
-           values ($1, $2, $3, $4, $5, $6) returning id`,
+          `insert into nodes (parent_id, title, done_check, next_action, labels, created_by,
+             owner_user_id, visibility)
+           select $1, $2, $3, $4, $5, $6, p.owner_user_id, p.visibility from nodes p where p.id = $1
+           returning id`,
           [
             parentId,
             child.title,
@@ -610,9 +723,9 @@ export class Store {
         "split",
         `${ids.length} children. Hypothesis: ${input.hypothesis}`
       );
-      const children = await new Store(tx).children(parentId);
+      const children = await new Store(tx, this.viewer).children(parentId);
       return {
-        parent: await new Store(tx).getNode(parentId),
+        parent: await new Store(tx, this.viewer).getNode(parentId),
         children,
         check_overlap: await overlapCandidates(
           tx,
@@ -634,12 +747,17 @@ export class Store {
   ): Promise<{ parent: NodeSummary; adopted: NodeSummary[] }> {
     if (!input.rootIds.length) throw new ProcessError("Name at least one root to adopt.");
     return this.db.transaction(async (tx) => {
-      const store = new Store(tx);
+      const store = new Store(tx, this.viewer);
       const parent = await store.startSplit(parentId, input);
       const adopted: NodeSummary[] = [];
       for (const rootId of input.rootIds) {
         const root = await store.getNode(rootId);
         if (root.parent_id) throw new ProcessError(`"${root.title}" is not a root.`);
+        if (!(await store.sameTreeOwnership(rootId, parentId))) {
+          throw new ProcessError(
+            `"${root.title}" and "${parent.title}" differ in who can see them (private or public, or another owner); only goals with the same visibility can be adopted.`
+          );
+        }
         try {
           await tx.query(`update nodes set parent_id = $2 where id = $1`, [rootId, parentId]);
         } catch (error: unknown) {
@@ -781,7 +899,7 @@ export class Store {
         [id]
       );
       await logEvent(tx, id, actor, "claimed");
-      return new Store(tx).getNode(id);
+      return new Store(tx, this.viewer).getNode(id);
     });
   }
 
@@ -789,7 +907,7 @@ export class Store {
     return this.db.transaction(async (tx) => {
       await this.closeClaim(tx, id, "released");
       await logEvent(tx, id, actor, "released", note);
-      return new Store(tx).getNode(id);
+      return new Store(tx, this.viewer).getNode(id);
     });
   }
 

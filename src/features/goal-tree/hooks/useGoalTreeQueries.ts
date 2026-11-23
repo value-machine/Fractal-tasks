@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import {
+  fetchMyTasks,
   fetchGoalNode,
   fetchGoalRoleView,
   fetchGoalRoots,
@@ -13,6 +14,7 @@ export const goalTreeKeys = {
   roots: () => [...goalTreeKeys.all, "roots"] as const,
   node: (id: string) => [...goalTreeKeys.all, "node", id] as const,
   search: (query: string) => [...goalTreeKeys.all, "search", query] as const,
+  myTasks: (userId: string) => [...goalTreeKeys.all, "my-tasks", userId] as const,
   roleView: (role: GoalRole, filters: GoalWorkFilters = {}) =>
     [...goalTreeKeys.all, "role-view", role, filters] as const,
 };
@@ -49,5 +51,14 @@ export const useGoalRoleView = (role: GoalRole, filters: GoalWorkFilters = {}) =
     queryKey: goalTreeKeys.roleView(role, filters),
     queryFn: () => fetchGoalRoleView(role, filters),
     placeholderData: keepPreviousData,
+    staleTime: GOAL_TREE_STALE_MS,
+  });
+
+/** The signed-in person's own list; waits until someone is signed in. */
+export const useMyTasks = (userId: string | null) =>
+  useQuery({
+    queryKey: goalTreeKeys.myTasks(userId ?? ""),
+    queryFn: fetchMyTasks,
+    enabled: Boolean(userId),
     staleTime: GOAL_TREE_STALE_MS,
   });
