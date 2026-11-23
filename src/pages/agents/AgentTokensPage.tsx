@@ -2,6 +2,7 @@ import { useAuthContext } from "@/shared/context/AuthContext";
 import { ConnectAgentGuide } from "@/features/agent-login/components/ConnectAgentGuide";
 import { AgentTokensPanel } from "@/features/agent-tokens/components/AgentTokensPanel";
 import { SignInPanel } from "@/features/auth/components/SignInPanel";
+import { Link } from "react-router-dom";
 import { PageLoadingState } from "@/components/common/PageLoadingState";
 
 /** "Connect your agent": one link with agent login; personal tokens only as a fallback. */
@@ -14,7 +15,10 @@ export const AgentTokensPage = () => {
         <h1 className="mb-1.5 font-heading text-3xl font-semibold">Connect your agent</h1>
         <p className="text-muted-foreground">
           Let your AI agent split goals, review and do agent steps in Point At. Everything it does
-          is recorded in your name.
+          is recorded in your name.{" "}
+          <Link to="/agents/context" className="text-primary no-underline hover:underline">
+            See what your agent is told when it connects.
+          </Link>
         </p>
       </div>
       <ConnectAgentGuide />

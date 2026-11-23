@@ -31,5 +31,6 @@ Page (thin): `src/pages/goal-tree/GoalGraphPage.tsx` at `/nodes/:id/graph`, link
 - Relation lines leave a box on its right and enter on the left, so lines between siblings run side to side instead of looping under the boxes. A relation's note is in the line's accessible label, not drawn on the canvas, where it overlapped boxes.
 - Only line types the graph has get a switch, so the row stays short on a phone.
 - React Flow loads only on this page (the route is lazy), so the rest of the site does not carry it.
+- `TaskGraphView` takes an optional `highlight` set (tasks outside it are faded) and `focusId` (ringed), used by the agent-context page to show which tasks an agent sees. `useTaskGraph` waits while the id is empty, for callers that learn the root later.
 - Tasks cannot be dragged or connected here: changes go through agents, as everywhere on the site.
 - React Flow is pinned to 12.12.1: 13.0 was three days old when this was built.

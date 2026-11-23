@@ -109,7 +109,17 @@ const LineSwitches = ({
  * The tasks under one goal as boxes, with the split tree and typed relations as lines.
  * Each line type can be switched on or off; clicking a task opens its page.
  */
-export const TaskGraphView = ({ graph }: { graph: TaskGraph }) => {
+export const TaskGraphView = ({
+  graph,
+  highlight,
+  focusId,
+}: {
+  graph: TaskGraph;
+  /** When given, tasks outside this set are drawn faded. */
+  highlight?: ReadonlySet<string>;
+  /** The task the view is about, drawn with a ring. */
+  focusId?: string;
+}) => {
   const navigate = useNavigate();
   const { positions, lines, counts, visible, toggle } = useTaskGraphCanvas(graph);
 
@@ -119,11 +129,16 @@ export const TaskGraphView = ({ graph }: { graph: TaskGraph }) => {
         id: task.id,
         type: "task",
         position: positions.get(task.id) ?? { x: 0, y: 0 },
-        data: { task, isRoot: task.id === graph.root_id },
+        data: {
+          task,
+          isRoot: task.id === graph.root_id,
+          dimmed: highlight ? !highlight.has(task.id) : false,
+          isFocus: task.id === focusId,
+        },
         draggable: false,
         connectable: false,
       })),
-    [graph, positions]
+    [graph, positions, highlight, focusId]
   );
 
   const edges = useMemo<Edge[]>(
