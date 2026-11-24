@@ -93,3 +93,17 @@ export const describeGoalRelation = (relation: GoalRelation): string =>
 /** Whether a status counts as closed for progress purposes. */
 export const isGoalClosed = (status: GoalStatus): boolean =>
   status === "done" || status === "overtaken";
+
+/**
+ * "Idle 8 days · 2 tasks wait on this": shown on work-list rows so stalled work is visible when
+ * someone comes back (Point At has no reminders). Empty for recent work nobody waits on.
+ */
+export const describeGoalStall = (idleDays: number, blocksOpen: number): string =>
+  [
+    idleDays >= 3 ? `Idle ${idleDays} days` : null,
+    blocksOpen > 0
+      ? `${blocksOpen} ${blocksOpen === 1 ? "task waits" : "tasks wait"} on this`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");

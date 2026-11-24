@@ -34,6 +34,7 @@ Pages (thin): `src/pages/goal-tree/` — `/` (roots), `/nodes/:id`, `/views/:rol
 - A goal's links (its context: documents, pages, results written elsewhere) show in a "Links" panel and open in a new tab; Point At stores no files.
 - Every task page links to "What an agent sees on this task" (`/nodes/:id/agent-view`, `src/features/agent-context/`).
 - Private goals carry a "Private" badge. A public goal shows how many private steps of other people also serve it, as a count only. `/me` ("My tasks", in the nav when signed in) lists the person's private goals and claimed tasks.
+- Work-list rows show "Idle N days" (from 3 days) and "N tasks wait on this", so stalled work is visible when someone comes back; there are no reminders (vision: everything happens in the loop). A human step's page shows its follow-up under "Then".
 - Reads go through the shared `fetchPointAtJson` (`src/shared/services/pointAtFunctionService.ts`), also used by the graph view.
 - The role views filter on time (up to half a day; longer tasks stay under "Any time"), "No money needed" and a "Needs…" text that applies on Enter, like the site search. Tasks without a time estimate are left out when filtering on time, and the empty state says so.
 - The filter bar lives in the role-view page (`GoalRoleViewPage.tsx`): it is page-only UI and the components folder is at its file budget.

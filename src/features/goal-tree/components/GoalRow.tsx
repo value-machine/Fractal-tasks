@@ -4,6 +4,7 @@ import { GoalLeafPill, GoalStatusDot } from "@/features/goal-tree/components/Goa
 import {
   describeGoalDuration,
   describeGoalRequirement,
+  describeGoalStall,
 } from "@/features/goal-tree/types/goalTreeLabels";
 
 const rowSubtitle = (item: GoalRoleViewItem): string => {
@@ -23,6 +24,7 @@ const rowNeeds = (item: GoalRoleViewItem): string =>
 export const GoalRow = ({ item }: { item: GoalRoleViewItem }) => {
   const subtitle = rowSubtitle(item);
   const needs = rowNeeds(item);
+  const stall = describeGoalStall(item.idle_days, item.blocks_open);
   return (
     <Link
       to={`/nodes/${encodeURIComponent(item.id)}`}
@@ -35,6 +37,7 @@ export const GoalRow = ({ item }: { item: GoalRoleViewItem }) => {
         </h3>
         {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
         {needs && <p className="mt-0.5 text-xs text-muted-foreground">{needs}</p>}
+        {stall && <p className="mt-0.5 text-xs font-medium text-warning">{stall}</p>}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
         {item.why && <span className="text-xs font-semibold text-primary">{item.why}</span>}

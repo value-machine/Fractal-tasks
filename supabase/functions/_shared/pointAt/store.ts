@@ -57,6 +57,8 @@ export interface Node {
   leaf_who: string | null;
   leaf_what: string | null;
   leaf_how: string | null;
+  /** Human leaf: what follows once it is done (e.g. handling a reply); created on "done". */
+  leaf_follow_up: string | null;
   split_hypothesis: string | null;
   split_prediction: string | null;
   split_assumptions: string | null;
@@ -82,6 +84,13 @@ export interface Node {
 export interface NodeSummary extends Node {
   child_count: number;
   done_child_count: number;
+  /**
+   * Whole days since anything happened on this task, worked out when it is read (no timers:
+   * stillness shows up the moment someone comes back; owner decision 2026-11-24).
+   */
+  idle_days: number;
+  /** Open tasks that are blocked by this one: the more, the more it holds others up. */
+  blocks_open: number;
 }
 
 export interface NodeEvent {
@@ -98,7 +107,7 @@ export interface NodeEvent {
 
 const NODE_COLUMNS = `
   n.id, n.parent_id, n.title, n.done_check, n.next_action, n.status, n.leaf_type,
-  n.leaf_who, n.leaf_what, n.leaf_how, n.split_hypothesis, n.split_prediction,
+  n.leaf_who, n.leaf_what, n.leaf_how, n.leaf_follow_up, n.split_hypothesis, n.split_prediction,
   n.split_assumptions, n.split_at, n.labels, n.visibility, claim.claimed_by, claim.claimed_at,
   n.duration_minutes, ${REQUIREMENTS_COLUMN}, ${HYPERLINKS_COLUMN}, n.verification_level, n.overtaken_note, n.unclear_reason, n.created_by,
   n.created_at, n.updated_at`;
@@ -106,7 +115,13 @@ const NODE_COLUMNS = `
 const summarySelect = (extraColumns = "") => `
   select ${NODE_COLUMNS},
     (select count(*)::int from nodes c where c.parent_id = n.id) as child_count,
-    (select count(*)::int from nodes c where c.parent_id = n.id and c.status in ('done','overtaken')) as done_child_count
+    (select count(*)::int from nodes c where c.parent_id = n.id and c.status in ('done','overtaken')) as done_child_count,
+    floor(extract(epoch from (now() - greatest(n.updated_at,
+      coalesce((select max(e.created_at) from node_events e where e.node_id = n.id), n.updated_at))
+    )) / 86400)::int as idle_days,
+    (select count(*)::int from node_relations br join visible_nodes bf on bf.id = br.from_id
+      where br.to_id = n.id and br.type = 'blocked_by'
+        and bf.status not in ('done','overtaken')) as blocks_open
     ${extraColumns}
   from visible_nodes n ${OPEN_CLAIM_JOIN}`;
 const SUMMARY_SELECT = summarySelect();
@@ -493,9 +508,11 @@ export class Store {
       `${SUMMARY_SELECT} where n.status not in ('done','overtaken') and exists (
          select 1 from node_assignments a where a.node_id = n.id and a.role = 'claimed'
            and a.ended_at is null and a.user_id = $1)
-       order by n.updated_at desc`,
+       order by n.updated_at asc`,
       [this.viewer]
     );
+    // Claimed work that holds others up comes first, then what has waited longest.
+    claimed.sort((a, b) => b.blocks_open - a.blocks_open || b.idle_days - a.idle_days);
     return { private_goals: privateGoals, claimed };
   }
 
@@ -631,7 +648,7 @@ export class Store {
          where n.leaf_type = 'human' and n.status not in ('done','overtaken')
            and claim.claimed_by is null and n.unclear_reason is null ${extra}
            and not ${blockedSql("n")}
-         order by n.created_at limit ${lim}`,
+         order by blocks_open desc, idle_days desc, n.created_at limit ${lim}`,
         params
       );
     }
@@ -651,7 +668,9 @@ export class Store {
            )
        ) v
        ${kindFilter}
-       order by case when v.unclear_reason is not null then 0 when v.leaf_type = 'agent' then 1 else 2 end, v.created_at
+       order by (v.blocks_open > 0) desc,
+         case when v.unclear_reason is not null then 0 when v.leaf_type = 'agent' then 1 else 2 end,
+         v.idle_days desc, v.created_at
        limit ${lim}`,
       params
     );
@@ -829,6 +848,8 @@ export class Store {
       who?: string;
       what?: string;
       how?: string;
+      /** Human leaf: what follows once it is done, e.g. "Handle the council's reply". */
+      follow_up?: string;
       links?: Hyperlink[];
     } & TaskDetailsInput,
     actor: string
@@ -843,8 +864,16 @@ export class Store {
     }
     await this.db.query(
       `update nodes set leaf_type = $2, done_check = $3, leaf_who = $4, leaf_what = $5, leaf_how = $6,
-         unclear_reason = null where id = $1`,
-      [id, input.type, doneCheck, input.who ?? null, input.what ?? null, input.how ?? null]
+         leaf_follow_up = $7, unclear_reason = null where id = $1`,
+      [
+        id,
+        input.type,
+        doneCheck,
+        input.who ?? null,
+        input.what ?? null,
+        input.how ?? null,
+        input.type === "human" ? input.follow_up?.trim() || null : null,
+      ]
     );
     await saveNodeDetails(this.db, { nodeId: id, input, actor });
     await logEvent(this.db, id, actor, "note", `Marked as ${input.type} leaf`);
@@ -971,12 +1000,38 @@ export class Store {
     await endClaim(this.db, id, "done");
     const overtaken = await this.closeOvertakenBy(node, actor);
     await logEvent(this.db, id, actor, "report", input.note ?? "Done", input.evidence, level);
+    const followUp = node.leaf_follow_up ? await this.createFollowUp(node, actor) : null;
 
     return {
       node: await this.getNode(id),
-      parent_check: await this.parentCheck(node.parent_id),
+      parent_check: followUp ? undefined : await this.parentCheck(node.parent_id),
       ...(overtaken.length ? { overtaken } : {}),
+      ...(followUp ? { follow_up: followUp } : {}),
     };
+  }
+
+  /**
+   * A human leaf that waited on someone else is done when the person acted, not when the answer
+   * came (PROCESS.md 3.3). Its follow-up becomes a task beside it right away, and tasks that were
+   * blocked by the leaf now wait for the follow-up. No timer: the follow-up's age shows in every
+   * work list from then on.
+   */
+  private async createFollowUp(leaf: NodeSummary, actor: string): Promise<NodeSummary> {
+    const [row] = await this.db.query<{ id: string }>(
+      `insert into nodes (parent_id, title, labels, created_by, owner_user_id, visibility)
+       select n.parent_id, $2, n.labels, $3, n.owner_user_id, n.visibility from nodes n
+       where n.id = $1 returning id`,
+      [leaf.id, leaf.leaf_follow_up, actor]
+    );
+    await this.db.query(
+      `update node_relations set to_id = $2
+       where to_id = $1 and type = 'blocked_by'
+         and not exists (select 1 from node_relations x
+           where x.from_id = node_relations.from_id and x.to_id = $2 and x.type = 'blocked_by')`,
+      [leaf.id, row.id]
+    );
+    await logEvent(this.db, row.id, actor, "created", `Follow-up of "${leaf.title}"`);
+    return this.getNode(row.id);
   }
 
   /**

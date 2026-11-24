@@ -3,7 +3,7 @@
 // Run `node scripts/sync-process-doc.mjs` whenever that document changes.
 export const PROCESS_DOC = `# The Process
 
-Version: 0.9 (draft)
+Version: 0.10 (draft)
 This is a living document. It is refined through critique passes, and every change is recorded in the change log at the bottom.
 
 This document describes the single recursive unit used at every scale, from "make a sandwich this morning" to "achieve world peace".
@@ -108,7 +108,9 @@ Every human leaf must fill these fields:
 | How | The channel, and the deadline if there is one |
 | Done-signal | The yes/no check that shows it was done. It must be in the executor's own control: "the message was sent", not "they replied" |
 
-**Waiting is not part of the turn.** A leaf ends when the human has acted. If the outcome depends on someone else (a reply, a decision, a delivery), that is a new node, created when the answer arrives or when the deadline passes.
+**Waiting is not part of the turn.** A leaf ends when the human has acted. If the outcome depends on someone else (a reply, a decision, a delivery), that is a new node. The agent that writes the leaf names it as the leaf's **follow-up** ("handle the council's reply: yes, no or no answer"); when the leaf is reported done, the follow-up is created beside it at once, and tasks that were blocked by the leaf now wait for the follow-up. The waiting is a visible task, not a gap.
+
+**Nothing runs on a timer.** Every work list shows how long each task has been idle and how many open tasks wait on it, and tasks that hold others up come first. Stalled work becomes visible when anyone comes back, not through reminders.
 
 **Bounce-back:** if anything is unclear, the human marks the leaf as unclear and it returns to the agents for refinement. A human never has to guess.
 
@@ -200,6 +202,10 @@ What this project adds: no depth cap, decomposition on focus, lenses, human leav
 ---
 
 ## Change log
+
+### 0.10: everything in the loop (2026-11-24)
+- Follow-ups (3.3): a human leaf that waits on someone else names its follow-up; reporting it done creates that task and moves dependents onto it.
+- No timers (3.3): work lists show idle days and how many tasks wait on each task, blockers first. Prompted by the first SP-afdeling test, where a week-long stall went unnoticed.
 
 ### 0.9: private goals (2026-11-23)
 - Goals can be private (2.5): visible only to their owner and the owner's agents; public stays the default (owner decision 2026-11-23). A private step can also serve a public goal, which shows only a count.
