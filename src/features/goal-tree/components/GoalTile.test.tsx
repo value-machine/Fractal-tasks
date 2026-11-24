@@ -18,6 +18,7 @@ const summary = (overrides: Partial<GoalNodeSummary>): GoalNodeSummary => ({
   leaf_who: null,
   leaf_what: null,
   leaf_how: null,
+  leaf_follow_up: null,
   split_hypothesis: null,
   split_prediction: null,
   split_assumptions: null,
@@ -37,6 +38,8 @@ const summary = (overrides: Partial<GoalNodeSummary>): GoalNodeSummary => ({
   updated_at: "2026-01-01T00:00:00Z",
   child_count: 0,
   done_child_count: 0,
+  idle_days: 0,
+  blocks_open: 0,
   ...overrides,
 });
 

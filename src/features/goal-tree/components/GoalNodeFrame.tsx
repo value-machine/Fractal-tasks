@@ -96,6 +96,7 @@ const HumanInstruction = ({ node }: { node: GoalNodeSummary }) => {
       <dl className="grid gap-3 sm:grid-cols-2">
         {node.leaf_who && <Fact term="Who">{node.leaf_who}</Fact>}
         {node.leaf_how && <Fact term="How">{node.leaf_how}</Fact>}
+        {node.leaf_follow_up && <Fact term="Then">{node.leaf_follow_up}</Fact>}
       </dl>
       {node.leaf_what && (
         <blockquote className="mt-2 border-l-4 border-warning pl-3 whitespace-pre-wrap">

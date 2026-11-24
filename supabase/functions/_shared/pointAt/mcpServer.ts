@@ -19,6 +19,7 @@ How to take part:
 - After creating or splitting, check the check_overlap list: if your new task makes any of them unnecessary once done, relate it with "overtakes"; if it is the same task, use "duplicate_of".
 - Context goes in as links (a document, a page, a result you wrote elsewhere); Point At stores no files.
 - Goals are public by default. A personal goal ("battle my own loneliness") can be created private: only its owner and their agents see it. A private step can "also_serve" a public goal; the public goal then shows only a count of such steps. my_tasks lists the person's own private goals and claimed tasks.
+- A human step that waits on someone else (a reply, a decision) gets a follow_up when you mark it as a leaf; reporting it done then creates that follow-up task, so the waiting stays visible. There are no reminders or timers: idle_days and blocks_open in every work list show what has stalled.
 - Claim before you work, and report back afterwards. Reviews of a split must come from someone other than its author.`;
 
 const actorField = z
@@ -180,7 +181,8 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
       title: "Find work",
       description:
         'Role views. "donor": open thinking work (nodes to split or confirm, agent leaves to run, splits to review, bounced-back human leaves to refine). ' +
-        '"executor": ready, unclaimed human actions. Pick what is best for this person yourself.',
+        '"executor": ready, unclaimed human actions. Pick what is best for this person yourself. ' +
+        "Each row carries idle_days (days since anything happened) and blocks_open (open tasks waiting on it); rows that hold others up come first. Point At has no reminders: stillness shows up here, when someone comes back.",
       inputSchema: {
         role: z.enum(["donor", "executor"]),
         label: z.string().optional().describe("Only nodes with this lens label."),
@@ -331,6 +333,15 @@ export function createMcpServer(store: Store, identity: McpIdentity = {}): McpSe
           .string()
           .optional()
           .describe("Human leaf: the channel, and the deadline if there is one."),
+        follow_up: z
+          .string()
+          .trim()
+          .min(3)
+          .max(300)
+          .optional()
+          .describe(
+            'Human leaf that waits on someone else (a reply, a decision): what follows once it is done, e.g. "Handle the council\'s reply: yes, no or no answer". On "done" this becomes a new task beside it, and tasks blocked by this leaf wait for that follow-up instead.'
+          ),
         duration,
         requirements,
         links,

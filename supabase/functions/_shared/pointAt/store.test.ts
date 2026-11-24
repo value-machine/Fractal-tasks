@@ -518,6 +518,59 @@ describe("private goals", () => {
   });
 });
 
+describe("loop signals", () => {
+  it("should report idle days and how many open tasks wait on a task when it is read", async () => {
+    const { children } = await rootWithChildren("Ask the council", "Use the answer", "Unrelated");
+    const [ask, use] = children.map((n) => n.id);
+    await store.relate({ fromId: use, toId: ask, type: "blocked_by" }, AUTHOR);
+    await db.query("update node_events set created_at = now() - interval '8 days' where node_id = $1", [ask]);
+    // The guard trigger stamps updated_at on every update; switch it off to age the task.
+    await db.query("alter table nodes disable trigger nodes_guard_trg");
+    await db.query("update nodes set updated_at = now() - interval '8 days' where id = $1", [ask]);
+    await db.query("alter table nodes enable trigger nodes_guard_trg");
+    const node = await store.getNode(ask);
+    expect(node.idle_days).toBe(8);
+    expect(node.blocks_open).toBe(1);
+  });
+
+  it("should list a task that holds others up first when the work list is read", async () => {
+    const { children } = await rootWithChildren("Free", "Blocker", "Waiting");
+    const [free, blocker, waiting] = children.map((n) => n.id);
+    for (const id of [free, blocker]) await store.markLeaf(id, humanLeaf, AUTHOR);
+    await store.relate({ fromId: waiting, toId: blocker, type: "blocked_by" }, AUTHOR);
+    expect((await store.view("executor")).map((n) => n.id)).toEqual([blocker, free]);
+  });
+
+  it("should create the follow-up and move waiting tasks onto it when a human leaf is done", async () => {
+    const { children } = await rootWithChildren("Send the message", "Use the answer");
+    const [send, use] = children.map((n) => n.id);
+    await store.markLeaf(
+      send,
+      { ...humanLeaf, follow_up: "Handle the reply: yes, no, or no answer" },
+      AUTHOR
+    );
+    await store.relate({ fromId: use, toId: send, type: "blocked_by" }, AUTHOR);
+
+    const result = await store.report(send, { outcome: "done" }, AUTHOR);
+    const followUp = result.follow_up!;
+    expect(followUp.title).toBe("Handle the reply: yes, no, or no answer");
+    expect(followUp.parent_id).toBe((await store.getNode(send)).parent_id);
+    // "Use the answer" still waits: now on the reply, not on the sent message.
+    expect((await store.relations(use)).map((r) => [r.type, r.id])).toEqual([
+      ["blocked_by", followUp.id],
+    ]);
+    expect((await store.view("donor", { kind: "split" })).map((n) => n.id)).toContain(followUp.id);
+    expect((await store.view("donor", { kind: "split" })).map((n) => n.id)).not.toContain(use);
+  });
+
+  it("should not create a follow-up when the leaf has none", async () => {
+    const { children } = await rootWithChildren("Just do it");
+    await store.markLeaf(children[0].id, humanLeaf, AUTHOR);
+    const result = await store.report(children[0].id, { outcome: "done" }, AUTHOR);
+    expect(result.follow_up).toBeUndefined();
+  });
+});
+
 describe("graph", () => {
   it("should return the subtree and only the relations among its tasks when a graph is read", async () => {
     const { root, children } = await rootWithChildren("A", "B");

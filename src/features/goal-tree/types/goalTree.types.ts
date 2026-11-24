@@ -36,6 +36,8 @@ export interface GoalNode {
   leaf_who: string | null;
   leaf_what: string | null;
   leaf_how: string | null;
+  /** Human leaf: what follows once it is done; created as a task when it is reported done. */
+  leaf_follow_up: string | null;
   split_hypothesis: string | null;
   split_prediction: string | null;
   split_assumptions: string | null;
@@ -62,6 +64,10 @@ export interface GoalNode {
 export interface GoalNodeSummary extends GoalNode {
   child_count: number;
   done_child_count: number;
+  /** Whole days since anything happened on it (worked out when read; there are no timers). */
+  idle_days: number;
+  /** Open tasks blocked by this one. */
+  blocks_open: number;
 }
 
 /** A summary with its own children, so a tile can show two levels. */
